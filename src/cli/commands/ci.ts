@@ -24,7 +24,7 @@ export type CiInitResult = {
 
 const DEFAULT_PATHS = [".agents/skills", ".claude/skills", ".cursor/skills"];
 const DEFAULT_PACKAGE_VERSION = "0.1.0";
-const PUBLISHED_PACKAGE_NAME = "@chumaniac/skillsync";
+const PUBLISHED_PACKAGE_NAME = "@chumanic/skillsync";
 
 function validateNodeVersion(value: string): string {
   if (!/^\d+(?:\.\d+){0,2}$/.test(value)) {

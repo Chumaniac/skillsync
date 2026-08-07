@@ -121,16 +121,16 @@ describe("release documentation", () => {
     expect(repositoryWorkflow).toContain("SkillSync-Complete-Design.md");
     expect(repositoryWorkflow).toContain("Competitive-Research-and-Design-Rationale.md");
     expect(repositoryWorkflow).toContain("MVP-Implementation-Plan.md");
-    expect(githubTemplate).toContain("@chumaniac/skillsync@0.1.0");
-    expect(preCommitTemplate).toContain("@chumaniac/skillsync@0.1.0");
+    expect(githubTemplate).toContain("@chumanic/skillsync@0.1.0");
+    expect(preCommitTemplate).toContain("@chumanic/skillsync@0.1.0");
     expect(review).toContain("runtime-activation-policy.ts");
     expect(review).toContain("runtime-deployment-requirements.ts");
-    expect(packageJson.name).toBe("@chumaniac/skillsync");
+    expect(packageJson.name).toBe("@chumanic/skillsync");
     expect(packageJson.private).toBe(false);
     expect(packageJson.publishConfig).toEqual({ access: "public" });
     expect(packageJson.repository).toEqual({
       type: "git",
-      url: "https://github.com/Chumaniac/skillsync.git",
+      url: "git+https://github.com/Chumaniac/skillsync.git",
     });
     expect(packageJson.homepage).toBe("https://github.com/Chumaniac/skillsync#readme");
     expect(packageJson.bugs).toEqual({

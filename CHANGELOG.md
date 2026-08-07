@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Prepared the public npm package as `@chumaniac/skillsync@0.1.0`, updated generated CI
+- Prepared the public npm package as `@chumanic/skillsync@0.1.0`, updated generated CI
   templates to pin the scoped package, and added tag-based OIDC/provenance publication
   without a long-lived npm token.
 - Documented the English-only documentation migration by aligning the public workflow

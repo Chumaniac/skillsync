@@ -13,7 +13,7 @@ they can be replaced.
 
 The generated GitHub Action grants `contents: read` and uploads SARIF findings;
 it does not execute Skill scripts. The generated consumer command pins the
-published SkillSync package version (`@chumaniac/skillsync@0.1.0` by default); override it
+published SkillSync package version (`@chumanic/skillsync@0.1.0` by default); override it
 with `ci init --package-version <version>` when upgrading. Because the current
 repository publishes a scoped public package, the generated consumer template can
 be used after that package version is available; the repository's own workflow uses
@@ -66,7 +66,7 @@ placeholders is intentionally not accepted as production evidence.
 
 `.github/workflows/release.yml` runs only for tags matching `v*`. It checks the
 test suite, type-check, lint, build, and `npm pack --dry-run`, then publishes
-`@chumaniac/skillsync` with `npm publish --provenance --access public`. The job
+`@chumanic/skillsync` with `npm publish --provenance --access public`. The job
 uses GitHub OIDC (`id-token: write`) and no long-lived npm token. npm Trusted
 Publisher configuration is an external prerequisite; a tag is not permission
 to activate a live runtime capability.

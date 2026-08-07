@@ -17,8 +17,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      # Requires the published @chumaniac/skillsync@0.1.0 package.
-      - run: npx --yes @chumaniac/skillsync@0.1.0 verify --format sarif --path .agents/skills > skillsync.sarif
+      # Requires the published @chumanic/skillsync@0.1.0 package.
+      - run: npx --yes @chumanic/skillsync@0.1.0 verify --format sarif --path .agents/skills > skillsync.sarif
       - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
