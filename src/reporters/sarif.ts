@@ -23,6 +23,9 @@ function locationFor(finding: Finding, includeLocalPaths: boolean): Array<{
   physicalLocation: { artifactLocation: { uri: string } };
 }> {
   const pathEvidence = finding.evidence.find((evidence) => typeof evidence.path === "string");
+  if (!pathEvidence) {
+    return [{ physicalLocation: { artifactLocation: { uri: "SKILL.md" } } }];
+  }
   return pathEvidence?.path &&
     !isRedactedLocalPath(pathEvidence.path) &&
     (includeLocalPaths || !isAbsoluteLocalPath(pathEvidence.path))
