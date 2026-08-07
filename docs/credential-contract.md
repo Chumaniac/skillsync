@@ -1,26 +1,50 @@
 # Provider Credential Reference Contract
 
-`src/sandbox/credential-contract.ts` 只定义凭据的外部引用边界，不实现 secret
-manager、环境注入、provider SDK 或 token 刷新。
+## Purpose
 
-## 允许的数据
+`src/sandbox/credential-contract.ts` defines only the external reference boundary for
+credentials. It does not implement a secret manager, environment injection, a provider
+SDK, or token refresh.
 
-每个声明只包含：
+## Scope
 
-- credential name；
-- `secret://...` 外部引用；
-- 最小 scope；
-- 最大 TTL（不超过 3600 秒）；
-- 强制撤销声明。
+This contract covers only offline conformance checks before credential injection. It
+does not read or inject real credentials.
 
-契约严格拒绝 `value`、`token`、`env_value` 和未知字段。请求只携带 name、scope 和
-TTL，并检查它们是否与声明匹配；任何 secret 内容都不会进入 SkillSync 报告、fixture
-或宿主进程。
+## Contract
 
-引用路径也拒绝空段、`.` 和 `..`，避免把外部引用当作可穿越的本地路径。
+### Allowed data
 
-## 当前边界
+Each declaration contains only:
 
-这个模块是凭据注入前的离线 conformance 检查。它不会解析宿主环境、读取 home、连接
-secret manager、启动 provider adapter 或向网络发送请求。真实注入仍必须在通过
-`runtime-activation-gate`、独立安全复核和受控 canary 后，由 provider image 内部完成。
+- credential name;
+- a `secret://...` external reference;
+- the minimum scope;
+- the maximum TTL (no more than 3600 seconds);
+- a mandatory revocation statement.
+
+The contract strictly rejects `value`, `token`, `env_value`, and unknown fields. A
+request carries only the name, scope, and TTL, and it verifies that they match the
+declaration. No secret contents enter SkillSync reports, fixtures, or the host process.
+
+Reference paths also reject empty segments, `.` and `..` so that external references
+cannot be treated as traversable local paths.
+
+## Failure behavior
+
+Any declaration or request that includes rejected fields, mismatched scope or TTL, or
+an invalid reference path fails closed.
+
+## Security boundary
+
+This module is an offline conformance check that runs before credential injection. It
+does not parse the host environment, read home, connect to a secret manager, start a
+provider adapter, or send network requests. Real injection must still happen inside the
+provider image only after `runtime-activation-gate`, an independent security review,
+and a controlled canary have all passed.
+
+## Verification
+
+Use this contract to verify that only external credential references, bounded scopes,
+bounded TTLs, and explicit revocation declarations are accepted before any live runtime
+capability is considered.
