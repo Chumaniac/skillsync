@@ -1,7 +1,10 @@
 {
-  "name": "skillsync",
+  "name": "@chumaniac/skillsync",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "description": "A provenance, compatibility, and behavior verification layer for Agent Skills.",
   "repository": {

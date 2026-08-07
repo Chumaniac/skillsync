@@ -6,16 +6,17 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "20"
-          cache: npm
+          node-version: "24"
+          package-manager-cache: false
       - run: npm ci
       - name: Run the offline test suite
         run: npm test
@@ -25,5 +26,7 @@ jobs:
         run: npm run lint
       - name: Build the release candidate
         run: npm run build
-      - name: Inspect the package without publishing
+      - name: Inspect the public package contents
         run: npm pack --dry-run
+      - name: Publish the package with npm provenance
+        run: npm publish --provenance --access public

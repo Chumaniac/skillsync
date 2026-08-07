@@ -86,13 +86,17 @@ The most recent validation ran locally and offline inside the repository:
 - type-check, lint, build, `npm pack --dry-run`, 4 workflows, 2 release-template parses, and 20 tracked JSON files (including 3 JSON Schemas) all passed; the public-tree hygiene scan and AST side-effect scan reported no findings.
 - Docker reference integration was skipped by the availability gate because no local daemon socket existed. This validation did not use any real endpoint, credential, Docker, microVM, remote Worker, or controlled environment, and it did not present local simulated output as live evidence.
 
-### Source repository and npm publication boundary
+### Source repository and npm package
 
 This project is published as a public source repository at [github.com/Chumaniac/skillsync](https://github.com/Chumaniac/skillsync). [`package.json`](./package.json) already includes `repository`, `homepage`, and `bugs` metadata.
 
-The package still keeps `private: true`, which means npm publication is not enabled yet. That does not block public GitHub source publication.
+The distributable CLI package is `@chumaniac/skillsync`. Scoped public access is declared in
+`package.json`, while the executable remains available as the `skillsync` command.
 
-If npm publication is enabled in the future, it must happen through a separate release workflow review together with a package-content and provenance-policy recheck.
+Tag releases run the full offline validation, inspect the package allowlist, and publish with
+GitHub OIDC and npm provenance. The release workflow does not store or use a long-lived npm
+token. The package's npm Trusted Publisher must be configured for `Chumaniac/skillsync` and
+`.github/workflows/release.yml` before a tag can publish successfully.
 
 ### Report privacy boundary
 
@@ -107,6 +111,18 @@ reporting:
 ```
 
 This option controls only whether local paths are preserved. It does not change the default no-script-execution boundary, the no-network boundary, or the no-credential / no-file-content-output boundary.
+
+## Install from npm
+
+After a tagged release is published, install the CLI globally or run a pinned
+version without a global install:
+
+```bash
+npm install --global @chumaniac/skillsync
+npx --yes @chumaniac/skillsync@0.1.0 --help
+```
+
+The executable name is `skillsync` in both cases.
 
 ## Quick start
 

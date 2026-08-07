@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Prepared the public npm package as `@chumaniac/skillsync@0.1.0`, updated generated CI
+  templates to pin the scoped package, and added tag-based OIDC/provenance publication
+  without a long-lived npm token.
 - Documented the English-only documentation migration by aligning the public workflow
   filters with `MVP-Implementation-Plan.md`, `SkillSync-Complete-Design.md`, and
   `Competitive-Research-and-Design-Rationale.md`; historical versions remain available

@@ -24,6 +24,7 @@ export type CiInitResult = {
 
 const DEFAULT_PATHS = [".agents/skills", ".claude/skills", ".cursor/skills"];
 const DEFAULT_PACKAGE_VERSION = "0.1.0";
+const PUBLISHED_PACKAGE_NAME = "@chumaniac/skillsync";
 
 function validateNodeVersion(value: string): string {
   if (!/^\d+(?:\.\d+){0,2}$/.test(value)) {
@@ -78,8 +79,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "${nodeVersion}"
-      # Requires the published skillsync@${packageVersion} package; publication remains an explicit release step.
-      - run: npx --yes skillsync@${packageVersion} verify --format sarif ${shellPaths(paths)} > skillsync.sarif
+      # Requires the published ${PUBLISHED_PACKAGE_NAME}@${packageVersion} package.
+      - run: npx --yes ${PUBLISHED_PACKAGE_NAME}@${packageVersion} verify --format sarif ${shellPaths(paths)} > skillsync.sarif
       - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
@@ -95,7 +96,7 @@ export function renderPreCommit(options: { packageVersion?: string; paths: strin
     hooks:
       - id: skillsync-verify
         name: Verify Agent Skills with SkillSync
-        entry: npx --yes skillsync@${packageVersion} verify --format json ${shellPaths(paths)}
+        entry: npx --yes ${PUBLISHED_PACKAGE_NAME}@${packageVersion} verify --format json ${shellPaths(paths)}
         language: system
         pass_filenames: false
 `;
