@@ -19,7 +19,7 @@ jobs:
           node-version: "20"
       # Requires the published skillsync@0.1.0 package; publication remains an explicit release step.
       - run: npx --yes skillsync@0.1.0 verify --format sarif --path .agents/skills > skillsync.sarif
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: skillsync.sarif
