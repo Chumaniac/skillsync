@@ -1,0 +1,25 @@
+schema_version: 2
+id: docker-reference
+description: Run the inert contract-compatible Runner without provider credentials or writes.
+skill_path: skill
+agent: codex
+execution:
+  backend: docker
+  image: skillsync/reference@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  timeout_ms: 30000
+  memory_mb: 512
+  cpu_limit: 1
+  pids_limit: 64
+  network:
+    mode: deny
+    allowed_hosts: []
+  environment:
+    allow: []
+invariants:
+  allowed_writes: []
+  required_outputs: []
+  forbidden_paths:
+    - /Users/**
+    - workspace/.secrets/**
+  allowed_tools:
+    - fs.read
