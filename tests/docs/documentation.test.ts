@@ -25,6 +25,12 @@ describe("release documentation", () => {
     const releaseWorkflow = await readFile(".github/workflows/release.yml", "utf8");
     const githubTemplate = await readFile("templates/github/skillsync.yml", "utf8");
     const preCommitTemplate = await readFile("templates/pre-commit/skillsync.yaml", "utf8");
+    const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
+      bugs?: { url?: string };
+      homepage?: string;
+      private?: boolean;
+      repository?: { type?: string; url?: string };
+    };
 
     expect(readme).toContain("verify");
     expect(readme).toContain("explain");
@@ -108,5 +114,14 @@ describe("release documentation", () => {
     expect(preCommitTemplate).toContain("skillsync@0.1.0");
     expect(review).toContain("runtime-activation-policy.ts");
     expect(review).toContain("runtime-deployment-requirements.ts");
+    expect(packageJson.private).toBe(true);
+    expect(packageJson.repository).toEqual({
+      type: "git",
+      url: "https://github.com/Chumaniac/skillsync.git",
+    });
+    expect(packageJson.homepage).toBe("https://github.com/Chumaniac/skillsync#readme");
+    expect(packageJson.bugs).toEqual({
+      url: "https://github.com/Chumaniac/skillsync/issues",
+    });
   });
 });
