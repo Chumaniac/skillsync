@@ -21,6 +21,7 @@ on:
       - "SECURITY.md"
       - "CODE_OF_CONDUCT.md"
       - ".gitignore"
+      - ".gitattributes"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/pull_request_template.md"
       - "SkillSync-完整设计文档.md"
