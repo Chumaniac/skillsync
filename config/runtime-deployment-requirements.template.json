@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "source": "deployment-config",
+  "liveCapabilitiesEnabled": false,
+  "activation": {
+    "order": ["egress", "provider-credentials", "docker-microvm", "remote-worker"],
+    "rootPin": {
+      "reference": "deployment-key-store://skillsync/runtime-root/primary",
+      "keyId": "<deployment-root-key-id>",
+      "fingerprint": "sha256:<deployment-pinned-fingerprint>"
+    },
+    "entrypoints": {
+      "egress": { "boundary": "runtime-activation-boundary", "enforcement": "required", "implementation": "not-enabled" },
+      "provider-credentials": { "boundary": "runtime-activation-boundary", "enforcement": "required", "implementation": "not-enabled" },
+      "docker-microvm": { "boundary": "runtime-activation-boundary", "enforcement": "required", "implementation": "not-enabled" },
+      "remote-worker": { "boundary": "runtime-activation-boundary", "enforcement": "required", "implementation": "not-enabled" }
+    }
+  },
+  "worker": {
+    "mode": "secure",
+    "identity": {
+      "source": "mtls",
+      "reference": "mtls://skillsync/worker-ca"
+    },
+    "receipt": {
+      "required": true,
+      "maxTtlSeconds": 3600,
+      "cleanupRequired": true
+    }
+  },
+  "controlledEnvironment": {
+    "runner": "controlled-ci",
+    "network": "isolated",
+    "egress": "deny-by-default",
+    "credentials": "external-reference-only",
+    "hostMounts": "none",
+    "docker": {
+      "daemon": "controlled-ci-only",
+      "baseImages": "preseeded-only",
+      "pull": "forbidden",
+      "socketMount": "forbidden",
+      "network": "deny"
+    },
+    "microvm": {
+      "execution": "controlled-ci-only",
+      "network": "deny-by-default",
+      "hostMounts": "forbidden"
+    },
+    "publicEvidence": "bounded-redacted"
+  },
+  "rollback": {
+    "enabled": true,
+    "target": "existing-fail-closed-backend",
+    "triggers": ["receipt-missing", "credential-leak", "network-policy-regression", "teardown-incomplete"]
+  }
+}
