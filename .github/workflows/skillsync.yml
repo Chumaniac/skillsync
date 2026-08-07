@@ -1,0 +1,90 @@
+name: SkillSync
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - ".agents/skills/**"
+      - ".claude/skills/**"
+      - ".cursor/skills/**"
+      - "src/**"
+      - "tests/**"
+      - "runner/**"
+      - "fixtures/behavior/**"
+      - "fixtures/product/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "LICENSE"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+      - "CODE_OF_CONDUCT.md"
+      - ".gitignore"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/pull_request_template.md"
+      - "SkillSync-完整设计文档.md"
+      - "MVP-实施计划.md"
+      - "竞品研究与设计推演.md"
+      - "docs/**"
+      - "config/**"
+      - "profiles/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm test -- --run tests/integration/product-trust-loop.test.ts tests/integration/live-runtime-preparation.test.ts tests/docs/documentation.test.ts
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm pack --dry-run
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Check public-tree hygiene
+        run: |
+          if rg -n --hidden \
+            -g '!node_modules/**' -g '!dist/**' -g '!coverage/**' -g '!.superpowers/**' -g '!docs/superpowers/**' \
+            -e '/Users/[A-Za-z0-9._-]+' \
+            -e 'sk-[A-Za-z0-9]{20,}' \
+            -e 'gh[pousr]_[A-Za-z0-9]{20,}' \
+            -e 'AKIA[0-9A-Z]{12,}' \
+            -e 'BEGIN [A-Z ]*PRIVATE KEY' .; then
+            echo "Public-tree hygiene check found a personal path or secret-like value."
+            exit 1
+          fi
+          if find . -type f \
+            \( -name '.env' -o -name '.env.*' -o -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' \) \
+            -not -path './node_modules/*' -not -path './dist/*' -not -path './coverage/*' \
+            -print -quit | rg -q .; then
+            echo "Public-tree hygiene check found a local secret or key file."
+            exit 1
+          fi
+      - run: node dist/cli/index.js verify --format sarif --path fixtures/behavior/review-basic --target codex > skillsync.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: skillsync.sarif

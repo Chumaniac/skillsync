@@ -1,0 +1,29 @@
+name: SkillSync Release Validation
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Run the offline test suite
+        run: npm test
+      - name: Type-check the release candidate
+        run: npm run type-check
+      - name: Lint the release candidate
+        run: npm run lint
+      - name: Build the release candidate
+        run: npm run build
+      - name: Inspect the package without publishing
+        run: npm pack --dry-run

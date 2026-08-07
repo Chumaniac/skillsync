@@ -1,0 +1,126 @@
+name: SkillSync Runtime Canary Contracts
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_docker_reference:
+        description: "Run the local digest-pinned Docker reference smoke"
+        required: true
+        default: false
+        type: boolean
+      canary_environment:
+        description: "GitHub Environment used for the controlled canary record"
+        required: true
+        type: environment
+      enable_live_capabilities:
+        description: "Must remain false; live activation is not implemented by this workflow"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  contract-preflight:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.canary_environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Run offline runtime contracts
+        run: >-
+          npx vitest run
+          tests/sandbox/egress-contract.test.ts
+          tests/sandbox/credential-contract.test.ts
+          tests/sandbox/runtime-capability-gate.test.ts
+          tests/sandbox/runtime-activation-policy.test.ts
+          tests/sandbox/runtime-activation-boundary.test.ts
+          tests/sandbox/remote-receipt.test.ts
+          tests/sandbox/remote-contract.test.ts
+          tests/sandbox/runtime-deployment-requirements.test.ts
+          tests/sandbox/runtime-ports.test.ts
+          tests/sandbox/runtime-evidence.test.ts
+          tests/sandbox/reference-provider-adapter.test.ts
+          tests/sandbox/egress-simulator.test.ts
+          tests/sandbox/microvm-contract.test.ts
+          tests/sandbox/remote-worker-port.test.ts
+          tests/sandbox/runtime-orchestrator.test.ts
+          tests/integration/runtime-activation-readiness.test.ts
+          tests/integration/runtime-deployment-requirements.test.ts
+          tests/integration/live-runtime-preparation.test.ts
+          tests/security/contracts-no-side-effects.test.ts
+      - run: npm run type-check
+      - run: npm run lint
+
+  activation-readiness:
+    needs: contract-preflight
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.canary_environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Reject live capability mode
+        env:
+          ENABLE_LIVE_CAPABILITIES: ${{ inputs.enable_live_capabilities }}
+        run: |
+          if [ "$ENABLE_LIVE_CAPABILITIES" != "false" ]; then
+            echo "Live capability activation is intentionally unavailable in this workflow."
+            exit 1
+          fi
+      - name: Evaluate offline readiness posture
+        run: npx vitest run tests/integration/runtime-activation-readiness.test.ts
+      - name: Assert no live endpoints or credentials are configured
+        run: >-
+          node -e "console.log('Readiness only: no live endpoint, provider credential, Docker allowlist, microVM, or remote Worker is configured.')"
+
+  docker-reference:
+    if: ${{ inputs.enable_docker_reference }}
+    needs: [contract-preflight, activation-readiness]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.canary_environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Build the local reference image
+        run: docker build --pull=false -f runner/reference/Dockerfile -t skillsync/reference:canary .
+      - name: Bind the smoke test to the local image id
+        id: image
+        run: echo "id=$(docker image inspect --format '{{.Id}}' skillsync/reference:canary)" >> "$GITHUB_OUTPUT"
+      - name: Validate the local immutable image
+        run: node dist/cli/index.js runner validate --image "skillsync/reference@${{ steps.image.outputs.id }}"
+      - name: Run the explicit Docker smoke test
+        env:
+          SKILLSYNC_DOCKER_INTEGRATION: "1"
+          SKILLSYNC_REFERENCE_IMAGE: skillsync/reference@${{ steps.image.outputs.id }}
+        run: npm test -- tests/integration/docker-reference.test.ts
+
+  remote-microvm-contract:
+    needs: [contract-preflight, activation-readiness]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.canary_environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Verify the remote/microVM protocol contract only
+        run: npx vitest run tests/sandbox/remote-contract.test.ts
+      - name: State the live-runtime boundary
+        run: >-
+          node -e "console.log('No remote worker, microVM, provider credential, or live network capability is started by this job.')"
