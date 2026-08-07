@@ -165,3 +165,18 @@ source repository is not confused with a published npm package.
 M4 reaches a public-source delivery state that is ready for collaboration, review, and
 local verification. npm package publication and real runtime capabilities still require
 their own separate release and security gates.
+
+## M5 default-branch closeout (2026-08-07)
+
+The public documentation migration was delivered through [PR #1](https://github.com/Chumaniac/skillsync/pull/1)
+and merged into the default `main` branch as `a99503d`. The repository's default
+download path now contains the canonical English documentation, documentation tests,
+and updated workflow filters.
+
+| Review item | Result |
+| --- | --- |
+| Default branch delivery | Pass | `main` contains the merged English documentation migration |
+| Remote CI | Pass | `skillsync`, `regression`, and `verify` checks passed |
+| Current local evidence | Pass | 69 test files passed, 1 skipped; 426 tests passed, 1 skipped; type-check, lint, build, and package dry-run passed |
+| npm publication | Intentionally pending | `private: true` remains; npm publication requires a separate release decision |
+| Live runtime enablement | Intentionally pending | Independent security approval and controlled-environment evidence remain mandatory |
