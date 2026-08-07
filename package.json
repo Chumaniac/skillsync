@@ -1,5 +1,5 @@
 {
-  "name": "@chumaniac/skillsync",
+  "name": "@chumanic/skillsync",
   "version": "0.1.0",
   "private": false,
   "publishConfig": {
@@ -9,7 +9,7 @@
   "description": "A provenance, compatibility, and behavior verification layer for Agent Skills.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Chumaniac/skillsync.git"
+    "url": "git+https://github.com/Chumaniac/skillsync.git"
   },
   "homepage": "https://github.com/Chumaniac/skillsync#readme",
   "bugs": {

@@ -90,7 +90,7 @@ The most recent validation ran locally and offline inside the repository:
 
 This project is published as a public source repository at [github.com/Chumaniac/skillsync](https://github.com/Chumaniac/skillsync). [`package.json`](./package.json) already includes `repository`, `homepage`, and `bugs` metadata.
 
-The distributable CLI package is `@chumaniac/skillsync`. Scoped public access is declared in
+The distributable CLI package is `@chumanic/skillsync`. Scoped public access is declared in
 `package.json`, while the executable remains available as the `skillsync` command.
 
 Tag releases run the full offline validation, inspect the package allowlist, and publish with
@@ -118,8 +118,8 @@ After a tagged release is published, install the CLI globally or run a pinned
 version without a global install:
 
 ```bash
-npm install --global @chumaniac/skillsync
-npx --yes @chumaniac/skillsync@0.1.0 --help
+npm install --global @chumanic/skillsync
+npx --yes @chumanic/skillsync@0.1.0 --help
 ```
 
 The executable name is `skillsync` in both cases.

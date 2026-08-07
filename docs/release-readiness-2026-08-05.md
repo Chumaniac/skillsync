@@ -184,19 +184,19 @@ and updated workflow filters.
 ## M6 npm package release preparation (2026-08-07)
 
 The package release track now targets the scoped public package
-`@chumaniac/skillsync`. The package metadata, generated consumer templates, and
+`@chumanic/skillsync`. The package metadata, generated consumer templates, and
 tag workflow are aligned. Publication uses GitHub OIDC and npm provenance rather
 than a long-lived registry token; the npm Trusted Publisher configuration remains
 an external one-time setup for the package owner.
 
 | Review item | Result |
 | --- | --- |
-| Package identity | Prepared | `@chumaniac/skillsync@0.1.0`; the unscoped `skillsync` name is already occupied by another package |
+| Package identity | Prepared | `@chumanic/skillsync@0.1.0`; the unscoped `skillsync` name is already occupied by another package |
 | Public access | Prepared | `private: false` and `publishConfig.access: public` |
-| Consumer templates | Pass | GitHub Action and pre-commit templates pin `@chumaniac/skillsync@0.1.0` |
+| Consumer templates | Pass | GitHub Action and pre-commit templates pin `@chumanic/skillsync@0.1.0` |
 | Release workflow | Prepared | Tag validation runs on Node 24, then publishes with OIDC and provenance; no npm token is stored in GitHub |
 | npm Trusted Publisher | Pending owner setup | Configure user `Chumaniac`, repository `skillsync`, workflow `.github/workflows/release.yml`, and allow `npm publish` |
-| First publication | Pending authentication | Requires an authenticated npm account that owns the `@chumaniac` scope |
+| First publication | Pending authentication | Requires an authenticated npm account that owns the `@chumanic` scope |
 
 This package track does not change the offline-first product boundary. Real
 network access, provider credentials, Docker/microVM execution, and remote Worker
