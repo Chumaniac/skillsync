@@ -1,0 +1,9 @@
+{
+  "Labels": {
+    "org.skillsync.runner.protocol": "skillsync.runner.v1",
+    "org.skillsync.runner.contract": "1",
+    "org.skillsync.runner.entrypoint": "/usr/local/bin/skillsync-runner"
+  },
+  "Entrypoint": ["/usr/local/bin/skillsync-runner"],
+  "Env": ["PATH=/usr/local/bin:/usr/bin:/bin"]
+}

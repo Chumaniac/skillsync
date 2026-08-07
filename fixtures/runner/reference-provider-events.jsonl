@@ -1,0 +1,8 @@
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":0,"atMs":0,"type":"run.started","payload":{"agent":"reference-agent","skillPath":"skills/reference","inputDigest":"__SKILLSYNC_INPUT_DIGEST__"}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":1,"atMs":1,"type":"tool.call","payload":{"tool":"reference.simulated","operation":"start","callId":"reference-read"}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":2,"atMs":2,"type":"fs.read","payload":{"path":"workspace/input.md","bytes":24}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":3,"atMs":3,"type":"tool.call","payload":{"tool":"reference.simulated","operation":"finish","callId":"reference-read","result":"ok"}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":4,"atMs":4,"type":"tool.call","payload":{"tool":"reference.simulated","operation":"start","callId":"reference-write"}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":5,"atMs":5,"type":"fs.write","payload":{"path":"workspace/reference-output.md","bytes":16,"digest":"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":6,"atMs":6,"type":"tool.call","payload":{"tool":"reference.simulated","operation":"finish","callId":"reference-write","result":"ok"}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":7,"atMs":7,"type":"run.finished","payload":{"status":"passed","exitCode":0}}

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "adapter_id": "reference",
+  "adapter_version": "1.0.0",
+  "provider": "reference-agent",
+  "provider_version": "0.1.0"
+}

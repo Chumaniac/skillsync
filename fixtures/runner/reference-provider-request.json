@@ -1,0 +1,24 @@
+{
+  "runId": "reference-provider-run",
+  "attempt": 1,
+  "skillDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "inputDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "policyDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "imageDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "adapterId": "reference",
+  "adapterVersion": "1.0.0",
+  "provider": "reference-agent",
+  "providerVersion": "0.1.0",
+  "credentialContract": {
+    "schemaVersion": 1,
+    "adapterId": "reference",
+    "provider": "reference-agent",
+    "credentials": []
+  },
+  "egressPolicy": {
+    "mode": "deny",
+    "allowedHosts": []
+  },
+  "timeoutMs": 60000,
+  "maxOutputBytes": 16384
+}
