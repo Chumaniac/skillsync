@@ -18,7 +18,7 @@ describe("skillsync ci", () => {
     expect(content).toContain("contents: read");
     expect(content).toContain("npx --yes skillsync@0.1.0 verify --format sarif");
     expect(content).toContain("published skillsync@0.1.0");
-    expect(content).toContain("upload-sarif");
+    expect(content).toContain("github/codeql-action/upload-sarif@v4");
     expect(content).toContain(".agents/skills/**");
   });
 
