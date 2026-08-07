@@ -127,3 +127,19 @@ JSON、文本和 SARIF 的 Finding 消息、remediation 与路径字段均经过
 
 M3 只证明离线准备层可交付；受控 Docker/microVM、真实 egress/provider、凭据撤销和 remote
 Worker 认证仍是后续外部门禁。
+
+## M4 公共源码仓库交付（2026-08-07）
+
+本阶段完成公开源码仓库的交付收口：GitHub 仓库已公开，包元数据指向仓库和 Issue 入口，
+贡献者在不同操作系统或通过 GitHub 网页提交文件时使用统一的 LF 文本换行。npm 发布仍保持
+显式关闭，避免把源码仓库公开误解为已经发布 npm 包。
+
+| 复核项 | 结果 |
+| --- | --- |
+| 公共仓库 | `https://github.com/Chumaniac/skillsync` 已公开，可读取 `main` 分支 |
+| 开源治理 | MIT、贡献指南、安全政策、行为准则、Issue 模板、PR 模板和 CI 均已入库 |
+| 包元数据 | `repository`、`homepage`、`bugs` 已指向公共仓库；`private: true` 仍保留 |
+| 发布边界 | 未执行 npm publish、真实网络、凭据、Docker/microVM 或 remote Worker |
+
+M4 达到“可公开协作、可审阅、可本地验证”的源码交付状态；npm 包发布和真实 runtime 能力
+仍需分别通过独立的发布与安全门禁。
