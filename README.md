@@ -81,7 +81,7 @@ The operator procedure for activation, revocation, rollback, and evidence review
 
 The most recent validation ran locally and offline inside the repository:
 
-- `npm test`: 68 test files passed, 1 skipped; 423 tests passed, 1 skipped.
+- `npm test`: 69 test files passed, 1 skipped; 426 tests passed, 1 skipped.
 - Runtime preparation targeted set: 10 test files and 88 tests passed; simulator evidence was `offline-simulated`.
 - type-check, lint, build, `npm pack --dry-run`, 4 workflows, 2 release-template parses, and 20 tracked JSON files (including 3 JSON Schemas) all passed; the public-tree hygiene scan and AST side-effect scan reported no findings.
 - Docker reference integration was skipped by the availability gate because no local daemon socket existed. This validation did not use any real endpoint, credential, Docker, microVM, remote Worker, or controlled environment, and it did not present local simulated output as live evidence.

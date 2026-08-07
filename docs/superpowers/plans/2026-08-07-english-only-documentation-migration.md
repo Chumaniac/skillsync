@@ -1,5 +1,7 @@
 # English-Only Documentation Migration Implementation Plan
 
+> **Status:** Complete. The migration was verified locally and delivered to the public `main` branch through GitHub PR #1 on 2026-08-07.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Translate all tracked repository documentation and user-visible descriptions into English, rename the three non-English canonical documents, repair every reference, and add automated documentation-language and link checks.
@@ -44,7 +46,7 @@
 - Consumes: the current root Markdown files and all repository references found by `rg`.
 - Produces: three stable English paths that later translation tasks can edit without another rename.
 
-- [ ] **Step 1: Capture the clean baseline.**
+- [x] **Step 1: Capture the clean baseline.**
 
   Run:
 
@@ -57,7 +59,7 @@
 
   Expected: branch `docs/english-documentation`, no unrelated worktree changes, and a complete list of references before any path changes.
 
-- [ ] **Step 2: Rename the three legacy paths without changing their content.**
+- [x] **Step 2: Rename the three legacy paths without changing their content.**
 
   Run in zsh or Bash:
 
@@ -72,11 +74,11 @@
 
   Expected: Git reports three renames and no content is altered by this step.
 
-- [ ] **Step 3: Update all path references.**
+- [x] **Step 3: Update all path references.**
 
   Replace each legacy path reference with its canonical English path in `README.md`, `CHANGELOG.md`, `.github/workflows/skillsync.yml`, the renamed implementation plan, the release-readiness record, and any tests or templates returned by the baseline scan. Do not translate prose in this step.
 
-- [ ] **Step 4: Verify the path migration.**
+- [x] **Step 4: Verify the path migration.**
 
   Run:
 
@@ -90,7 +92,7 @@
 
   Expected: all navigational references use canonical English paths; the renamed files exist; no workflow path filter points at a removed path.
 
-- [ ] **Step 5: Commit the path-only migration.**
+- [x] **Step 5: Commit the path-only migration.**
 
   ```bash
   git add README.md CHANGELOG.md .github/workflows/skillsync.yml \
@@ -109,23 +111,23 @@
 - Consumes: current product positioning, CLI examples, release-candidate evidence, and security boundary text.
 - Produces: the canonical public navigation and the only document a new visitor must read first.
 
-- [ ] **Step 1: Replace the title and opening statement.**
+- [x] **Step 1: Replace the title and opening statement.**
 
   Use the title `# SkillSync: Provenance, Compatibility, and Behavior Verification for Agent Skills` and state that SkillSync validates installed Agent Skills, their source, compatibility, and behavior. Keep the comparison with installation and synchronization tools, but express it in English.
 
-- [ ] **Step 2: Rebuild the documentation index.**
+- [x] **Step 2: Rebuild the documentation index.**
 
   Use links to `SkillSync-Complete-Design.md`, `Competitive-Research-and-Design-Rationale.md`, `MVP-Implementation-Plan.md`, and `docs/release-readiness-2026-08-05.md`. Keep the existing technical document links for runtime activation and operator guidance, using descriptive English link text.
 
-- [ ] **Step 3: Translate status and trust-boundary sections without changing claims.**
+- [x] **Step 3: Translate status and trust-boundary sections without changing claims.**
 
   Preserve the current command list (`scan`, `compat`, `verify`, semantic `diff`, `lock`, `adopt`, fixture-only `test`, `ci init`, `runner validate`, and `runner adapter validate`), the default no-script-execution boundary, the offline Replay/Docker distinction, the inert reference Runner limitation, and the disabled live-runtime order.
 
-- [ ] **Step 4: Translate the release validation, package boundary, privacy boundary, quick start, and 15-minute trust loop.**
+- [x] **Step 4: Translate the release validation, package boundary, privacy boundary, quick start, and 15-minute trust loop.**
 
   Keep the exact validation count and date currently recorded, the `private: true` npm boundary, `<local-path>`, `include_local_paths`, and all executable commands unchanged except for surrounding prose and canonical documentation paths.
 
-- [ ] **Step 5: Verify the public entry point.**
+- [x] **Step 5: Verify the public entry point.**
 
   Run:
 
@@ -136,7 +138,7 @@
 
   Expected: no Han characters, all four canonical documentation links present, and no machine-specific path or credential value introduced.
 
-- [ ] **Step 6: Commit the README migration.**
+- [x] **Step 6: Commit the README migration.**
 
   ```bash
   git add README.md
@@ -153,7 +155,7 @@
 - Consumes: the existing 0-16 section structure, product positioning, CLI surface, Verification Contract, profiles, lock/policy model, architecture, MVP, roadmap, and Definition of Done.
 - Produces: an English technical baseline referenced by the README and implementation plan.
 
-- [ ] **Step 1: Preserve the document outline before translating prose.**
+- [x] **Step 1: Preserve the document outline before translating prose.**
 
   Record the current heading sequence with:
 
@@ -164,15 +166,15 @@
 
   Do not change section numbers, CLI identifiers, schema names, or code blocks while translating the surrounding prose.
 
-- [ ] **Step 2: Translate the product, problem, goals, non-goals, and competitive-positioning sections.**
+- [x] **Step 2: Translate the product, problem, goals, non-goals, and competitive-positioning sections.**
 
   Use the approved English positioning: SkillSync is a verification layer, not another synchronization manager. Preserve all alternatives, rejected directions, and explicit scope boundaries. Add a concise `Summary` paragraph below the title when the current record does not already have one.
 
-- [ ] **Step 3: Translate the CLI, Verification Contract, capability profile, manifest, lockfile, policy, security, architecture, MVP, roadmap, and Definition of Done sections.**
+- [x] **Step 3: Translate the CLI, Verification Contract, capability profile, manifest, lockfile, policy, security, architecture, MVP, roadmap, and Definition of Done sections.**
 
   Keep commands, flags, YAML/JSON snippets, rule codes, and field names byte-for-byte unless a path now points to a canonical English document.
 
-- [ ] **Step 4: Compare the translated outline and scan the result.**
+- [x] **Step 4: Compare the translated outline and scan the result.**
 
   Run:
 
@@ -185,7 +187,7 @@
 
   Expected: the heading count is unchanged, headings are readable English, and the file contains no Han characters.
 
-- [ ] **Step 5: Commit the complete design translation.**
+- [x] **Step 5: Commit the complete design translation.**
 
   ```bash
   git add SkillSync-Complete-Design.md
@@ -202,7 +204,7 @@
 - Consumes: the existing implementation task IDs, test-first sequence, competitor findings, product alternatives, and decision rationale.
 - Produces: English records that remain traceable to the implementation history and the approved product direction.
 
-- [ ] **Step 1: Capture both original heading sequences and task/checklist counts.**
+- [x] **Step 1: Capture both original heading sequences and task/checklist counts.**
 
   ```bash
   rg -n '^#{1,6} ' MVP-Implementation-Plan.md > /tmp/skillsync-mvp-headings.before
@@ -214,15 +216,15 @@
 
   Expected: the plan retains its task structure and checklist coverage after translation.
 
-- [ ] **Step 2: Translate the implementation plan.**
+- [x] **Step 2: Translate the implementation plan.**
 
   Keep task IDs, file paths, module names, test commands, acceptance gates, and checked-state markers unchanged. Translate task descriptions, rationale, and explanatory notes into concise English. Add an English `Summary` and `Status` line below the title without changing task ordering.
 
-- [ ] **Step 3: Translate the competitive research and design rationale.**
+- [x] **Step 3: Translate the competitive research and design rationale.**
 
   Preserve source links, product names, research dates, conclusions, rejected options, and open assumptions. Translate only the explanatory prose and headings, and add an English `Summary` and `Status` line below the title.
 
-- [ ] **Step 4: Verify structure, links, and language.**
+- [x] **Step 4: Verify structure, links, and language.**
 
   ```bash
   rg -n '^#{1,6} ' MVP-Implementation-Plan.md > /tmp/skillsync-mvp-headings.after
@@ -238,7 +240,7 @@
 
   Expected: heading and checklist counts are unchanged, no Han characters remain, and all local links use canonical paths.
 
-- [ ] **Step 5: Commit the two record translations.**
+- [x] **Step 5: Commit the two record translations.**
 
   ```bash
   git add MVP-Implementation-Plan.md Competitive-Research-and-Design-Rationale.md
@@ -255,19 +257,19 @@
 - Consumes: current offline contracts, failure behavior, provenance limitations, activation ordering, and release evidence.
 - Produces: English operational documentation that retains fail-closed semantics and historical evidence labels.
 
-- [ ] **Step 1: Translate the credential and Runner contracts.**
+- [x] **Step 1: Translate the credential and Runner contracts.**
 
   Preserve `secret://`, scope, TTL, revocation, `runner validate`, immutable image references, provenance rule codes, and the statement that the contract does not read or inject real credentials. Where absent, add the standard headings `Purpose`, `Scope`, `Contract`, `Failure behavior`, `Security boundary`, and `Verification` around existing content without deleting requirements.
 
-- [ ] **Step 2: Translate the activation gate.**
+- [x] **Step 2: Translate the activation gate.**
 
   Preserve the activation order `egress → provider-credentials → docker-microvm → remote-worker`, `enable_live_capabilities: false`, `authoritative: false`, no-socket behavior, and all runtime deployment schema names.
 
-- [ ] **Step 3: Translate the release-readiness record.**
+- [x] **Step 3: Translate the release-readiness record.**
 
   Preserve the date, local release candidate status, independent security review result, Docker unavailability, offline simulator evidence, and the distinction between prepared contracts and disabled live capabilities.
 
-- [ ] **Step 4: Update exact documentation-test expectations.**
+- [x] **Step 4: Update exact documentation-test expectations.**
 
   Replace the existing non-English assertions with these English assertions while retaining the surrounding coverage:
 
@@ -279,7 +281,7 @@
   expect(credentialContract).toContain("does not parse the host environment");
   ```
 
-- [ ] **Step 5: Verify the contract translation.**
+- [x] **Step 5: Verify the contract translation.**
 
   ```bash
   if rg -n -P '\\p{Han}' docs/credential-contract.md docs/runner-contract.md \
@@ -290,7 +292,7 @@
 
   Expected: the focused test passes and no security or runtime boundary assertion is removed.
 
-- [ ] **Step 6: Commit the contract and release translation.**
+- [x] **Step 6: Commit the contract and release translation.**
 
   ```bash
   git add docs/credential-contract.md docs/runner-contract.md \
@@ -309,7 +311,7 @@
 - Consumes: all tracked `description`, `title`, `name`, `summary`, and human-readable fixture fields.
 - Produces: English user-visible metadata without changing machine identifiers or fixture behavior.
 
-- [ ] **Step 1: Inventory description fields.**
+- [x] **Step 1: Inventory description fields.**
 
   ```bash
   rg -n --hidden -g '!node_modules' -g '!dist' \
@@ -318,11 +320,11 @@
 
   Expected: a reviewable list of metadata fields, with source formats separated from executable code.
 
-- [ ] **Step 2: Translate only human-readable descriptions.**
+- [x] **Step 2: Translate only human-readable descriptions.**
 
   Keep package name/version, command identifiers, schema keys, fixture directory names, rule codes, and workflow trigger values unchanged. The current package description is already English; retain it unless the audit identifies a concrete consistency issue.
 
-- [ ] **Step 3: Verify metadata syntax and language.**
+- [x] **Step 3: Verify metadata syntax and language.**
 
   ```bash
   if rg -n -P '\\p{Han}' --hidden -g '!node_modules' -g '!dist' \
@@ -335,7 +337,7 @@
 
   Expected: no Han characters in documentation or metadata; JSON/YAML remain parseable.
 
-- [ ] **Step 4: Commit the description audit.**
+- [x] **Step 4: Commit the description audit.**
 
   ```bash
   changed_files=$(git diff --name-only --diff-filter=AM -- \
@@ -360,7 +362,7 @@
 - Consumes: tracked Markdown paths from Git and repository-relative Markdown links.
 - Produces: deterministic Vitest failures that identify the file and line containing a language or link violation.
 
-- [ ] **Step 1: Add the failing invariant test.**
+- [x] **Step 1: Add the failing invariant test.**
 
   Create `tests/docs/english-documentation.test.ts` with this implementation shape:
 
@@ -403,7 +405,7 @@
   });
   ```
 
-- [ ] **Step 2: Run the focused test before the final cleanup.**
+- [x] **Step 2: Run the focused test before the final cleanup.**
 
   ```bash
   npm test -- tests/docs/english-documentation.test.ts
@@ -411,7 +413,7 @@
 
   Expected after Tasks 1-6: PASS with no Han-character or broken-link failures. If a failure identifies a real omission, fix the referenced document or link rather than weakening the invariant.
 
-- [ ] **Step 3: Run the documentation test group.**
+- [x] **Step 3: Run the documentation test group.**
 
   ```bash
   npm test -- tests/docs
@@ -419,7 +421,7 @@
 
   Expected: all documentation, metadata, runtime-boundary, and release assertions pass.
 
-- [ ] **Step 4: Commit the documentation invariants.**
+- [x] **Step 4: Commit the documentation invariants.**
 
   ```bash
   git add tests/docs/english-documentation.test.ts tests/docs/documentation.test.ts
@@ -436,15 +438,15 @@
 - Consumes: canonical root-document paths and the English-only migration record.
 - Produces: CI behavior that still runs documentation checks when any canonical design document changes, plus a discoverable release note.
 
-- [ ] **Step 1: Replace removed paths in workflow filters.**
+- [x] **Step 1: Replace removed paths in workflow filters.**
 
   Keep the workflow triggers and jobs unchanged; update only the three path-filter entries to `MVP-Implementation-Plan.md`, `SkillSync-Complete-Design.md`, and `Competitive-Research-and-Design-Rationale.md`.
 
-- [ ] **Step 2: Add an English migration note to `CHANGELOG.md`.**
+- [x] **Step 2: Add an English migration note to `CHANGELOG.md`.**
 
   Add an `Unreleased` documentation entry that identifies the three canonical English replacement paths, notes that historical versions remain available through Git history, and states that all tracked Markdown and user-visible descriptions are now English-only.
 
-- [ ] **Step 3: Verify workflow and release references.**
+- [x] **Step 3: Verify workflow and release references.**
 
   ```bash
   rg -n --hidden -g '!node_modules' -g '!dist' \
@@ -455,7 +457,7 @@
 
   Expected: no removed path remains, the workflow still names every canonical design document, and the release note is English-only.
 
-- [ ] **Step 4: Commit the automation and release updates.**
+- [x] **Step 4: Commit the automation and release updates.**
 
   ```bash
   git add .github/workflows/skillsync.yml CHANGELOG.md
@@ -472,7 +474,7 @@
 - Consumes: all commits from Tasks 1-8.
 - Produces: fresh evidence for the final review and GitHub publication handoff.
 
-- [ ] **Step 1: Run the complete project check.**
+- [x] **Step 1: Run the complete project check.**
 
   ```bash
   npm run check
@@ -480,7 +482,7 @@
 
   Expected: tests, type-check, lint, and build all pass.
 
-- [ ] **Step 2: Verify package contents and syntax.**
+- [x] **Step 2: Verify package contents and syntax.**
 
   ```bash
   npm pack --dry-run
@@ -490,7 +492,7 @@
 
   Expected: package creation remains dry-run only; no credentials or machine-specific paths appear in the package file list.
 
-- [ ] **Step 3: Run the public-tree and documentation gates.**
+- [x] **Step 3: Run the public-tree and documentation gates.**
 
   ```bash
   npm test -- tests/docs
@@ -501,7 +503,7 @@
 
   Expected: documentation tests pass, the language scan has no matches, and the public-tree hygiene scan has no secrets or local absolute paths.
 
-- [ ] **Step 4: Review the final diff against the approved scope.**
+- [x] **Step 4: Review the final diff against the approved scope.**
 
   ```bash
   git diff --stat 570edb9..HEAD
@@ -523,3 +525,10 @@
 - Runtime and security documentation still state that unavailable capabilities remain disabled and that offline evidence is not live evidence.
 - `npm run check`, `npm pack --dry-run`, documentation tests, syntax checks, and public-tree hygiene checks pass.
 - The final diff contains no credentials, machine-specific paths, or unrelated source changes.
+
+## Completion Record
+
+- All nine migration tasks and the final review criteria are complete.
+- Local validation passed with 69 test files passed and 1 Docker-gated test skipped; 426 tests passed and 1 skipped; type-check, lint, build, package dry-run, documentation tests, language checks, link checks, and public-tree hygiene checks passed.
+- Commit `23f653b` was published through PR #1 and merged into the public `main` branch as merge commit `a99503d`.
+- Real network access, credentials, Docker/microVM execution, and remote Workers remain intentionally disabled and are outside this documentation migration.
