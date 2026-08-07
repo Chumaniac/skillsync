@@ -109,4 +109,35 @@ describe("renderSarif", () => {
       },
     });
   });
+
+  it("anchors findings without file-specific evidence to the Skill document", () => {
+    const finding = {
+      level: 1 as const,
+      severity: "warn" as const,
+      status: "warn" as const,
+      code: "provenance.local-only",
+      skill: "review",
+      message: "Skill source is local-only.",
+      evidence: [{ root_path: "/workspace/private-project/review" }],
+      remediation: "Record a repository URL and resolved commit.",
+    };
+    const report: VerificationReport = {
+      schema_version: 1,
+      generated_at: "2026-08-04T10:00:00.000Z",
+      targets: [{ name: "project", path: "/workspace/private-project", scope: "explicit" }],
+      findings: [finding],
+      issues: [],
+      summary: { total: 1, pass: 0, warn: 1, fail: 0, unknown: 0 },
+      exitCode: 0,
+      reporting: { sarif: true, include_local_paths: false },
+    };
+
+    const sarif = JSON.parse(renderSarif(report)) as {
+      runs: Array<{ results: Array<{ locations: unknown[] }> }>;
+    };
+
+    expect(sarif.runs[0]?.results[0]?.locations).toEqual([
+      { physicalLocation: { artifactLocation: { uri: "SKILL.md" } } },
+    ]);
+  });
 });
