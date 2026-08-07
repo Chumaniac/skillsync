@@ -67,25 +67,24 @@ jobs:
       - run: npm run build
       - name: Check public-tree hygiene
         run: |
-          if rg -n --hidden \
-            -g '!node_modules/**' -g '!dist/**' -g '!coverage/**' -g '!.superpowers/**' -g '!docs/superpowers/**' \
+          if git grep -nE \
             -e '/Users/[A-Za-z0-9._-]+' \
             -e 'sk-[A-Za-z0-9]{20,}' \
             -e 'gh[pousr]_[A-Za-z0-9]{20,}' \
             -e 'AKIA[0-9A-Z]{12,}' \
-            -e 'BEGIN [A-Z ]*PRIVATE KEY' .; then
+            -e 'BEGIN [A-Z ]*PRIVATE KEY' -- . ':(exclude)docs/superpowers/**'; then
             echo "Public-tree hygiene check found a personal path or secret-like value."
             exit 1
           fi
           if find . -type f \
             \( -name '.env' -o -name '.env.*' -o -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' \) \
             -not -path './node_modules/*' -not -path './dist/*' -not -path './coverage/*' \
-            -print -quit | rg -q .; then
+            -print -quit | grep -q .; then
             echo "Public-tree hygiene check found a local secret or key file."
             exit 1
           fi
       - run: node dist/cli/index.js verify --format sarif --path fixtures/behavior/review-basic --target codex > skillsync.sarif
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: skillsync.sarif
