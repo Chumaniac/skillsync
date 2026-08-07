@@ -1,5 +1,8 @@
 # SkillSync MVP Implementation Plan
 
+> **Summary:** Task-by-task implementation plan for SkillSync's local-first verification CLI, from deterministic domain models through release readiness.
+> **Status:** Implemented; Tasks 1-11 and the final review checklist are complete.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task. Each task ends with an independently testable deliverable.
 
 **Goal:** Build a local-first CLI that scans existing Agent Skill directories and verifies structure, provenance, target compatibility, semantic changes, policy and CI output without executing Skill code by default.
@@ -742,7 +745,7 @@ Expected: all tests pass, no TypeScript errors, no new lint errors, and the pack
 
 ## Final Review Checklist
 
-- [x] Every requirement in `SkillSync-完整设计文档.md` maps to one or more tasks above.
+- [x] Every requirement in `SkillSync-Complete-Design.md` maps to one or more tasks above.
 - [x] No task assumes a function or type that has not been defined in an earlier task or its own Interfaces block.
 - [x] No task uses a placeholder such as TBD, TODO or “implement later”.
 - [x] No default command executes Skill code or performs network access.

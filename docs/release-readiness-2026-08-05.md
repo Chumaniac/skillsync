@@ -1,146 +1,167 @@
-# SkillSync 发布就绪度记录（2026-08-05）
+# SkillSync Release Readiness Record (2026-08-05)
 
-## 结论
+## Conclusion
 
-SkillSync 的 MVP 产品能力已经达到本地发布候选状态：扫描、漂移识别、兼容性、语义
-diff、verify 输出、fixture、模板和默认只读边界均已实现并通过回归验证。
+SkillSync's MVP product capability has reached Local release candidate status: scanning,
+drift detection, compatibility, semantic diff, verify output, fixtures, templates, and
+the default read-only boundary are all implemented and have passed regression
+verification.
 
-本阶段不宣称可以安全执行第三方 Skill。Runner、egress、provider adapter 和 remote
-worker 已完成 fail-closed 契约与模拟生命周期，但真实网络、凭据、Docker、microVM
-和远程 worker 仍未启用。
+This stage does not claim that third-party Skills can be executed safely. The Runner,
+egress, provider adapter, and remote Worker have fail-closed contracts and simulated
+lifecycle coverage in place, but real network access, credentials, Docker, microVM, and
+remote Workers remain disabled.
 
-## 就绪矩阵
+## Readiness matrix
 
-| 范围 | 状态 | 证据或说明 |
+| Scope | Status | Evidence or notes |
 | --- | --- | --- |
-| MVP 产品验收清单 | 通过 | `SkillSync-完整设计文档.md` 第 19 节；CLI、fixture 和文档测试 |
-| 默认只读与无副作用边界 | 通过 | `tests/security/contracts-no-side-effects.test.ts` |
-| egress fail-closed 契约 | 通过 | 30 个定向测试；包含请求绑定、IP literal、私有/本地解析地址和 redirect 重校验 |
-| provider adapter 身份绑定 | 通过 | 9 个定向测试；image 与 identity policy 均来自外部输入 |
-| runtime capability 启用顺序门禁 | 本地通过，待复核 | `src/sandbox/runtime-capability-gate.ts`；6 个定向测试；不执行任何 runtime side effect |
-| deployment policy bootstrap | 本地通过，待复核 | root fingerprint、trust bundle 和 deployment-config source；8 个定向测试 |
-| activation boundary | 本地通过，待复核 | 无 policy 必拒绝；有序记录 capability；授权后才启动且拒绝伪造/篡改 boundary；7 个定向测试 |
-| credential reference contract | 本地通过，待复核 | 只接受 secret reference、scope、TTL 和撤销声明；8 个定向测试，不接受值 |
-| remote Worker receipt contract | 本地通过，待复核 | Ed25519、最大 1 小时 TTL、过期、run/attempt/resource/digest 绑定；4 个定向测试 |
-| activation readiness | 已准备 | 非 live readiness evaluator 和手动 canary；5 个定向测试 |
-| external deployment requirements | 已配置契约 | schema、reference-only template、纯 parser/evaluator；15 个定向测试；不解析 root/Worker 引用 |
-| controlled canary workflow | 已准备 | 手动 workflow；默认跑完整离线 runtime simulator contracts，可选本地 reference Docker smoke，不注入凭据；`enable_live_capabilities` 默认 `false`，非 `false` 值由 job 拒绝 |
-| release validation workflow | 已准备 | `v*` tag 只运行 test、type-check、lint、build 和 `npm pack --dry-run`；不发布，`private: true` 保持不变 |
-| runtime operator runbook | 已准备 | 覆盖 activation order、revocation、rollback、evidence review 和部署侧外部前置条件；不包含真实 endpoint 或 secret location |
-| remote 生命周期与清理证明 | 本地通过，待复核 | 17 个定向测试；secure mode 严格校验并要求 Worker receipt；retry 需先清理当前 attempt |
-| dogfood 结果 | 已记录 | `docs/dogfood-2026-08-05.md`；发现保留给用户目录的既有问题，未自动改写 |
-| runtime entrypoints and live input | 保持关闭 | deployment template/schema 中 4 个 entrypoint 均为 `not-enabled`；唯一 live workflow input 为 false-only；activation order 固定为 `egress → provider-credentials → docker-microvm → remote-worker` |
-| 全量回归 | 通过 | `npm test`：68 个测试文件通过，1 个跳过；400 passed，1 skipped；Docker reference integration 仍按可用性门禁跳过 |
-| 静态检查与打包 | 通过 | 本地 type-check、lint、build、`npm pack --dry-run` 均通过；package dry-run 列出 262 个 package files，未发布 |
-| Docker 集成 | 待受控环境 | 本次未设置 Docker integration opt-in，未执行 Docker；历史记录中的“Docker daemon 仍不可用”不作为本次 live evidence |
-| 独立安全复核 | 未批准 | 准备层已完成；root pin 来源、真实执行路径接入、Worker key/mTLS 和受控 canary 仍需外部批准 |
+| MVP product acceptance checklist | Pass | Section 19 of `SkillSync-Complete-Design.md`; CLI, fixture, and documentation tests |
+| Default read-only and no-side-effect boundary | Pass | `tests/security/contracts-no-side-effects.test.ts` |
+| Egress fail-closed contract | Pass | 30 focused tests, including request binding, IP literals, private/local resolved addresses, and redirect revalidation |
+| Provider adapter identity binding | Pass | 9 focused tests; both image and identity policy come from external inputs |
+| Runtime capability activation-order gate | Local pass, pending review | `src/sandbox/runtime-capability-gate.ts`; 6 focused tests; executes no runtime side effects |
+| Deployment policy bootstrap | Local pass, pending review | Root fingerprint, trust bundle, and deployment-config source; 8 focused tests |
+| Activation boundary | Local pass, pending review | Must reject without policy; records capability in order; starts only after authorization and rejects forged or tampered boundaries; 7 focused tests |
+| Credential reference contract | Local pass, pending review | Accepts only a secret reference, scope, TTL, and revocation declaration; 8 focused tests; rejects values |
+| Remote Worker receipt contract | Local pass, pending review | Ed25519, 1-hour maximum TTL, expiry, and run/attempt/resource/digest binding; 4 focused tests |
+| Activation readiness | Prepared | Non-live readiness evaluator and manual canary; 5 focused tests |
+| External deployment requirements | Contract prepared | Schema, reference-only template, pure parser/evaluator; 15 focused tests; does not parse root or Worker references |
+| Controlled canary workflow | Prepared | Manual workflow; runs full offline runtime simulator contracts by default, optional local reference Docker smoke, no credential injection; `enable_live_capabilities` defaults to `false`, and the job rejects any value other than `false` |
+| Release validation workflow | Prepared | `v*` tags run only test, type-check, lint, build, and `npm pack --dry-run`; does not publish; `private: true` remains unchanged |
+| Runtime operator runbook | Prepared | Covers activation order, revocation, rollback, evidence review, and deployment-owned external prerequisites; contains no real endpoint or secret location |
+| Remote lifecycle and cleanup proof | Local pass, pending review | 17 focused tests; secure mode validates strictly and requires a Worker receipt; retries must clean up the current attempt first |
+| Dogfood results | Recorded | `docs/dogfood-2026-08-05.md`; known issues reserved to the user directory were found and not rewritten automatically |
+| Runtime entrypoints and live input | Kept disabled | All 4 entrypoints in the deployment template/schema remain `not-enabled`; the only live workflow input remains false-only; activation order remains `egress → provider-credentials → docker-microvm → remote-worker` |
+| Full regression | Pass | `npm test`: 68 test files passed, 1 skipped; 400 passed, 1 skipped; Docker reference integration remains skipped behind availability gating |
+| Static checks and packaging | Pass | Local type-check, lint, build, and `npm pack --dry-run` all passed; package dry-run listed 262 package files and did not publish |
+| Docker integration | Pending controlled environment | Docker integration opt-in was not enabled in this run, so Docker was not executed; the historical record "Docker daemon remains unavailable" is not used as current live evidence |
+| independent security review | Not approved | Preparation is complete; root-pin source, live execution-path wiring, Worker key/mTLS, and controlled canary still require external approval |
 
-## Task 7 本地发布候选复核（2026-08-06）
+## Task 7 local release-candidate review (2026-08-06)
 
-本节只记录 release-candidate checkout 中新鲜的本地、离线证据，不把本地
-contract/simulator 结果表述为受控环境、生产网络或远程 Worker 证据。此次复核未使用
-真实 endpoint、凭据、Docker daemon、microVM 或 remote Worker。
+This section records only fresh local offline evidence from the release-candidate
+checkout. It does not describe local contract or simulator results as controlled
+environment, production network, or remote Worker evidence. No real endpoint,
+credential, Docker daemon, microVM, or remote Worker was used in this review.
 
-| 复核项 | 新鲜结果 |
+| Review item | Fresh result |
 | --- | --- |
-| 全量测试 | `npm test`：68 个测试文件通过，1 个跳过；400 个测试通过，1 个跳过 |
-| runtime preparation 定向测试 | 7 个测试文件、61 个测试全部通过；provider/egress evidence 为 `offline-simulated` |
-| 类型、lint、build | `npm run type-check`、`npm run lint`、`npm run build` 本地通过 |
-| workflow YAML | 4 个 `.github/workflows/*.yml` 文件解析通过 |
-| JSON/schema | 20 个 tracked JSON 文档解析通过，其中 3 个为 JSON Schema |
-| public-tree hygiene | personal path、secret-like value、`.env`、key/certificate/keystore 文件扫描无命中 |
-| source side-effect | AST side-effect suite 20 个测试通过 |
-| live boundary | 4 个 live entrypoint 仍为 `not-enabled`；唯一 `enable_live_capabilities` input 仍由 workflow false-only 约束 |
-| package/diff review | package dry-run 仅含公开 allowlist 路径；完整 diff 仅包含本 Task 7 的四个文档文件，无 raw credential、private path 或 generated artifact |
+| Full test suite | `npm test`: 68 test files passed, 1 skipped; 400 tests passed, 1 skipped |
+| Focused runtime-preparation tests | 7 test files and 61 tests all passed; provider and egress evidence remained `offline-simulated` |
+| Type, lint, and build | `npm run type-check`, `npm run lint`, and `npm run build` passed locally |
+| Workflow YAML | 4 `.github/workflows/*.yml` files parsed successfully |
+| JSON/schema | 20 tracked JSON documents parsed successfully, including 3 JSON Schemas |
+| Public-tree hygiene | No hits for personal paths, secret-like values, `.env`, or key/certificate/keystore files |
+| Source side effects | The AST side-effect suite passed 20 tests |
+| Live boundary | All 4 live entrypoints remain `not-enabled`; the only `enable_live_capabilities` input is still constrained to false-only by the workflow |
+| Package/diff review | The package dry-run contained only public allowlist paths; the full diff contained only the four documentation files in Task 7 and no raw credentials, private paths, or generated artifacts |
 
-这些结果证明仓库的发布候选准备和 fail-closed 边界保持一致；它们不替代独立安全批准、
-受控 Docker/microVM 验证、真实 egress/provider/credential 复核或 remote Worker 认证证据。
+These results show that release-candidate preparation remains aligned with fail-closed
+boundaries. They do not replace independent security approval, controlled Docker/microVM
+validation, real egress/provider/credential review, or remote Worker authentication
+evidence.
 
-## 发布边界
+## Release boundary
 
-当前可以交付的是本地、可审计、默认只读的 Skill 资产治理工具。以下能力在获得单独
-威胁建模、独立批准和受控 CI 证据前保持关闭：
+What can be delivered today is a local, auditable, default-read-only Skill asset
+governance tool. The following capabilities remain disabled until they receive separate
+threat modeling, independent approval, and controlled CI evidence:
 
-- 真实代理网络和 redirect-following；
-- provider adapter 镜像与短期凭据注入；
-- Docker allowlist 网络和 microVM 执行；
-- 远程 worker、资源删除和租户隔离。
+- real agent network access and redirect following;
+- provider-adapter images and short-lived credential injection;
+- Docker allowlist networking and microVM execution;
+- remote Workers, resource deletion, and tenant isolation.
 
-Task 6 将发布与 canary 验证也保持在准备层：所有 simulator evidence 明确标记为
-`offline-simulated`，Docker smoke 仍需显式 opt-in，release workflow 只做验证和 package
-dry-run。`docs/runtime-operator-runbook.md` 中列出的 deployment-owned prerequisites
-不能由仓库中的 workflow、fixture 或 package artifact 代替。
+Task 6 also keeps release and canary validation at the preparation layer: all simulator
+evidence is explicitly labeled `offline-simulated`, Docker smoke still requires explicit
+opt-in, and the release workflow performs only verification and package dry-run. The
+deployment-owned prerequisites listed in `docs/runtime-operator-runbook.md` cannot be
+replaced by workflow, fixture, or package artifacts in the repository.
 
-## 下一阶段进入条件
+## Entry conditions for the next stage
 
-1. 独立 reviewer 在 `docs/security-review-egress-provider-runtime.md` 记录明确 verdict。
-2. 在受控 CI 中运行 Docker/microVM 集成 fixture，并验证网络、凭据、日志和清理隔离。
-3. 每次只启用一个 capability，绑定 immutable image、policy、审计证据和回滚开关。
-4. 通过 canary 后再更新 rollout 文档中的未勾选门禁。
+1. An independent reviewer records a clear verdict in `docs/security-review-egress-provider-runtime.md`.
+2. Run the Docker/microVM integration fixture in controlled CI and validate the isolation
+   of network, credentials, logs, and cleanup.
+3. Enable only one capability at a time, bound to an immutable image, policy, audit
+   evidence, and rollback switch.
+4. Update the unchecked rollout gates only after the canary passes.
 
-## M1 报告隐私边界复核（2026-08-07）
+## M1 report privacy-boundary review (2026-08-07)
 
-本阶段修复了报告策略未接线和默认值反向的问题：默认报告不再暴露绝对本地路径，
-`reporting.include_local_paths` 只有显式设置为 `true` 才允许受信任的本地调试输出保留路径。
-JSON、文本和 SARIF 的 Finding 消息、remediation 与路径字段均经过同一脱敏边界；脱敏结果保留
-报告字段结构和相对 evidence path，因此仍可被 `report` 命令消费。
+This stage fixed the unwired report policy and the inverted default. Reports no longer
+expose absolute local paths by default, and `reporting.include_local_paths` preserves
+paths only when it is explicitly set to `true` for trusted local debugging output. The
+Finding message, remediation, and path fields in JSON, text, and SARIF all pass through
+the same redaction boundary. The redacted result preserves the report field structure
+and relative evidence paths, so the `report` command can still consume it.
 
-| 复核项 | 结果 |
+| Review item | Result |
 | --- | --- |
-| 路径脱敏回归 | `tests/cli/scan.test.ts`、`compat.test.ts`、`verify.test.ts` 与 reporter tests 通过 |
-| 全量测试 | `npm test`：68 个测试文件通过，1 个跳过；419 个测试通过，1 个跳过 |
-| 类型与 lint | `npm run type-check`、`npm run lint` 通过 |
-| 默认策略 | `verify` 默认输出 `reporting.include_local_paths: false`，本地绝对路径替换为 `<local-path>` |
-| 显式例外 | YAML policy 的 `include_local_paths: true` 仅恢复路径保留，不恢复文件全文或凭据输出 |
+| Path-redaction regression | `tests/cli/scan.test.ts`, `compat.test.ts`, `verify.test.ts`, and reporter tests passed |
+| Full test suite | `npm test`: 68 test files passed, 1 skipped; 419 tests passed, 1 skipped |
+| Type and lint | `npm run type-check` and `npm run lint` passed |
+| Default policy | `verify` now outputs `reporting.include_local_paths: false` by default, and local absolute paths are replaced with `<local-path>` |
+| Explicit exception | `include_local_paths: true` in YAML policy restores path retention only; it does not restore full file contents or credential output |
 
-该阶段仍不改变真实网络、provider 凭据、Docker/microVM 或 remote Worker 的关闭状态；这些能力
-继续等待独立安全批准和受控环境证据。
+This stage still does not change the disabled state of real network access, provider
+credentials, Docker/microVM, or remote Workers. Those capabilities continue to wait for
+independent security approval and controlled-environment evidence.
 
-## M2 本地可交付性复核（2026-08-07）
+## M2 local deliverability review (2026-08-07)
 
-本阶段完成 lock/CI/安装包的本地收口：`lock --from` 可导入当前 `npx skills` v3 lock，保留原始
-安装器字段；目录树 `skillFolderHash` 不会被当作内容 digest，缺少 SkillSync digest 时检查直接
-失败。生成的消费者 CI 模板固定包版本；安装入口按真实路径解析，避免 macOS `/var` 符号链接导致
-已安装 CLI 静默退出。
+This stage completed the local closeout for lock/CI/package delivery: `lock --from` can
+import the current `npx skills` v3 lock while preserving the original installer fields;
+the directory-tree `skillFolderHash` is not treated as a content digest, and checks fail
+immediately when the SkillSync digest is missing. The generated consumer CI templates pin
+the package version. The install entrypoint resolves the real path so that macOS `/var`
+symlinks do not make the installed CLI exit silently.
 
-| 复核项 | 结果 |
+| Review item | Result |
 | --- | --- |
-| lock v3 互操作 | domain/CLI lock tests 通过；外部字段保留在 `metadata.external` |
-| CI 模板 | GitHub/pre-commit 命令固定 `skillsync@0.1.0`；当前 `private: true` 的发布前置仍明确标注 |
-| 干净安装 | 本地 `npm pack` tarball 安装到全新临时目录；帮助与 `scan --format json` 均成功 |
-| 全量回归 | `npm test`：68 个测试文件通过，1 个跳过；422 个测试通过，1 个跳过 |
-| 静态门禁 | `npm run type-check`、`npm run lint`、`npm run build` 与 `git diff --check` 通过 |
+| Lock v3 interoperability | Domain and CLI lock tests passed; external fields remain in `metadata.external` |
+| CI templates | GitHub and pre-commit commands pin `skillsync@0.1.0`; the pre-publish requirement from `private: true` remains explicit |
+| Clean install | The local `npm pack` tarball installed into a fresh temporary directory; help and `scan --format json` both succeeded |
+| Full regression | `npm test`: 68 test files passed, 1 skipped; 422 tests passed, 1 skipped |
+| Static gates | `npm run type-check`, `npm run lint`, `npm run build`, and `git diff --check` passed |
 
-该阶段未执行 npm publish、Git push、真实网络、凭据、Docker/microVM 或 remote Worker。
+This stage did not run `npm publish`, Git push, real network access, credentials,
+Docker/microVM, or remote Workers.
 
-## M3 离线 runtime 与发布候选验收（2026-08-07）
+## M3 offline runtime and release-candidate acceptance (2026-08-07)
 
-本阶段只验证仓库内已有的 fail-closed runtime contract、发布包和配置解析，不开启任何真实能力。
+This stage validates only the existing fail-closed runtime contracts, release package,
+and config parsing in the repository. It does not enable any real capability.
 
-| 复核项 | 结果 |
+| Review item | Result |
 | --- | --- |
-| runtime preparation | 10 个定向测试文件、88 个测试全部通过；证据仍为 `offline-simulated` |
-| workflow/template 解析 | 4 个 workflow 与 2 个 CI 模板解析通过 |
-| JSON/schema 解析 | 20 个 tracked JSON 解析通过，其中 3 个为 JSON Schema |
-| package dry-run | `npm pack --dry-run` 通过；265 个 package files；未发布 |
-| Docker 门禁 | 本机 daemon socket 不存在，reference integration 保持 skip；未启动、未绕过、未降级到宿主机 |
+| Runtime preparation | All 10 focused test files and all 88 tests passed; evidence remains `offline-simulated` |
+| Workflow/template parsing | 4 workflows and 2 CI templates parsed successfully |
+| JSON/schema parsing | 20 tracked JSON files parsed successfully, including 3 JSON Schemas |
+| Package dry-run | `npm pack --dry-run` passed; 265 package files; not published |
+| Docker gate | No local daemon socket exists, the reference integration remains skipped, and execution did not start, bypass, or degrade to the host |
 
-M3 只证明离线准备层可交付；受控 Docker/microVM、真实 egress/provider、凭据撤销和 remote
-Worker 认证仍是后续外部门禁。
+M3 proves only that the offline preparation layer is deliverable. Controlled
+Docker/microVM, real egress/provider flows, credential revocation, and remote Worker
+authentication remain later external gates.
 
-## M4 公共源码仓库交付（2026-08-07）
+## M4 public source-repository delivery (2026-08-07)
 
-本阶段完成公开源码仓库的交付收口：GitHub 仓库已公开，包元数据指向仓库和 Issue 入口，
-贡献者在不同操作系统或通过 GitHub 网页提交文件时使用统一的 LF 文本换行。npm 发布仍保持
-显式关闭，避免把源码仓库公开误解为已经发布 npm 包。
+This stage completed closeout for a public source repository: the GitHub repository is
+public, package metadata points to the repository and issue entrypoint, and contributors
+use consistent LF text newlines whether they commit from different operating systems or
+through the GitHub web UI. npm publish remains explicitly disabled so that a public
+source repository is not confused with a published npm package.
 
-| 复核项 | 结果 |
+| Review item | Result |
 | --- | --- |
-| 公共仓库 | `https://github.com/Chumaniac/skillsync` 已公开，可读取 `main` 分支 |
-| 开源治理 | MIT、贡献指南、安全政策、行为准则、Issue 模板、PR 模板和 CI 均已入库 |
-| 包元数据 | `repository`、`homepage`、`bugs` 已指向公共仓库；`private: true` 仍保留 |
-| GitHub Actions | 修复后的 `main` push workflow 中 `regression`、`verify` 均通过；SARIF 已被 Code Scanning 接受，上传动作使用 CodeQL v4 |
-| 发布边界 | 未执行 npm publish、真实网络、凭据、Docker/microVM 或 remote Worker |
+| Public repository | `https://github.com/Chumaniac/skillsync` is public and `main` can be read |
+| Open-source governance | MIT, contributor guide, security policy, code of conduct, Issue templates, PR template, and CI are all in the repository |
+| Package metadata | `repository`, `homepage`, and `bugs` point to the public repository; `private: true` remains |
+| GitHub Actions | After the fix, `regression` and `verify` pass in the `main` push workflow; SARIF has been accepted by Code Scanning, and the upload action uses CodeQL v4 |
+| Release boundary | `npm publish`, real network access, credentials, Docker/microVM, and remote Workers were not executed |
 
-M4 达到“可公开协作、可审阅、可本地验证”的源码交付状态；npm 包发布和真实 runtime 能力
-仍需分别通过独立的发布与安全门禁。
+M4 reaches a public-source delivery state that is ready for collaboration, review, and
+local verification. npm package publication and real runtime capabilities still require
+their own separate release and security gates.

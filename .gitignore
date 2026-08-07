@@ -14,6 +14,7 @@ coverage/
 *.der
 *.tgz
 .superpowers/
+.worktrees/
 docs/superpowers/
 .idea/
 .vscode/

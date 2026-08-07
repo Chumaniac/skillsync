@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Documented the English-only documentation migration by aligning the public workflow
+  filters with `MVP-Implementation-Plan.md`, `SkillSync-Complete-Design.md`, and
+  `Competitive-Research-and-Design-Rationale.md`; historical versions remain available
+  through Git history, and all tracked Markdown and user-visible descriptions are now
+  English-only.
 - Prepared the public repository boundary with open-source contribution, security, conduct,
   issue, and pull-request guidance.
 - Added canonical GitHub repository, homepage, and issue-tracker metadata, plus cross-platform
