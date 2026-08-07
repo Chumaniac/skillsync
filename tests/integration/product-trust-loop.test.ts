@@ -65,13 +65,13 @@ describe("product trust loop", () => {
     const originalScript = join(fixtureRoot, "scripts", "check.sh");
     const originalContent = await readFile(originalScript, "utf8");
     const originalMode = await mode(originalScript);
-    expect(originalMode).toBe(0o777);
     const tempRoot = await mkdtemp(join(tmpdir(), "skillsync-product-trust-loop-"));
     const copyRoot = join(tempRoot, "review");
     const copyScript = join(copyRoot, "scripts", "check.sh");
     const copyMarker = join(copyRoot, "executed.marker");
     const fixtureMarker = join(fixtureRoot, "executed.marker");
     await cp(fixtureRoot, copyRoot, { recursive: true });
+    // Normalize the copied fixture so this contract does not depend on a web upload preserving 0777.
     if ((await mode(copyScript)) !== 0o777) {
       await chmod(copyScript, 0o777);
     }
