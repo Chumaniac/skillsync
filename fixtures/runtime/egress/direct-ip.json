@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "scenario": "direct-ip",
+  "request": {
+    "requestId": "egress-direct-ip-1",
+    "host": "203.0.113.10",
+    "port": 443,
+    "protocol": "https"
+  },
+  "policy": {
+    "mode": "allowlist",
+    "allowedHosts": ["api.example.com"]
+  },
+  "expected_decision": {
+    "schema_version": 1,
+    "request_id": "egress-direct-ip-1",
+    "requested_host": "203.0.113.10",
+    "port": 443,
+    "protocol": "https",
+    "decision": "allowed",
+    "enforcement": "proxy",
+    "proxy_status": "available",
+    "resolved_addresses": ["203.0.113.10"],
+    "redirect_chain": []
+  },
+  "expected_finding": {
+    "code": "egress.direct-ip-forbidden",
+    "status": "fail"
+  },
+  "expected_digests": {
+    "request_digest": "sha256:64b84d86ebf42a305150a7e8f58df349f0ee9f12f62ef1d42b106ed2f8cad45a",
+    "decision_digest": "sha256:e843b6bbf32c25036bd5775ef4b7a6dbea875f0037bcc1293ca8439724b85bb7",
+    "evidence_digest": "sha256:b088c1225640fe211f9ddf27804ece5bf6e50b319c09ae9c68decb06d9458a0d"
+  }
+}

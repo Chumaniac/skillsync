@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "scenario": "proxy-unavailable",
+  "request": {
+    "requestId": "egress-proxy-unavailable-1",
+    "host": "api.example.com",
+    "port": 443,
+    "protocol": "https"
+  },
+  "policy": {
+    "mode": "allowlist",
+    "allowedHosts": ["api.example.com"]
+  },
+  "expected_decision": {
+    "schema_version": 1,
+    "request_id": "egress-proxy-unavailable-1",
+    "requested_host": "api.example.com",
+    "port": 443,
+    "protocol": "https",
+    "decision": "blocked",
+    "enforcement": "proxy",
+    "proxy_status": "unavailable",
+    "resolved_addresses": [],
+    "redirect_chain": []
+  },
+  "expected_finding": {
+    "code": "egress.proxy-unavailable",
+    "status": "fail"
+  },
+  "expected_digests": {
+    "request_digest": "sha256:b7f64b32b3b052f5fa441afbd6e756453c80bd04242afa14e1b8ed3d4d46f55b",
+    "decision_digest": "sha256:63c09a8df8a0e2635fa5a6c2b47ba8de98c8b79737ce193f37310a1d91828a28",
+    "evidence_digest": "sha256:a9ab2a61517c3dad43c24d1f150e76d673a8c50ee8f8fb03ac89d111343eb288"
+  }
+}
