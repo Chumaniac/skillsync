@@ -6,6 +6,8 @@
   issue, and pull-request guidance.
 - Added canonical GitHub repository, homepage, and issue-tracker metadata, plus cross-platform
   LF normalization for checked-in text files.
+- Hardened public CI for web-uploaded fixture modes and runner portability, made SARIF results
+  acceptable to Code Scanning, and moved generated GitHub Actions to CodeQL v4.
 - Kept live network, provider credentials, microVM, and remote Worker capabilities disabled;
   public verification remains offline and fail-closed.
 - Completed the local release-candidate review: `npm test` passed 400 tests across 68 files

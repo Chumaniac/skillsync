@@ -81,7 +81,7 @@ microVM 和远程 worker 在启用前必须满足的安全条件。
 
 最近一次验证只在仓库本地、离线完成：
 
-- `npm test`：68 个测试文件通过，1 个跳过；422 个测试通过，1 个跳过。
+- `npm test`：68 个测试文件通过，1 个跳过；423 个测试通过，1 个跳过。
 - runtime preparation 定向集合：10 个测试文件、88 个测试通过，simulator evidence 为 `offline-simulated`。
 - type-check、lint、build、`npm pack --dry-run`、4 个 workflow 和 2 个发布模板解析、20 个 tracked JSON（含 3 个 JSON Schema）均通过；public-tree hygiene 和 AST side-effect 扫描无命中。
 - Docker reference integration 由可用性门禁跳过，本机 daemon socket 不存在；本次没有使用真实 endpoint、凭据、Docker、microVM、remote Worker 或受控环境，也没有把本地模拟结果当作 live evidence。
