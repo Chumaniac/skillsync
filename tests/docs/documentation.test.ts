@@ -29,7 +29,9 @@ describe("release documentation", () => {
     const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
       bugs?: { url?: string };
       homepage?: string;
+      name?: string;
       private?: boolean;
+      publishConfig?: { access?: string };
       repository?: { type?: string; url?: string };
     };
 
@@ -113,17 +115,19 @@ describe("release documentation", () => {
     expect(runbook).toContain("mTLS");
     expect(runbook).toContain("remote Worker");
     expect(releaseWorkflow).toContain('tags: ["v*"]');
-    expect(releaseWorkflow).not.toContain("npm publish");
+    expect(releaseWorkflow).toContain("npm publish --provenance --access public");
     expect(repositoryWorkflow).toContain("git grep -nE");
     expect(repositoryWorkflow).not.toContain("rg -n");
     expect(repositoryWorkflow).toContain("SkillSync-Complete-Design.md");
     expect(repositoryWorkflow).toContain("Competitive-Research-and-Design-Rationale.md");
     expect(repositoryWorkflow).toContain("MVP-Implementation-Plan.md");
-    expect(githubTemplate).toContain("skillsync@0.1.0");
-    expect(preCommitTemplate).toContain("skillsync@0.1.0");
+    expect(githubTemplate).toContain("@chumaniac/skillsync@0.1.0");
+    expect(preCommitTemplate).toContain("@chumaniac/skillsync@0.1.0");
     expect(review).toContain("runtime-activation-policy.ts");
     expect(review).toContain("runtime-deployment-requirements.ts");
-    expect(packageJson.private).toBe(true);
+    expect(packageJson.name).toBe("@chumaniac/skillsync");
+    expect(packageJson.private).toBe(false);
+    expect(packageJson.publishConfig).toEqual({ access: "public" });
     expect(packageJson.repository).toEqual({
       type: "git",
       url: "https://github.com/Chumaniac/skillsync.git",

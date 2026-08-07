@@ -3,6 +3,6 @@ repos:
     hooks:
       - id: skillsync-verify
         name: Verify Agent Skills with SkillSync
-        entry: npx --yes skillsync@0.1.0 verify --format json --path .claude/skills --path .agents/skills
+        entry: npx --yes @chumaniac/skillsync@0.1.0 verify --format json --path .claude/skills --path .agents/skills
         language: system
         pass_filenames: false

@@ -99,7 +99,7 @@ describe("live runtime preparation", () => {
     expect(content).not.toMatch(/npm publish|NODE_AUTH_TOKEN|secrets\.|docker\.sock/i);
   });
 
-  it("keeps release validation tag-based and publication-free", async () => {
+  it("keeps release validation tag-based and publishes only with provenance", async () => {
     const { content, document } = await readWorkflow("release.yml");
     const trigger = asRecord(document.on);
     const push = asRecord(trigger.push);
@@ -119,8 +119,11 @@ describe("live runtime preparation", () => {
       expect(runs).toContain(command);
     }
 
-    expect(content).not.toMatch(/npm publish|npm dist-tag|NODE_AUTH_TOKEN|registry-url|secrets\./i);
-    expect(asRecord(document.permissions)).toEqual({ contents: "read" });
+    expect(runs).toContain("npm publish --provenance --access public");
+    expect(content).toContain('node-version: "24"');
+    expect(content).toContain("package-manager-cache: false");
+    expect(content).not.toMatch(/npm dist-tag|NODE_AUTH_TOKEN|registry-url|secrets\./i);
+    expect(asRecord(document.permissions)).toEqual({ contents: "read", "id-token": "write" });
   });
 
   it("keeps workflow and test sources outside the package artifact allowlist", async () => {
@@ -132,7 +135,7 @@ describe("live runtime preparation", () => {
       ? packageJson.files.filter((entry): entry is string => typeof entry === "string")
       : [];
 
-    expect(packageJson.private).toBe(true);
+    expect(packageJson.private).toBe(false);
     expect(files).toContain("dist");
     expect(files).not.toContain(".github");
     expect(files).not.toContain(".github/**");

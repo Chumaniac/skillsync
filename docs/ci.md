@@ -13,11 +13,11 @@ they can be replaced.
 
 The generated GitHub Action grants `contents: read` and uploads SARIF findings;
 it does not execute Skill scripts. The generated consumer command pins the
-published SkillSync package version (`skillsync@0.1.0` by default); override it
+published SkillSync package version (`@chumaniac/skillsync@0.1.0` by default); override it
 with `ci init --package-version <version>` when upgrading. Because the current
-repository keeps `private: true`, this consumer template becomes runnable only
-after an explicit package publication decision; the repository's own workflow
-uses the checked-out build instead.
+repository publishes a scoped public package, the generated consumer template can
+be used after that package version is available; the repository's own workflow uses
+the checked-out build instead.
 
 The repository's own `.github/workflows/skillsync.yml` runs the offline regression
 and verifies the checked-in `fixtures/behavior/review-basic` fixture on pull
@@ -27,8 +27,8 @@ and public-tree hygiene rather than assuming that this repository contains a
 user's `~/.agents/skills` or `~/.claude/skills` directory.
 
 The default regression also runs the live-runtime preparation integration and
-documentation tests. Its package step is `npm pack --dry-run`; it does not
-publish the private package or resolve any deployment-owned reference.
+documentation tests. Its package step is `npm pack --dry-run`; it does not publish
+or resolve any deployment-owned reference.
 
 ## Runtime canary contracts
 
@@ -65,10 +65,11 @@ placeholders is intentionally not accepted as production evidence.
 ## Release validation
 
 `.github/workflows/release.yml` runs only for tags matching `v*`. It checks the
-test suite, type-check, lint, build, and `npm pack --dry-run`. It has no
-publication step, no public secret input, and no live runtime input. `private: true`
-remains in `package.json`; a tag is a validation signal, not permission
-to publish or activate a capability.
+test suite, type-check, lint, build, and `npm pack --dry-run`, then publishes
+`@chumaniac/skillsync` with `npm publish --provenance --access public`. The job
+uses GitHub OIDC (`id-token: write`) and no long-lived npm token. npm Trusted
+Publisher configuration is an external prerequisite; a tag is not permission
+to activate a live runtime capability.
 
 The operator-facing activation, revocation, rollback, and evidence review
 procedure is in [`runtime-operator-runbook.md`](runtime-operator-runbook.md).

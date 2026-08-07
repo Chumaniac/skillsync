@@ -16,8 +16,8 @@ describe("skillsync ci", () => {
     const content = renderGitHubAction({ nodeVersion: "20", paths: [".agents/skills"], packageVersion: "0.1.0" });
 
     expect(content).toContain("contents: read");
-    expect(content).toContain("npx --yes skillsync@0.1.0 verify --format sarif");
-    expect(content).toContain("published skillsync@0.1.0");
+    expect(content).toContain("npx --yes @chumaniac/skillsync@0.1.0 verify --format sarif");
+    expect(content).toContain("published @chumaniac/skillsync@0.1.0");
     expect(content).toContain("github/codeql-action/upload-sarif@v4");
     expect(content).toContain(".agents/skills/**");
   });
@@ -28,7 +28,7 @@ describe("skillsync ci", () => {
     expect(content).toContain("id: skillsync-verify");
     expect(content).toContain(".claude/skills");
     expect(content).toContain(".agents/skills");
-    expect(content).toContain("npx --yes skillsync@0.1.0 verify --format json");
+    expect(content).toContain("npx --yes @chumaniac/skillsync@0.1.0 verify --format json");
   });
 
   it("prints a plan without writing, and applies only when requested", async () => {
@@ -50,7 +50,7 @@ describe("skillsync ci", () => {
       apply: true,
     });
     expect(applied.applied).toBe(true);
-    expect(await readFile(applied.outputPath, "utf8")).toContain("skillsync@0.1.0 verify --format sarif");
+    expect(await readFile(applied.outputPath, "utf8")).toContain("@chumaniac/skillsync@0.1.0 verify --format sarif");
 
     await expect(
       runCiInit({

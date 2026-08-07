@@ -28,7 +28,7 @@ remote Workers remain disabled.
 | Activation readiness | Prepared | Non-live readiness evaluator and manual canary; 5 focused tests |
 | External deployment requirements | Contract prepared | Schema, reference-only template, pure parser/evaluator; 15 focused tests; does not parse root or Worker references |
 | Controlled canary workflow | Prepared | Manual workflow; runs full offline runtime simulator contracts by default, optional local reference Docker smoke, no credential injection; `enable_live_capabilities` defaults to `false`, and the job rejects any value other than `false` |
-| Release validation workflow | Prepared | `v*` tags run only test, type-check, lint, build, and `npm pack --dry-run`; does not publish; `private: true` remains unchanged |
+| Release validation workflow | Prepared | `v*` tags run test, type-check, lint, build, package inspection, and OIDC-backed public npm publication with provenance; no long-lived npm token is used |
 | Runtime operator runbook | Prepared | Covers activation order, revocation, rollback, evidence review, and deployment-owned external prerequisites; contains no real endpoint or secret location |
 | Remote lifecycle and cleanup proof | Local pass, pending review | 17 focused tests; secure mode validates strictly and requires a Worker receipt; retries must clean up the current attempt first |
 | Dogfood results | Recorded | `docs/dogfood-2026-08-05.md`; known issues reserved to the user directory were found and not rewritten automatically |
@@ -180,3 +180,25 @@ and updated workflow filters.
 | Current local evidence | Pass | 69 test files passed, 1 skipped; 426 tests passed, 1 skipped; type-check, lint, build, and package dry-run passed |
 | npm publication | Intentionally pending | `private: true` remains; npm publication requires a separate release decision |
 | Live runtime enablement | Intentionally pending | Independent security approval and controlled-environment evidence remain mandatory |
+
+## M6 npm package release preparation (2026-08-07)
+
+The package release track now targets the scoped public package
+`@chumaniac/skillsync`. The package metadata, generated consumer templates, and
+tag workflow are aligned. Publication uses GitHub OIDC and npm provenance rather
+than a long-lived registry token; the npm Trusted Publisher configuration remains
+an external one-time setup for the package owner.
+
+| Review item | Result |
+| --- | --- |
+| Package identity | Prepared | `@chumaniac/skillsync@0.1.0`; the unscoped `skillsync` name is already occupied by another package |
+| Public access | Prepared | `private: false` and `publishConfig.access: public` |
+| Consumer templates | Pass | GitHub Action and pre-commit templates pin `@chumaniac/skillsync@0.1.0` |
+| Release workflow | Prepared | Tag validation runs on Node 24, then publishes with OIDC and provenance; no npm token is stored in GitHub |
+| npm Trusted Publisher | Pending owner setup | Configure user `Chumaniac`, repository `skillsync`, workflow `.github/workflows/release.yml`, and allow `npm publish` |
+| First publication | Pending authentication | Requires an authenticated npm account that owns the `@chumaniac` scope |
+
+This package track does not change the offline-first product boundary. Real
+network access, provider credentials, Docker/microVM execution, and remote Worker
+execution remain disabled pending the independent security and controlled-runtime
+gates above.
