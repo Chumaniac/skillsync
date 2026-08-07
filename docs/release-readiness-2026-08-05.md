@@ -139,6 +139,7 @@ Worker 认证仍是后续外部门禁。
 | 公共仓库 | `https://github.com/Chumaniac/skillsync` 已公开，可读取 `main` 分支 |
 | 开源治理 | MIT、贡献指南、安全政策、行为准则、Issue 模板、PR 模板和 CI 均已入库 |
 | 包元数据 | `repository`、`homepage`、`bugs` 已指向公共仓库；`private: true` 仍保留 |
+| GitHub Actions | 修复后的 `main` push workflow 中 `regression`、`verify` 均通过；SARIF 已被 Code Scanning 接受，上传动作使用 CodeQL v4 |
 | 发布边界 | 未执行 npm publish、真实网络、凭据、Docker/microVM 或 remote Worker |
 
 M4 达到“可公开协作、可审阅、可本地验证”的源码交付状态；npm 包发布和真实 runtime 能力
