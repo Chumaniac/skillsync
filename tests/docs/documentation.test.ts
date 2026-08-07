@@ -23,6 +23,7 @@ describe("release documentation", () => {
     const ci = await readFile("docs/ci.md", "utf8");
     const runbook = await readFile("docs/runtime-operator-runbook.md", "utf8");
     const releaseWorkflow = await readFile(".github/workflows/release.yml", "utf8");
+    const repositoryWorkflow = await readFile(".github/workflows/skillsync.yml", "utf8");
     const githubTemplate = await readFile("templates/github/skillsync.yml", "utf8");
     const preCommitTemplate = await readFile("templates/pre-commit/skillsync.yaml", "utf8");
     const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
@@ -110,6 +111,8 @@ describe("release documentation", () => {
     expect(runbook).toContain("remote Worker");
     expect(releaseWorkflow).toContain('tags: ["v*"]');
     expect(releaseWorkflow).not.toContain("npm publish");
+    expect(repositoryWorkflow).toContain("git grep -nE");
+    expect(repositoryWorkflow).not.toContain("rg -n");
     expect(githubTemplate).toContain("skillsync@0.1.0");
     expect(preCommitTemplate).toContain("skillsync@0.1.0");
     expect(review).toContain("runtime-activation-policy.ts");
