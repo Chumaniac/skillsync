@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "evidenceMode": "offline-simulated",
+  "request": {
+    "runId": "remote-contract-1",
+    "attempt": 1,
+    "resourceId": "worker-contract-1",
+    "stagingDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "inputDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "imageDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "contextDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "mode": "contract"
+  },
+  "expectedEventDigest": "sha256:11eab6e8198ba6e882aa02c1903e20a869ba279ae05e4ee02034c913b229b81a",
+  "expectedLifecycle": [
+    "run.created",
+    "workspace.staged",
+    "run.started",
+    "run.finished",
+    "teardown.started"
+  ]
+}
