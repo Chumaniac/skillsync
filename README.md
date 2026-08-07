@@ -88,10 +88,11 @@ microVM 和远程 worker 在启用前必须满足的安全条件。
 
 ### 源码仓库与 npm 发布边界
 
-本项目可以作为公开源码仓库发布。当前 [package.json](./package.json) 保留
-`private: true`，表示尚未开启 npm 包发布；这不会阻止 GitHub 源码仓库设为公开。
-未来如果要发布 npm 包，需要在确定 GitHub 仓库地址后补充 `repository`、`homepage`、
-`bugs` 和正式的发布工作流，并单独复核包内容与 provenance 策略。
+本项目作为公开源码仓库发布在
+[github.com/Chumaniac/skillsync](https://github.com/Chumaniac/skillsync)。
+[`package.json`](./package.json) 已包含 `repository`、`homepage` 和 `bugs` 元数据。
+当前仍保留 `private: true`，表示尚未开启 npm 包发布；这不会阻止 GitHub 源码仓库公开。
+未来如果要发布 npm 包，需要单独启用正式发布工作流，并复核包内容与 provenance 策略。
 
 ### 报告隐私边界
 

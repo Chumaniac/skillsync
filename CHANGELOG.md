@@ -4,6 +4,8 @@
 
 - Prepared the public repository boundary with open-source contribution, security, conduct,
   issue, and pull-request guidance.
+- Added canonical GitHub repository, homepage, and issue-tracker metadata, plus cross-platform
+  LF normalization for checked-in text files.
 - Kept live network, provider credentials, microVM, and remote Worker capabilities disabled;
   public verification remains offline and fail-closed.
 - Completed the local release-candidate review: `npm test` passed 400 tests across 68 files

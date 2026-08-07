@@ -4,6 +4,14 @@
   "private": true,
   "license": "MIT",
   "description": "A provenance, compatibility, and behavior verification layer for Agent Skills.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Chumaniac/skillsync.git"
+  },
+  "homepage": "https://github.com/Chumaniac/skillsync#readme",
+  "bugs": {
+    "url": "https://github.com/Chumaniac/skillsync/issues"
+  },
   "keywords": [
     "agent-skills",
     "developer-tools",
