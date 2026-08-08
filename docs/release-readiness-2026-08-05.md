@@ -202,3 +202,23 @@ This package track does not change the offline-first product boundary. Real
 network access, provider credentials, Docker/microVM execution, and remote Worker
 execution remain disabled pending the independent security and controlled-runtime
 gates above.
+
+## M7 npm publication closeout (2026-08-08)
+
+The initial public package release is now available as
+`@chumanic/skillsync@0.1.0`. The package was published interactively after the
+release checks passed and was verified from a clean consumer directory.
+
+| Review item | Result |
+| --- | --- |
+| Public registry metadata | Pass | Anonymous registry lookup resolves version `0.1.0` with the `latest` tag |
+| Clean consumer install | Pass | `npm install --ignore-scripts @chumanic/skillsync@0.1.0` completed successfully |
+| CLI smoke test | Pass | The installed `skillsync --help` command rendered the public command list |
+| Package audit | Pass | The clean install reported zero vulnerabilities |
+| npm Trusted Publisher | Pending owner setup | Configure user `Chumaniac`, repository `skillsync`, workflow `release.yml`, and allow `npm publish` |
+| Future tag publication | Pending owner setup | The GitHub OIDC/provenance workflow is ready, but the npm Trusted Publisher must be configured before publishing a future tag |
+
+This closeout confirms public distribution and local consumer usability. It does
+not approve live network access, provider credentials, Docker/microVM execution,
+or remote Worker execution; those remain separate security and controlled-runtime
+gates.
