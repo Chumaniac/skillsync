@@ -27,6 +27,7 @@ describe("release documentation", () => {
     const repositoryWorkflow = await readFile(".github/workflows/skillsync.yml", "utf8");
     const githubTemplate = await readFile("templates/github/skillsync.yml", "utf8");
     const preCommitTemplate = await readFile("templates/pre-commit/skillsync.yaml", "utf8");
+    const terminalDemo = await readFile("docs/assets/verify-demo.svg", "utf8");
     const changelog = await readFile("CHANGELOG.md", "utf8");
     const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
       bugs?: { url?: string };
@@ -44,6 +45,9 @@ describe("release documentation", () => {
     );
     expect(readme).toContain(
       "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png",
+    );
+    expect(terminalDemo).toContain(
+      "npx --yes --package=@chumanic/skillsync@0.1.1 --call 'skillsync verify --path . --target codex'",
     );
     expect(readme).toContain("does not execute Skill scripts");
     expect(readme).toContain("does not read credentials");
