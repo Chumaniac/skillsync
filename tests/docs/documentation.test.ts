@@ -1,3 +1,4 @@
+import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
@@ -35,27 +36,25 @@ describe("release documentation", () => {
       repository?: { type?: string; url?: string };
     };
 
-    expect(readme).toContain("verify");
-    expect(readme).toContain("explain");
-    expect(readme).toContain("fix --plan");
-    expect(readme).toContain("fix --apply");
-    expect(readme).toContain("report");
-    expect(readme).toContain("./SkillSync-Complete-Design.md");
-    expect(readme).toContain("./Competitive-Research-and-Design-Rationale.md");
-    expect(readme).toContain("./MVP-Implementation-Plan.md");
-    expect(readme).toContain("applied");
-    expect(readme).toContain("verified");
-    expect(readme).toContain("Manual resolutions are shown for review");
-    expect(readme).toContain("never invent or overwrite user content");
-    expect(readme).toContain("no Skill script is executed by this flow");
+    expect(readme).toContain("Verify Agent Skills before you trust them.");
+    expect(readme).toContain("Alpha · v0.1.0 · Node.js 20+");
+    expect(readme).toContain(
+      "npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex",
+    );
+    expect(readme).toContain(
+      "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png",
+    );
     expect(readme).toContain("does not execute Skill scripts");
-    expect(readme).toContain("include_local_paths");
-    expect(readme).toContain("<local-path>");
+    expect(readme).toContain("does not read credentials");
+    expect(readme).not.toContain("## Documentation index");
+    expect(readme).not.toContain("## Recommended reading order");
+    expect(readme).not.toContain("Local release-candidate validation");
+    expect(existsSync("docs/assets/verify-demo.png")).toBe(true);
+    expect(statSync("docs/assets/verify-demo.png").size).toBeGreaterThan(1_000);
     expect(security).toContain("not a security certification");
     expect(security).toContain("reporting.include_local_paths");
     expect(security).toContain("<local-path>");
     expect(security).toContain("Replay");
-    expect(readme).toContain("--execute");
     expect(authoring).toContain("schema_version: 2");
     expect(authoring).toContain("--backend replay");
     expect(security).toContain("symlink");
@@ -63,16 +62,9 @@ describe("release documentation", () => {
     expect(compatibility).toContain("claude-code@1");
     expect(compatibility).toContain("cursor@1");
     expect(compatibility).toContain("skillFolderHash");
-    expect(readme).toContain("`npx skills` v3");
-    expect(readme).toContain("runner validate");
-    expect(readme).toContain("reference Runner");
     expect(security).toContain("workspace evidence");
     expect(runner).toContain("runner validate");
     expect(provenance).toContain("runner.signature-verification-unavailable");
-    expect(readme).toContain("runner adapter validate");
-    expect(readme).toContain("external runtime deployment requirements");
-    expect(readme).toContain("--image skillsync/reference@sha256:");
-    expect(readme).toContain("reference-adapter-policy.json");
     expect(adapter).toContain("explicit-short-lived");
     expect(adapter).toContain("external immutable image reference and an external identity policy");
     expect(runtime).toContain("allowlist");
