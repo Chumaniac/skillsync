@@ -9,7 +9,11 @@ import { describe, expect, it } from "vitest";
 import { isCliEntryPoint, runCli } from "../../src/cli/index";
 
 describe("skillsync CLI", () => {
-  it("lists the verification commands", async () => {
+  it("reports the public version and lists the verification commands", async () => {
+    const version = await runCli(["--version"]);
+    expect(version.exitCode).toBe(0);
+    expect(version.stdout).toContain("0.1.1");
+
     const result = await runCli(["--help"]);
 
     expect(result.stdout).toContain("scan");

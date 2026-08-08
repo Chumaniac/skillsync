@@ -13,7 +13,7 @@ they can be replaced.
 
 The generated GitHub Action grants `contents: read` and uploads SARIF findings;
 it does not execute Skill scripts. The generated consumer command pins the
-published SkillSync package version (`@chumanic/skillsync@0.1.0` by default); override it
+published SkillSync package version (`@chumanic/skillsync@0.1.1` by default); override it
 with `ci init --package-version <version>` when upgrading. Because the current
 repository publishes a scoped public package, the generated consumer template can
 be used after that package version is available; the repository's own workflow uses

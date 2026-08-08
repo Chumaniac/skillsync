@@ -53,7 +53,7 @@ import { renderSarif } from "../reporters/sarif.js";
 import { renderText } from "../reporters/text.js";
 import { parseOutputFormat } from "./output.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 
 const COMMANDS = [
   ["scan", "Inspect skill files without executing their instructions."],
@@ -615,7 +615,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .command("init")
     .option("--target <target>", "Template target: github or pre-commit", "github")
     .option("--node-version <version>", "Node.js version for GitHub Actions", "20")
-    .option("--package-version <version>", "Pinned published SkillSync package version", "0.1.0")
+    .option("--package-version <version>", "Pinned published SkillSync package version", "0.1.1")
     .option("--path <paths...>", "Project Skill paths")
     .option("--apply", "Write the generated file")
     .option("--force", "Allow replacing an existing generated file")
@@ -623,7 +623,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
       const result = await runCiInit({
         target: options.target ?? "github",
         nodeVersion: options.nodeVersion ?? "20",
-        packageVersion: options.packageVersion ?? "0.1.0",
+        packageVersion: options.packageVersion ?? "0.1.1",
         paths: options.path ?? [],
         apply: options.apply,
         force: options.force,

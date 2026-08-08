@@ -1,28 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-08-08
 
-- Published and smoke-tested the public npm package `@chumanic/skillsync@0.1.0`; a clean
-  consumer install, `skillsync --help`, and the package audit passed. Future tag releases
-  use the configured OIDC/provenance workflow without a long-lived npm token.
-- Documented the English-only documentation migration by aligning the public workflow
-  filters with `MVP-Implementation-Plan.md`, `SkillSync-Complete-Design.md`, and
-  `Competitive-Research-and-Design-Rationale.md`; historical versions remain available
-  through Git history, and all tracked Markdown and user-visible descriptions are now
-  English-only.
-- Prepared the public repository boundary with open-source contribution, security, conduct,
-  issue, and pull-request guidance.
-- Added canonical GitHub repository, homepage, and issue-tracker metadata, plus cross-platform
-  LF normalization for checked-in text files.
-- Hardened public CI for web-uploaded fixture modes and runner portability, made SARIF results
-  acceptable to Code Scanning, and moved generated GitHub Actions to CodeQL v4.
-- Kept live network, provider credentials, microVM, and remote Worker capabilities disabled;
-  public verification remains offline and fail-closed.
-- Completed the local release-candidate review: `npm test` passed 400 tests across 68 files
-  with 1 Docker integration test skipped, and the focused offline runtime-preparation set
-  passed 61 tests across 7 files. Type-check, lint, build, package dry-run, workflow/JSON
-  parsing, public-tree hygiene, AST side-effect, live-entrypoint, and false-only workflow
-  input checks passed locally; no controlled or remote runtime evidence was claimed.
+- Corrected the valid Docker workspace bind-mount form and recorded controlled smoke evidence.
+- Hardened immutable reference-image inputs and instruction-network isolation while retaining
+  fail-closed local validation.
+- Recorded current local release evidence: 436 passed tests across 69 files, one opt-in Docker
+  integration skip locally, and type-check, lint, build, and package dry-run completion.
 
 ## 0.1.0 - 2026-08-04
 

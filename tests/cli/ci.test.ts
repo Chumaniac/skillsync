@@ -12,7 +12,7 @@ import {
 } from "../../src/cli/commands/ci";
 
 describe("skillsync ci", () => {
-  it("renders a read-only GitHub Action with SARIF upload", () => {
+  it("preserves an explicitly supplied 0.1.0 GitHub Action package version", () => {
     const content = renderGitHubAction({ nodeVersion: "20", paths: [".agents/skills"], packageVersion: "0.1.0" });
 
     expect(content).toContain("contents: read");
@@ -22,7 +22,7 @@ describe("skillsync ci", () => {
     expect(content).toContain(".agents/skills/**");
   });
 
-  it("renders a pre-commit hook for explicit Skill paths", () => {
+  it("preserves an explicitly supplied 0.1.0 pre-commit package version", () => {
     const content = renderPreCommit({ paths: [".claude/skills", ".agents/skills"], packageVersion: "0.1.0" });
 
     expect(content).toContain("id: skillsync-verify");
@@ -40,6 +40,7 @@ describe("skillsync ci", () => {
       cwd: root,
     });
     expect(planned.applied).toBe(false);
+    expect(planned.content).toContain("@chumanic/skillsync@0.1.1 verify --format sarif");
     await expect(access(join(root, ".github/workflows/skillsync.yml"))).rejects.toThrow();
 
     const applied = await runCiInit({
@@ -50,7 +51,7 @@ describe("skillsync ci", () => {
       apply: true,
     });
     expect(applied.applied).toBe(true);
-    expect(await readFile(applied.outputPath, "utf8")).toContain("@chumanic/skillsync@0.1.0 verify --format sarif");
+    expect(await readFile(applied.outputPath, "utf8")).toContain("@chumanic/skillsync@0.1.1 verify --format sarif");
 
     await expect(
       runCiInit({

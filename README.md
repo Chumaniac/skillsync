@@ -2,7 +2,7 @@
 
 **Verify Agent Skills before you trust them.** SkillSync checks a local Skill's provenance, compatibility, and changes without executing it.
 
-> **Alpha · v0.1.0 · Node.js 20+**
+> **Alpha · v0.1.1 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.png)
@@ -10,7 +10,7 @@
 Run this from a directory containing `SKILL.md`:
 
 ```bash
-npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'
+npx --yes --package=@chumanic/skillsync@0.1.1 --call 'skillsync verify --path . --target codex'
 ```
 
 ## What you get

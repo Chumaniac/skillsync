@@ -27,6 +27,7 @@ describe("release documentation", () => {
     const repositoryWorkflow = await readFile(".github/workflows/skillsync.yml", "utf8");
     const githubTemplate = await readFile("templates/github/skillsync.yml", "utf8");
     const preCommitTemplate = await readFile("templates/pre-commit/skillsync.yaml", "utf8");
+    const changelog = await readFile("CHANGELOG.md", "utf8");
     const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
       bugs?: { url?: string };
       homepage?: string;
@@ -37,9 +38,9 @@ describe("release documentation", () => {
     };
 
     expect(readme).toContain("Verify Agent Skills before you trust them.");
-    expect(readme).toContain("Alpha · v0.1.0 · Node.js 20+");
+    expect(readme).toContain("Alpha · v0.1.1 · Node.js 20+");
     expect(readme).toContain(
-      "npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'",
+      "npx --yes --package=@chumanic/skillsync@0.1.1 --call 'skillsync verify --path . --target codex'",
     );
     expect(readme).toContain(
       "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png",
@@ -113,8 +114,13 @@ describe("release documentation", () => {
     expect(repositoryWorkflow).toContain("SkillSync-Complete-Design.md");
     expect(repositoryWorkflow).toContain("Competitive-Research-and-Design-Rationale.md");
     expect(repositoryWorkflow).toContain("MVP-Implementation-Plan.md");
-    expect(githubTemplate).toContain("@chumanic/skillsync@0.1.0");
-    expect(preCommitTemplate).toContain("@chumanic/skillsync@0.1.0");
+    expect(githubTemplate).toContain("@chumanic/skillsync@0.1.1");
+    expect(preCommitTemplate).toContain("@chumanic/skillsync@0.1.1");
+    expect(ci).toContain("@chumanic/skillsync@0.1.1");
+    expect(changelog).toContain("## 0.1.1 - 2026-08-08");
+    expect(changelog).toContain("valid Docker workspace bind-mount form");
+    expect(changelog).toContain("immutable reference-image inputs and instruction-network isolation");
+    expect(changelog).toContain("436 passed tests across 69 files");
     expect(review).toContain("runtime-activation-policy.ts");
     expect(review).toContain("runtime-deployment-requirements.ts");
     expect(packageJson.name).toBe("@chumanic/skillsync");
