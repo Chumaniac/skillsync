@@ -248,16 +248,36 @@ describe("DockerBackend", () => {
     expect(call.args).not.toContain("/bin/sh");
   });
 
-  it("does not expose Docker stderr in public control errors", async () => {
+  it("classifies bind-mount create failures without exposing the source path", async () => {
     const runner = new FakeRunner([result({
       exitCode: 1,
-      stderr: "secret-provider-token /workspace/private-config",
+      stderr: 'Error response from daemon: invalid mount config for type "bind": bind source path does not exist: /private/tenant-a/skillsync-stage',
     })]);
     const backend = new DockerBackend({ runner });
 
     await expect(backend.provision(makeSpec())).rejects.toThrowError(
-      new Error("Docker container creation failed"),
+      new Error("Docker container creation failed: bind-mount-invalid"),
     );
+  });
+
+  it("uses an unknown category without exposing arbitrary Docker stderr", async () => {
+    const fakeSecret = "secret-provider-token";
+    const runner = new FakeRunner([result({
+      exitCode: 1,
+      stderr: `${fakeSecret} /workspace/private-config`,
+    })]);
+    const backend = new DockerBackend({ runner });
+
+    const error = await backend.provision(makeSpec()).then(
+      () => new Error("expected Docker container creation to fail"),
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) {
+      throw new Error("Docker container creation did not return an Error");
+    }
+    expect(error.message).toBe("Docker container creation failed: unknown-control-error");
+    expect(error.message).not.toContain(fakeSecret);
   });
 
   it("attaches, parses bounded events, and tears down the exact container", async () => {

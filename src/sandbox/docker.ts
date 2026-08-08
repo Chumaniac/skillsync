@@ -57,11 +57,26 @@ function emptyExecutionResult(overrides: Partial<BackendExecutionResult> = {}): 
   };
 }
 
-function commandResultError(result: ProcessResult, action: string): Error {
+type DockerCreateFailureCategory =
+  | "bind-mount-invalid"
+  | "user-unavailable"
+  | "runtime-option-invalid"
+  | "resource-limit-invalid"
+  | "container-name-conflict"
+  | "unknown-control-error";
+
+function classifyDockerCreateFailure(stderr: string): DockerCreateFailureCategory {
+  if (/invalid mount config for type ["']?bind|bind source path does not exist/i.test(stderr)) {
+    return "bind-mount-invalid";
+  }
+  return "unknown-control-error";
+}
+
+function dockerCreateError(result: ProcessResult): Error {
   // Docker stderr can contain image names, paths, or provider-controlled data.
-  // Keep the public error stable and leave raw process output out of reports.
-  void result;
-  return new Error(`${action} failed`);
+  // Derive only a finite category; never return raw process output in reports.
+  const category = classifyDockerCreateFailure(result.stderr);
+  return new Error(`Docker container creation failed: ${category}`);
 }
 
 function containerName(runId: string): string {
@@ -201,7 +216,7 @@ export class DockerBackend implements SandboxBackend {
       asProcessSpec(this.dockerPath, createArgs(spec), CONTROL_TIMEOUT_MS),
     );
     if (created.exitCode !== 0 || created.timedOut || created.outputLimitExceeded) {
-      throw commandResultError(created, "Docker container creation");
+      throw dockerCreateError(created);
     }
     const id = created.stdout.trim().split(/\s+/, 1)[0] ?? "";
     if (!id) {
