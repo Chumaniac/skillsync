@@ -30,7 +30,7 @@ describe.skipIf(!enabled || !image)("reference Runner Docker integration", () =>
       backend: "docker",
     });
 
-    expect(report.execution.status).toBe("passed");
+    expect(report.execution.status, JSON.stringify(report.execution, null, 2)).toBe("passed");
     expect(report.execution.evidence.writes).toEqual([]);
     expect(report.execution.evidence.tools).toEqual(["fs.read"]);
   });
