@@ -101,11 +101,14 @@ jobs:
         id: image
         run: echo "id=$(docker image inspect --format '{{.Id}}' skillsync/reference:canary)" >> "$GITHUB_OUTPUT"
       - name: Validate the local immutable image
-        run: node dist/cli/index.js runner validate --image "skillsync/reference@${{ steps.image.outputs.id }}"
+        run: |
+          docker image inspect --format '{{json .Config}}' "${{ steps.image.outputs.id }}" \
+            > "$RUNNER_TEMP/skillsync-reference-config.json"
+          node dist/cli/index.js runner validate --config "$RUNNER_TEMP/skillsync-reference-config.json"
       - name: Run the explicit Docker smoke test
         env:
           SKILLSYNC_DOCKER_INTEGRATION: "1"
-          SKILLSYNC_REFERENCE_IMAGE: skillsync/reference@${{ steps.image.outputs.id }}
+          SKILLSYNC_REFERENCE_IMAGE: ${{ steps.image.outputs.id }}
         run: npm test -- tests/integration/docker-reference.test.ts
 
   remote-microvm-contract:

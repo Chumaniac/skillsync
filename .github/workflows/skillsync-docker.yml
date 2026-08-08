@@ -23,9 +23,12 @@ jobs:
         id: image
         run: echo "id=$(docker image inspect --format '{{.Id}}' skillsync/reference:ci)" >> "$GITHUB_OUTPUT"
       - name: Validate the image contract
-        run: node dist/cli/index.js runner validate --image "skillsync/reference@${{ steps.image.outputs.id }}"
+        run: |
+          docker image inspect --format '{{json .Config}}' "${{ steps.image.outputs.id }}" \
+            > "$RUNNER_TEMP/skillsync-reference-config.json"
+          node dist/cli/index.js runner validate --config "$RUNNER_TEMP/skillsync-reference-config.json"
       - name: Run the explicit Docker smoke test
         env:
           SKILLSYNC_DOCKER_INTEGRATION: "1"
-          SKILLSYNC_REFERENCE_IMAGE: skillsync/reference@${{ steps.image.outputs.id }}
+          SKILLSYNC_REFERENCE_IMAGE: ${{ steps.image.outputs.id }}
         run: npm test -- tests/integration/docker-reference.test.ts

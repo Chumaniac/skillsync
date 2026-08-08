@@ -10,7 +10,7 @@ const enabled = process.env.SKILLSYNC_DOCKER_INTEGRATION === "1";
 const image = process.env.SKILLSYNC_REFERENCE_IMAGE;
 
 describe.skipIf(!enabled || !image)("reference Runner Docker integration", () => {
-  it("executes the local digest-pinned reference image without writes", async () => {
+  it("executes the local immutable image-ID reference without writes", async () => {
     const fixtureRoot = resolve("fixtures/behavior/docker-reference");
     const manifest = parseBehaviorManifest(
       await readFile(resolve(fixtureRoot, "behavior.yaml"), "utf8"),
