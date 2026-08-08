@@ -93,10 +93,11 @@ This project is published as a public source repository at [github.com/Chumaniac
 The distributable CLI package is `@chumanic/skillsync`. Scoped public access is declared in
 `package.json`, while the executable remains available as the `skillsync` command.
 
-Tag releases run the full offline validation, inspect the package allowlist, and publish with
-GitHub OIDC and npm provenance. The release workflow does not store or use a long-lived npm
-token. The package's npm Trusted Publisher must be configured for `Chumaniac/skillsync` and
-`.github/workflows/release.yml` before a tag can publish successfully.
+The initial `0.1.0` package is published on npm. Future tag releases run the full offline
+validation, inspect the package allowlist, and publish with GitHub OIDC and npm provenance.
+The release workflow does not store or use a long-lived npm token. The package's npm Trusted
+Publisher must be configured for `Chumaniac/skillsync` and `.github/workflows/release.yml`
+before a tag can publish a future version successfully.
 
 ### Report privacy boundary
 
@@ -114,8 +115,8 @@ This option controls only whether local paths are preserved. It does not change 
 
 ## Install from npm
 
-After a tagged release is published, install the CLI globally or run a pinned
-version without a global install:
+The initial public package release is available on npm. Install the CLI globally or run a
+pinned version without a global install:
 
 ```bash
 npm install --global @chumanic/skillsync
