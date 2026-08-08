@@ -10,7 +10,7 @@
 Run this from a directory containing `SKILL.md`:
 
 ```bash
-npx --yes --package=@chumanic/skillsync@0.1.0 -- skillsync verify --path . --target codex
+npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'
 ```
 
 ## What you get

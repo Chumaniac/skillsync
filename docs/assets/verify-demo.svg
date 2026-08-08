@@ -8,7 +8,7 @@
   <circle cx="118" cy="50" r="10" fill="#4ade80"/>
   <text x="154" y="57" fill="#cbd5e1" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="22">skillsync — verify a local Skill</text>
   <line x1="36" y1="86" x2="1164" y2="86" stroke="#334155" stroke-width="2"/>
-  <text x="60" y="145" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="18">$ npx --yes --package=@chumanic/skillsync@0.1.0 -- skillsync verify --path . --target codex</text>
+  <text x="60" y="145" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="18">$ npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'</text>
   <text x="60" y="210" fill="#94a3b8" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="21">Real output excerpt</text>
   <rect x="60" y="238" width="1080" height="250" rx="12" fill="#0b1220" stroke="#334155" stroke-width="2"/>
   <text x="92" y="302" fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="27">SkillSync verification: 4 findings</text>
