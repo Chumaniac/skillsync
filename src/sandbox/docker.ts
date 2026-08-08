@@ -124,7 +124,7 @@ function createArgs(spec: RunSpec): string[] {
     "--memory", `${spec.limits.memoryMb}m`,
     "--cpus", String(spec.limits.cpuLimit),
     "--pids-limit", String(spec.limits.pidsLimit),
-    "--mount", `type=bind,src=${spec.stagedWorkspace},dst=/workspace,rw`,
+    "--mount", `type=bind,src=${spec.stagedWorkspace},dst=/workspace`,
     "--tmpfs", TMPFS_SPEC,
     "--workdir", "/workspace",
     "--entrypoint", "/usr/local/bin/skillsync-runner",
