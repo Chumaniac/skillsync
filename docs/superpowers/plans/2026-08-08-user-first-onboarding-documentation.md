@@ -26,18 +26,21 @@
 - Modify: `README.md` — user-first public onboarding page.
 - Modify: `tests/docs/documentation.test.ts` — documentation contract for the user-facing promises.
 
-### Task 1: Lock the user-facing documentation contract
+### Task 1: Deliver the complete user-first onboarding experience
 
 **Files:**
+- Create: `docs/assets/verify-demo.svg`
+- Create: `docs/assets/verify-demo.png`
+- Modify: `README.md`
 - Modify: `tests/docs/documentation.test.ts`
 
 **Interfaces:**
-- Consumes: `README.md`, `docs/assets/verify-demo.png`, `package.json`.
-- Produces: a regression test that rejects removal of the first-run command, maturity label, visual demo, and safety boundary.
+- Consumes: the npm package `@chumanic/skillsync@0.1.0`, `fixtures/product/trust-loop/review`, and existing reference documentation.
+- Produces: a single green, reviewable documentation commit that makes the public README useful before technical reference material.
 
-- [ ] **Step 1: Replace the README-only assertions with the onboarding contract**
+- [ ] **Step 1: Write the documentation contract first**
 
-Add `existsSync` and `statSync` from `node:fs`, retain the existing checks for detailed reference documents and published package metadata, and replace the old README prose assertions with:
+Add `existsSync` and `statSync` from `node:fs`. Retain the existing checks for detailed reference documents and published package metadata, then replace the old README prose assertions with:
 
 ```ts
 expect(readme).toContain("Verify Agent Skills before you trust them.");
@@ -57,23 +60,13 @@ expect(existsSync("docs/assets/verify-demo.png")).toBe(true);
 expect(statSync("docs/assets/verify-demo.png").size).toBeGreaterThan(1_000);
 ```
 
-- [ ] **Step 2: Run the focused test and verify the expected failure**
+- [ ] **Step 2: Prove the contract is initially red**
 
 Run: `npx vitest run tests/docs/documentation.test.ts`
 
-Expected: FAIL because the current README lacks the value statement, Alpha label, command, and demo image.
+Expected: FAIL because the current README lacks the value statement, Alpha label, first-run command, and demo image.
 
-### Task 2: Create a truthful terminal demonstration
-
-**Files:**
-- Create: `docs/assets/verify-demo.svg`
-- Create: `docs/assets/verify-demo.png`
-
-**Interfaces:**
-- Consumes: the npm package `@chumanic/skillsync@0.1.0` and `fixtures/product/trust-loop/review`.
-- Produces: a public image used by the README's absolute GitHub raw URL.
-
-- [ ] **Step 1: Capture the source output from the published package**
+- [ ] **Step 3: Capture and render real public-package output**
 
 Run:
 
@@ -84,18 +77,7 @@ npx --yes @chumanic/skillsync@0.1.0 verify \
   --format text
 ```
 
-Confirm that the captured output includes these exact, non-sensitive lines:
-
-```text
-SkillSync verification: 4 findings
-pass=3 warn=1 fail=0 unknown=0
-```
-
-- [ ] **Step 2: Render a terminal screenshot from that output**
-
-Create an SVG with a dark terminal surface, the exact public command, and a clearly labelled `Real output excerpt` containing the two summary lines plus one genuine `provenance.local-only` finding. Do not include any absolute path, account name, credential, or synthetic success claim.
-
-Use this title and summary text in the image:
+Create `docs/assets/verify-demo.svg` with a dark terminal surface, the public command, and a clearly labelled `Real output excerpt`. It must include these genuine, non-sensitive lines:
 
 ```text
 $ npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex
@@ -104,35 +86,17 @@ pass=3 warn=1 fail=0 unknown=0
 warning  provenance.local-only  Record a repository URL and resolved commit when publishing the Skill.
 ```
 
-- [ ] **Step 3: Generate the portable PNG and inspect it visually**
-
-Run:
+Convert it with:
 
 ```bash
 sips -s format png docs/assets/verify-demo.svg --out docs/assets/verify-demo.png
 ```
 
-Open `docs/assets/verify-demo.png` with the image viewer. Confirm that the command, summary, warning, contrast, and terminal title are legible at README width.
+Visually inspect the PNG. The command, summary, warning, contrast, and title must remain legible at README width. Run `sips -g pixelWidth -g pixelHeight docs/assets/verify-demo.png` and confirm non-zero dimensions.
 
-- [ ] **Step 4: Verify the asset is non-empty**
+- [ ] **Step 4: Rewrite README.md around immediate use**
 
-Run: `sips -g pixelWidth -g pixelHeight docs/assets/verify-demo.png`
-
-Expected: a non-zero PNG dimension suitable for a README image.
-
-### Task 3: Rewrite the README around first use
-
-**Files:**
-- Modify: `README.md`
-- Modify: `tests/docs/documentation.test.ts`
-
-**Interfaces:**
-- Consumes: `docs/assets/verify-demo.png`, the current public npm package, and the focused documentation contract.
-- Produces: the primary user onboarding experience for GitHub and npm.
-
-- [ ] **Step 1: Put the value proposition, status, and visual demo above all reference material**
-
-Replace the current architecture-first opening with this semantic structure:
+Start the README with this semantic structure:
 
 ```markdown
 # SkillSync
@@ -151,72 +115,30 @@ npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex
 ```
 ```
 
-- [ ] **Step 2: Keep the middle of the README product-oriented and concise**
+Then add a concise `What you get` section covering `verify`, `scan`, `compat`, `diff`, and the explicit `fix --plan` / `fix --apply` / `report` trust loop. Explain that `pass`, `warn`, `fail`, and `unknown` are findings to review; `fix --apply` records an explicit change and only a subsequent `verify` establishes the new state.
 
-Add a compact `What you get` section covering `verify`, `scan`, `compat`, `diff`, and the explicit `fix --plan` / `fix --apply` / `report` trust loop. Explain results in plain language: `pass`, `warn`, `fail`, and `unknown` are findings to review; `fix --apply` records an explicit change and only a subsequent `verify` establishes the new state.
+End with a minimal `Reference` group containing labelled links such as `Security and privacy`, `Compatibility profiles`, `CI`, `Runner`, and `Full design`. Do not restore a recommended reading order, release-readiness narrative, or per-file reference descriptions.
 
-Do not reintroduce a recommended reading order, a release-readiness narrative, or individual explanatory blurbs for every reference file.
-
-- [ ] **Step 3: Collapse advanced material into a minimal reference group**
-
-End the README with a `Reference` section containing only labelled links such as `Security and privacy`, `Compatibility profiles`, `CI`, `Runner`, and `Full design`. Keep the detailed release and runtime documents in the repository without presenting them as onboarding prerequisites.
-
-- [ ] **Step 4: Run focused documentation checks and verify success**
+- [ ] **Step 5: Prove the implementation is green**
 
 Run:
 
 ```bash
 npx vitest run tests/docs/documentation.test.ts tests/docs/english-documentation.test.ts
+npm run check
+npm pack --dry-run
+git diff --check
 ```
 
-Expected: PASS. The first test confirms the onboarding promise and the second test confirms English-only text and valid Markdown links.
+Expected: all commands succeed. The README image must use the absolute GitHub raw URL so that it remains visible on npm even though `docs/assets/` is not in the package allowlist.
 
-- [ ] **Step 5: Commit the green documentation change**
+- [ ] **Step 6: Commit the completed task**
 
 ```bash
 git add README.md docs/assets/verify-demo.svg docs/assets/verify-demo.png tests/docs/documentation.test.ts
 git commit -m "docs: add user-first onboarding"
 ```
 
-### Task 4: Run release-quality documentation verification
+## Final Review Gate
 
-**Files:**
-- Verify only: `README.md`, `docs/assets/verify-demo.svg`, `docs/assets/verify-demo.png`, `tests/docs/documentation.test.ts`
-
-**Interfaces:**
-- Consumes: the completed onboarding documentation.
-- Produces: fresh evidence that the docs are link-safe, test-safe, build-safe, and package-safe.
-
-- [ ] **Step 1: Check whitespace and tracked changes**
-
-Run:
-
-```bash
-git diff origin/main...HEAD --check
-git status --short
-```
-
-Expected: no whitespace errors and only the approved documentation work on the branch.
-
-- [ ] **Step 2: Run the complete project validation**
-
-Run: `npm run check`
-
-Expected: tests, type-check, lint, and TypeScript build all pass.
-
-- [ ] **Step 3: Validate the publishable package preview**
-
-Run: `npm pack --dry-run`
-
-Expected: succeeds. The README's demo points to the absolute GitHub raw asset URL, so the image remains visible on npm even though the package allowlist does not need to ship `docs/assets/`.
-
-- [ ] **Step 4: Record final evidence before publishing**
-
-Run:
-
-```bash
-git log --oneline origin/main..HEAD
-git status --short --branch
-```
-
-Expected: the branch has the design-spec commit and the green onboarding-documentation commit, with a clean worktree.
+After Task 1 is task-reviewed, run the subagent-driven whole-branch review. The controller will verify the final range against `origin/main`, preserve the plan ledger, and use `superpowers:finishing-a-development-branch` only after the review is clean.
