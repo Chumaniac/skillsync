@@ -105,6 +105,52 @@ jobs:
           docker image inspect --format '{{json .Config}}' "${{ steps.image.outputs.id }}" \
             > "$RUNNER_TEMP/skillsync-reference-config.json"
           node dist/cli/index.js runner validate --config "$RUNNER_TEMP/skillsync-reference-config.json"
+      - name: Probe cumulative Docker create options without starting containers
+        run: |
+          image_id="${{ steps.image.outputs.id }}"
+          probe_workspace=""
+
+          probe_create() {
+            label="$1"
+            shift
+            container_name="skillsync-create-probe-${label}"
+
+            if docker create \
+              --name "$container_name" \
+              --network none \
+              --entrypoint /usr/local/bin/skillsync-runner \
+              "$@" \
+              "$image_id" \
+              > /dev/null 2>&1; then
+              if docker rm --force "$container_name" > /dev/null 2>&1; then
+                echo "Docker create probe ${label}: passed"
+              else
+                echo "Docker create probe ${label}: failed"
+              fi
+            else
+              echo "Docker create probe ${label}: failed"
+            fi
+          }
+
+          probe_create image
+          probe_create read-only --read-only
+          probe_create cap-drop --read-only --cap-drop ALL
+          probe_create security-opt --read-only --cap-drop ALL --security-opt no-new-privileges=true
+          probe_create user --read-only --cap-drop ALL --security-opt no-new-privileges=true --user 65532:65532
+          probe_create resources --read-only --cap-drop ALL --security-opt no-new-privileges=true --user 65532:65532 --memory 512m --cpus 1 --pids-limit 64
+
+          if probe_workspace="$(mktemp -d "$RUNNER_TEMP/skillsync-create-probe-workspace.XXXXXX" 2>/dev/null)" \
+            && chmod 0755 "$probe_workspace" 2>/dev/null; then
+            trap 'rmdir "$probe_workspace" > /dev/null 2>&1 || true' EXIT
+            probe_create workspace-mount --read-only --cap-drop ALL --security-opt no-new-privileges=true --user 65532:65532 --memory 512m --cpus 1 --pids-limit 64 --mount "type=bind,src=${probe_workspace},dst=/workspace,rw"
+            probe_create tmpfs --read-only --cap-drop ALL --security-opt no-new-privileges=true --user 65532:65532 --memory 512m --cpus 1 --pids-limit 64 --mount "type=bind,src=${probe_workspace},dst=/workspace,rw" --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m
+            probe_create workdir --read-only --cap-drop ALL --security-opt no-new-privileges=true --user 65532:65532 --memory 512m --cpus 1 --pids-limit 64 --mount "type=bind,src=${probe_workspace},dst=/workspace,rw" --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m --workdir /workspace
+            probe_create environment --read-only --cap-drop ALL --security-opt no-new-privileges=true --user 65532:65532 --memory 512m --cpus 1 --pids-limit 64 --mount "type=bind,src=${probe_workspace},dst=/workspace,rw" --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m --workdir /workspace --env SKILLSYNC_RUN_ID=probe --env SKILLSYNC_INPUT_DIGEST=sha256:0000000000000000000000000000000000000000000000000000000000000000 --env SKILLSYNC_PROTOCOL=skillsync.runner.v1 --env SKILLSYNC_SKILL_PATH=skill --env SKILLSYNC_AGENT=codex
+          else
+            for label in workspace-mount tmpfs workdir environment; do
+              echo "Docker create probe ${label}: failed"
+            done
+          fi
       - name: Run the explicit Docker smoke test
         env:
           SKILLSYNC_DOCKER_INTEGRATION: "1"
