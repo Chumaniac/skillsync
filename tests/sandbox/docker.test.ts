@@ -229,7 +229,6 @@ describe("DockerBackend", () => {
       "--user", "65532:65532",
       "--read-only",
       "--cap-drop", "ALL",
-      "--security-opt", "no-new-privileges:true",
       "--network", "none",
       "--memory", "512m",
       "--cpus", "1",
@@ -242,6 +241,10 @@ describe("DockerBackend", () => {
       "--env", "SKILLSYNC_SKILL_PATH=skill",
       image,
     ]));
+    const securityOptIndex = call.args.indexOf("--security-opt");
+    expect(call.args.filter((argument) => argument === "--security-opt")).toHaveLength(1);
+    expect(call.args[securityOptIndex + 1]).toBe("no-new-privileges=true");
+    expect(call.args).not.toContain("no-new-privileges:true");
     expect(call.args.join(" ")).toContain("type=bind,src=/tmp/skillsync-stage/run-1,dst=/workspace,rw");
     expect(call.args.join(" ")).toContain("/tmp:rw,noexec,nosuid,nodev,size=64m");
     expect(call.args.join(" ")).not.toMatch(/pull|\/Users|docker\.sock|SSH_AUTH_SOCK|HOME=/i);

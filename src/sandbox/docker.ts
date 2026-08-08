@@ -119,7 +119,7 @@ function createArgs(spec: RunSpec): string[] {
     "--user", "65532:65532",
     "--read-only",
     "--cap-drop", "ALL",
-    "--security-opt", "no-new-privileges:true",
+    "--security-opt", "no-new-privileges=true",
     "--network", "none",
     "--memory", `${spec.limits.memoryMb}m`,
     "--cpus", String(spec.limits.cpuLimit),
