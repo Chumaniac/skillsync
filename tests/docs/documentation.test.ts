@@ -39,7 +39,7 @@ describe("release documentation", () => {
     expect(readme).toContain("Verify Agent Skills before you trust them.");
     expect(readme).toContain("Alpha · v0.1.0 · Node.js 20+");
     expect(readme).toContain(
-      "npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex",
+      "npx --yes --package=@chumanic/skillsync@0.1.0 -- skillsync verify --path . --target codex",
     );
     expect(readme).toContain(
       "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png",
