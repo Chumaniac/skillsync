@@ -13,7 +13,7 @@ A reader should be able to:
 3. Run a useful check in a directory containing `SKILL.md` with:
 
    ```bash
-   npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex
+   npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'
    ```
 
 4. Know the current maturity and boundaries before adopting the tool.
@@ -50,7 +50,7 @@ Architecture notes, historical release preparation, and internal design material
 
 ## Acceptance checks
 
-- The README contains the exact copyable `npx` command and the Alpha status label.
+- The README contains the verified copyable `npx --call` command and the Alpha status label.
 - The embedded image matches a command run using the published package.
 - Markdown links resolve and the existing English-only documentation check passes.
 - The documentation test covers the new onboarding promises without requiring release-preparation prose in the README.

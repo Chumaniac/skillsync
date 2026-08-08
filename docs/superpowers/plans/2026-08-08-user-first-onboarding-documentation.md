@@ -12,7 +12,7 @@
 
 - Public user-facing Markdown is English only.
 - Show `Alpha · v0.1.0 · Node.js 20+` without implying production runtime availability.
-- The first command must remain exactly `npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex`.
+- The first command must use the verified, npm-11-compatible form: `npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'`.
 - The demo must be derived from a real published-package command and must not expose local paths, credentials, or fabricated findings.
 - The README must not lead with release preparation, file-by-file document descriptions, or internal architecture reading orders.
 - Do not add a hosted application, new CLI command, or package version change.
@@ -46,7 +46,7 @@ Add `existsSync` and `statSync` from `node:fs`. Retain the existing checks for d
 expect(readme).toContain("Verify Agent Skills before you trust them.");
 expect(readme).toContain("Alpha · v0.1.0 · Node.js 20+");
 expect(readme).toContain(
-  "npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex",
+  "npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'",
 );
 expect(readme).toContain(
   "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png",
@@ -71,16 +71,14 @@ Expected: FAIL because the current README lacks the value statement, Alpha label
 Run:
 
 ```bash
-npx --yes @chumanic/skillsync@0.1.0 verify \
-  --path fixtures/product/trust-loop/review \
-  --target codex \
-  --format text
+npx --yes --package=@chumanic/skillsync@0.1.0 --call \
+  'skillsync verify --path fixtures/product/trust-loop/review --target codex --format text'
 ```
 
 Create `docs/assets/verify-demo.svg` with a dark terminal surface, the public command, and a clearly labelled `Real output excerpt`. It must include these genuine, non-sensitive lines:
 
 ```text
-$ npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex
+$ npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'
 SkillSync verification: 4 findings
 pass=3 warn=1 fail=0 unknown=0
 warning  provenance.local-only  Record a repository URL and resolved commit when publishing the Skill.
@@ -111,7 +109,7 @@ Start the README with this semantic structure:
 Run this from a directory containing `SKILL.md`:
 
 ```bash
-npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex
+npx --yes --package=@chumanic/skillsync@0.1.0 --call 'skillsync verify --path . --target codex'
 ```
 ```
 
