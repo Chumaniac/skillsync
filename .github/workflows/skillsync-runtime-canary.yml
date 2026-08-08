@@ -192,9 +192,9 @@ jobs:
 
             if staged_probe_root="$(mktemp -d /tmp/skillsync-sandbox-XXXXXX 2>/dev/null)" \
               && staged_probe_workspace="$staged_probe_root/workspace" \
-              && mkdir -m 0755 "$staged_probe_workspace" \
-              && mkdir -m 0755 "$staged_probe_workspace/skill" \
-              && cp fixtures/behavior/docker-reference/skill/SKILL.md "$staged_probe_workspace/skill/SKILL.md"; then
+              && mkdir -m 0755 "$staged_probe_workspace" > /dev/null 2>&1 \
+              && mkdir -m 0755 "$staged_probe_workspace/skill" > /dev/null 2>&1 \
+              && cp fixtures/behavior/docker-reference/skill/SKILL.md "$staged_probe_workspace/skill/SKILL.md" > /dev/null 2>&1; then
               run_probe staged-workspace --read-only --cap-drop ALL --security-opt no-new-privileges=true --user 65532:65532 --memory 512m --cpus 1 --pids-limit 64 --mount "type=bind,src=${staged_probe_workspace},dst=/workspace,rw" --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m --workdir /workspace --env SKILLSYNC_RUN_ID=probe --env SKILLSYNC_INPUT_DIGEST=sha256:0000000000000000000000000000000000000000000000000000000000000000 --env SKILLSYNC_PROTOCOL=skillsync.runner.v1 --env SKILLSYNC_SKILL_PATH=skill --env SKILLSYNC_AGENT=codex
               run_runner_env_probe runner-env-staged-workspace --read-only --cap-drop ALL --security-opt no-new-privileges=true --user 65532:65532 --memory 512m --cpus 1 --pids-limit 64 --mount "type=bind,src=${staged_probe_workspace},dst=/workspace,rw" --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m --workdir /workspace --env SKILLSYNC_RUN_ID=probe --env SKILLSYNC_INPUT_DIGEST=sha256:0000000000000000000000000000000000000000000000000000000000000000 --env SKILLSYNC_PROTOCOL=skillsync.runner.v1 --env SKILLSYNC_SKILL_PATH=skill --env SKILLSYNC_AGENT=codex
             else
