@@ -1,6 +1,6 @@
-FROM node:22-bookworm-slim AS node-runtime
+FROM node:22-bookworm-slim@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436 AS node-runtime
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
 
 COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
 COPY runner/reference/runner.mjs /usr/local/bin/skillsync-runner

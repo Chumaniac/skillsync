@@ -96,7 +96,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Build the local reference image
-        run: docker build --pull=false -f runner/reference/Dockerfile -t skillsync/reference:canary .
+        run: docker build --pull=false --network=none -f runner/reference/Dockerfile -t skillsync/reference:canary .
       - name: Bind the smoke test to the local image id
         id: image
         run: echo "id=$(docker image inspect --format '{{.Id}}' skillsync/reference:canary)" >> "$GITHUB_OUTPUT"

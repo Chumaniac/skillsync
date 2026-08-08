@@ -50,16 +50,18 @@ must continue to report `offline-simulated` evidence. The Docker reference
 smoke remains opt-in and is the only canary step that may use the local Docker
 daemon.
 
-The optional Docker job builds the reference image locally with `--pull=false`.
-It uses the local immutable image ID only for this controlled smoke: validation
-receives the image's local Config through `runner validate --config`, and the
-integration test receives that same raw image ID through
+The optional Docker job builds the reference image locally with
+`--pull=false --network=none`. The no-network rule protects Dockerfile build
+instructions. Docker may fetch the exact pinned content as an ordinary build
+input. It uses the local immutable image ID only for this controlled smoke:
+validation receives the image's local Config through `runner validate --config`,
+and the integration test receives that same raw image ID through
 `SKILLSYNC_REFERENCE_IMAGE`. This local binding is not an external
-`repository@sha256:...` reference. The controlled runner must pre-seed the base
-image; if it is not available locally, the build fails rather than falling back
-to an unreviewed registry path. The job does not issue `docker pull` or supply
-provider credentials. The remote/microVM job verifies only the offline protocol
-contract; it does not claim a live Worker or microVM canary.
+`repository@sha256:...` reference. The job does not issue `docker pull` or
+supply provider credentials. This does not turn package/image acquisition by
+GitHub Actions into a live SkillSync runtime capability. The remote/microVM job
+verifies only the offline protocol contract; it does not claim a live Worker or
+microVM canary.
 
 Deployment requirements are checked as a reference-only declaration. The canary
 does not resolve deployment key-store or mTLS references, and a template with

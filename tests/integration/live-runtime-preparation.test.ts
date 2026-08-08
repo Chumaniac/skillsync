@@ -99,6 +99,39 @@ describe("live runtime preparation", () => {
     expect(content).not.toMatch(/npm publish|NODE_AUTH_TOKEN|secrets\.|docker\.sock/i);
   });
 
+  it("pins both reference Dockerfile base inputs to the controlled digests", async () => {
+    const dockerfile = await readFile("runner/reference/Dockerfile", "utf8");
+
+    expect(dockerfile).toContain(
+      "FROM node:22-bookworm-slim@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436 AS node-runtime",
+    );
+    expect(dockerfile).toContain(
+      "FROM debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241",
+    );
+  });
+
+  it("keeps both reference-image builds pull-disabled and instruction-networkless", async () => {
+    const [ci, canary] = await Promise.all([
+      readWorkflow("skillsync-docker.yml"),
+      readWorkflow("skillsync-runtime-canary.yml"),
+    ]);
+
+    expect(workflowRuns(ci.document, "reference-runner").join("\n")).toContain(
+      "docker build --pull=false --network=none -f runner/reference/Dockerfile -t skillsync/reference:ci .",
+    );
+    expect(workflowRuns(canary.document, "docker-reference").join("\n")).toContain(
+      "docker build --pull=false --network=none -f runner/reference/Dockerfile -t skillsync/reference:canary .",
+    );
+  });
+
+  it("documents the bounded reference-image acquisition rule accurately", async () => {
+    const ci = await readFile("docs/ci.md", "utf8");
+
+    expect(ci).toMatch(/Docker may fetch the exact pinned content as an ordinary build\s+input\./);
+    expect(ci).toMatch(/does not turn package\/image acquisition by\s+GitHub Actions into a live SkillSync runtime capability\./);
+    expect(ci).not.toMatch(/must pre-seed the base image|if it is not available locally, the build fails/i);
+  });
+
   it("keeps release validation tag-based and publishes only with provenance", async () => {
     const { content, document } = await readWorkflow("release.yml");
     const trigger = asRecord(document.on);
