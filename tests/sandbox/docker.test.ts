@@ -260,6 +260,94 @@ describe("DockerBackend", () => {
     );
   });
 
+  it("classifies unavailable Docker users without exposing the user value", async () => {
+    const runner = new FakeRunner([result({
+      exitCode: 1,
+      stderr: "unable to find user private-user-token: no matching entries in passwd file",
+    })]);
+    const backend = new DockerBackend({ runner });
+
+    await expect(backend.provision(makeSpec())).rejects.toThrowError(
+      new Error("Docker container creation failed: user-unavailable"),
+    );
+  });
+
+  it("classifies invalid Docker runtime options without exposing the runtime value", async () => {
+    const runner = new FakeRunner([result({
+      exitCode: 1,
+      stderr: "Error response from daemon: unknown or invalid runtime name: private-runtime-token",
+    })]);
+    const backend = new DockerBackend({ runner });
+
+    await expect(backend.provision(makeSpec())).rejects.toThrowError(
+      new Error("Docker container creation failed: runtime-option-invalid"),
+    );
+  });
+
+  it("classifies invalid Docker resource limits without exposing the workspace path", async () => {
+    const runner = new FakeRunner([result({
+      exitCode: 1,
+      stderr: "Error response from daemon: minimum memory limit allowed is 6MB for /private/tenant-a/workspace",
+    })]);
+    const backend = new DockerBackend({ runner });
+
+    await expect(backend.provision(makeSpec())).rejects.toThrowError(
+      new Error("Docker container creation failed: resource-limit-invalid"),
+    );
+  });
+
+  it("classifies Docker container name conflicts without exposing the name", async () => {
+    const runner = new FakeRunner([result({
+      exitCode: 1,
+      stderr: 'Conflict. The container name "/skillsync-private-token" is already in use by container "abcdef".',
+    })]);
+    const backend = new DockerBackend({ runner });
+
+    await expect(backend.provision(makeSpec())).rejects.toThrowError(
+      new Error("Docker container creation failed: container-name-conflict"),
+    );
+  });
+
+  it("keeps generic runtime-not-found stderr in the unknown category", async () => {
+    const fakeSecret = "private-runtime-token";
+    const runner = new FakeRunner([result({
+      exitCode: 1,
+      stderr: `${fakeSecret}: runtime plugin not found while loading /private/control-plane`,
+    })]);
+    const backend = new DockerBackend({ runner });
+
+    const error = await backend.provision(makeSpec()).then(
+      () => new Error("expected Docker container creation to fail"),
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) {
+      throw new Error("Docker container creation did not return an Error");
+    }
+    expect(error.message).toBe("Docker container creation failed: unknown-control-error");
+    expect(error.message).not.toContain(fakeSecret);
+  });
+
+  it("keeps generic resource-limit stderr in the unknown category", async () => {
+    const fakeSecret = "private-limit-token";
+    const runner = new FakeRunner([result({
+      exitCode: 1,
+      stderr: `${fakeSecret}: memory limit threshold reached for /private/control-plane`,
+    })]);
+    const backend = new DockerBackend({ runner });
+
+    const error = await backend.provision(makeSpec()).then(
+      () => new Error("expected Docker container creation to fail"),
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) {
+      throw new Error("Docker container creation did not return an Error");
+    }
+    expect(error.message).toBe("Docker container creation failed: unknown-control-error");
+    expect(error.message).not.toContain(fakeSecret);
+  });
+
   it("uses an unknown category without exposing arbitrary Docker stderr", async () => {
     const fakeSecret = "secret-provider-token";
     const runner = new FakeRunner([result({

@@ -66,8 +66,20 @@ type DockerCreateFailureCategory =
   | "unknown-control-error";
 
 function classifyDockerCreateFailure(stderr: string): DockerCreateFailureCategory {
-  if (/invalid mount config for type ["']?bind|bind source path does not exist/i.test(stderr)) {
+  if (/^Error response from daemon: invalid mount config for type ["']bind["']:/i.test(stderr)) {
     return "bind-mount-invalid";
+  }
+  if (/^unable to find user [^:]+: no matching entries in passwd file$/i.test(stderr)) {
+    return "user-unavailable";
+  }
+  if (/^Error response from daemon: unknown or invalid runtime name:/i.test(stderr)) {
+    return "runtime-option-invalid";
+  }
+  if (/^Error response from daemon: minimum memory limit allowed is \d+MB(?: for .+)?$/i.test(stderr)) {
+    return "resource-limit-invalid";
+  }
+  if (/^Conflict\. The container name "[^"]+" is already in use by container "[^"]+"\.$/i.test(stderr)) {
+    return "container-name-conflict";
   }
   return "unknown-control-error";
 }
