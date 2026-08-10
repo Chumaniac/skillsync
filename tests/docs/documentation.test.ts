@@ -40,15 +40,23 @@ describe("release documentation", () => {
 
     expect(readme).toContain("Verify Agent Skills before you trust them.");
     expect(readme).toContain("Alpha · v0.1.1 · Node.js 20+");
+    expect(readme).toContain("## Run it from source");
+    expect(readme).toContain("git clone https://github.com/Chumaniac/skillsync.git");
     expect(readme).toContain(
+      "node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex",
+    );
+    expect(readme).toContain("The npm package publish for `0.1.1` is currently paused.");
+    expect(readme).not.toContain(
       "npx --yes --package=@chumanic/skillsync@0.1.1 --call 'skillsync verify --path . --target codex'",
     );
     expect(readme).toContain(
       "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png",
     );
+    expect(terminalDemo).toContain("$ git clone https://github.com/Chumaniac/skillsync.git");
     expect(terminalDemo).toContain(
-      "npx --yes --package=@chumanic/skillsync@0.1.1 --call 'skillsync verify --path . --target codex'",
+      "$ node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex",
     );
+    expect(terminalDemo).not.toContain("@chumanic/skillsync@0.1.1");
     expect(readme).toContain("does not execute Skill scripts");
     expect(readme).toContain("does not read credentials");
     expect(readme).not.toContain("## Documentation index");

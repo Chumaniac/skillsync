@@ -7,11 +7,19 @@
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.png)
 
-Run this from a directory containing `SKILL.md`:
+## Run it from source
+
+The npm package publish for `0.1.1` is currently paused. Clone this repository to run the current Alpha build:
 
 ```bash
-npx --yes --package=@chumanic/skillsync@0.1.1 --call 'skillsync verify --path . --target codex'
+git clone https://github.com/Chumaniac/skillsync.git
+cd skillsync
+npm ci
+npm run build
+node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex
 ```
+
+The command above verifies the included sample Skill. Replace the fixture path with a directory containing your own `SKILL.md` when you are ready.
 
 ## What you get
 
