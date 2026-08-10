@@ -5,7 +5,7 @@
 > **Alpha · v0.1.1 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
-[![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.png)
+[![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
 ## Run it from source
 

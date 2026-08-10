@@ -41,16 +41,19 @@ describe("release documentation", () => {
     expect(readme).toContain("Verify Agent Skills before you trust them.");
     expect(readme).toContain("Alpha · v0.1.1 · Node.js 20+");
     expect(readme).toContain("## Run it from source");
-    expect(readme).toContain("git clone https://github.com/Chumaniac/skillsync.git");
-    expect(readme).toContain(
+    expect(readme).toContain([
+      "```bash",
+      "git clone https://github.com/Chumaniac/skillsync.git",
+      "cd skillsync",
+      "npm ci",
+      "npm run build",
       "node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex",
-    );
+      "```",
+    ].join("\n"));
     expect(readme).toContain("The npm package publish for `0.1.1` is currently paused.");
-    expect(readme).not.toContain(
-      "npx --yes --package=@chumanic/skillsync@0.1.1 --call 'skillsync verify --path . --target codex'",
-    );
+    expect(readme).not.toMatch(/@chumanic\/skillsync@0\.1\.1/);
     expect(readme).toContain(
-      "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.png",
+      "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg",
     );
     expect(terminalDemo).toContain("$ git clone https://github.com/Chumaniac/skillsync.git");
     expect(terminalDemo).toContain(
@@ -62,8 +65,8 @@ describe("release documentation", () => {
     expect(readme).not.toContain("## Documentation index");
     expect(readme).not.toContain("## Recommended reading order");
     expect(readme).not.toContain("Local release-candidate validation");
-    expect(existsSync("docs/assets/verify-demo.png")).toBe(true);
-    expect(statSync("docs/assets/verify-demo.png").size).toBeGreaterThan(1_000);
+    expect(existsSync("docs/assets/verify-demo.svg")).toBe(true);
+    expect(statSync("docs/assets/verify-demo.svg").size).toBeGreaterThan(1_000);
     expect(security).toContain("not a security certification");
     expect(security).toContain("reporting.include_local_paths");
     expect(security).toContain("<local-path>");
