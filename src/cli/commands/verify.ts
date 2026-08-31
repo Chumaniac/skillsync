@@ -14,7 +14,7 @@ import type { Finding } from "../../domain/result.js";
 import type { Skill } from "../../domain/skill.js";
 import { inspectProvenance } from "../../scanners/provenance.js";
 import { inspectStructure } from "../../scanners/structure.js";
-import { loadCapabilityProfiles } from "../../profiles/loader.js";
+import { loadProfilesForTargets } from "../../profiles/registry.js";
 
 export type VerifyOptions = {
   paths: string[];
@@ -22,6 +22,7 @@ export type VerifyOptions = {
   followSymlinks?: boolean;
   policy?: Policy;
   policyPath?: string;
+  profileDir?: string;
 };
 
 export type VerificationSummary = {
@@ -122,7 +123,7 @@ export async function runVerification(options: VerifyOptions): Promise<Verificat
   const inventory: Inventory = await scanInventory(targets, {
     followSymlinks: options.followSymlinks,
   });
-  const profiles = await loadCapabilityProfiles(profileValues);
+  const profiles = await loadProfilesForTargets(profileValues, { profileDir: options.profileDir });
   const findings = [...inventory.findings];
 
   for (const skill of inventory.skills) {

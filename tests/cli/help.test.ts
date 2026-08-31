@@ -28,6 +28,7 @@ describe("skillsync CLI", () => {
     expect(result.stdout).toContain("Run fixture preflight or explicit sandbox");
     expect(result.stdout).toContain("ci");
     expect(result.stdout).toContain("runner");
+    expect(result.stdout).toContain("profile");
     expect(result.stdout).toContain("report");
     expect(result.stdout).toContain("baseline");
     expect(result.exitCode).toBe(0);
@@ -40,6 +41,13 @@ describe("skillsync CLI", () => {
     expect(result.stdout).toContain("--execute");
     expect(result.stdout).toContain("--backend <backend>");
     expect(result.stdout).toMatch(/replay|docker/);
+  });
+
+  it("documents profile validation", async () => {
+    const validate = await runCli(["profile", "validate", "--help"]);
+    expect(validate.stdout).toContain("--path <path>");
+    const list = await runCli(["profile", "list", "--help"]);
+    expect(list.stdout).toContain("--profile-dir");
   });
 
   it("documents Runner contract validation inputs", async () => {
