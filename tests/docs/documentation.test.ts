@@ -39,7 +39,7 @@ describe("release documentation", () => {
     };
 
     expect(readme).toContain("Verify Agent Skills before you trust them.");
-    expect(readme).toContain("Alpha · v0.1.1 · Node.js 20+");
+    expect(readme).toContain("Alpha · v0.1.2 · Node.js 20+");
     expect(readme).toContain("## Install");
     expect(readme).toContain("npx --yes @chumanic/skillsync@0.1.0 verify");
     expect(readme).toContain([
@@ -59,7 +59,7 @@ describe("release documentation", () => {
     expect(terminalDemo).toContain(
       "$ node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex",
     );
-    expect(terminalDemo).not.toContain("@chumanic/skillsync@0.1.1");
+    expect(terminalDemo).not.toContain("@chumanic/skillsync@0.1.2");
     expect(readme).toContain("does not execute Skill scripts");
     expect(readme).toContain("does not read credentials");
     expect(readme).not.toContain("## Documentation index");
@@ -129,9 +129,12 @@ describe("release documentation", () => {
     expect(repositoryWorkflow).toContain("SkillSync-Complete-Design.md");
     expect(repositoryWorkflow).toContain("Competitive-Research-and-Design-Rationale.md");
     expect(repositoryWorkflow).toContain("MVP-Implementation-Plan.md");
-    expect(githubTemplate).toContain("@chumanic/skillsync@0.1.1");
-    expect(preCommitTemplate).toContain("@chumanic/skillsync@0.1.1");
-    expect(ci).toContain("@chumanic/skillsync@0.1.1");
+    expect(githubTemplate).toContain("@chumanic/skillsync@0.1.2");
+    expect(preCommitTemplate).toContain("@chumanic/skillsync@0.1.2");
+    expect(ci).toContain("@chumanic/skillsync@0.1.2");
+    expect(changelog).toContain("## 0.1.2 - 2026-08-31");
+    expect(changelog).toContain("publish contract");
+    expect(changelog).toContain("profile registry");
     expect(changelog).toContain("## 0.1.1 - 2026-08-08");
     expect(changelog).toContain("valid Docker workspace bind-mount form");
     expect(changelog).toContain("immutable reference-image inputs and instruction-network isolation");

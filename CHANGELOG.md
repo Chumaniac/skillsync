@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 - 2026-08-31
+
+- Aligned publish contract: unified `package.json`/`docs`/`templates` to `0.1.2`, added OIDC provenance + SBOM (`npm sbom` cyclonedx + `actions/attest-build-provenance`) to `release.yml` and `skillsync.yml`, clarified `README` install channels (`npx 0.1.0` stable vs `0.1.2` from source), and cleaned stale `npm-*` worktrees.
+- Added extensible profile registry: `src/profiles/registry.ts` discovers `profiles/contrib/*.yaml` → `~/.config/skillsync/profiles/` → `--profile-dir`, `profile validate`/`list` CLI, `compat`/`verify` now accept `--profile-dir`, and contrib examples `windsurf@1`/`opencode@1` with `docs/compatibility.md` registry documentation.
+
 ## 0.1.1 - 2026-08-08
 
 - Corrected the valid Docker workspace bind-mount form and recorded controlled smoke evidence.

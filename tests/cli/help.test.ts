@@ -12,7 +12,7 @@ describe("skillsync CLI", () => {
   it("reports the exact public version and lists the verification commands", async () => {
     const version = await runCli(["--version"]);
     expect(version.exitCode).toBe(0);
-    expect(version.stdout).toBe("0.1.1\n");
+    expect(version.stdout).toBe("0.1.2\n");
 
     const result = await runCli(["--help"]);
 
