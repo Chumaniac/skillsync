@@ -7,9 +7,18 @@
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
-## Run it from source
+## Install
 
-The npm package publish for `0.1.1` is currently paused. Clone this repository to run the current Alpha build:
+**From npm (stable 0.1.0):**
+
+```bash
+npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex
+# or install globally
+npm install -g @chumanic/skillsync@0.1.0
+skillsync verify --path . --target codex
+```
+
+**From source (latest 0.1.1):**
 
 ```bash
 git clone https://github.com/Chumaniac/skillsync.git
@@ -18,6 +27,8 @@ npm ci
 npm run build
 node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex
 ```
+
+> `0.1.1` is tagged as `v0.1.1` and will be published via the OIDC provenance workflow (`npm publish --provenance --access public` with `id-token: write`, no long-lived token). Until the Trusted Publisher is verified on npm, use `0.1.0` via `npx` or run `0.1.1` from source. The `skillsync ci init` template pins `0.1.1` by default; override with `--package-version 0.1.0` on npm today.
 
 The command above verifies the included sample Skill. Replace the fixture path with a directory containing your own `SKILL.md` when you are ready.
 
