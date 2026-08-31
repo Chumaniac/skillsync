@@ -15,6 +15,12 @@ import { renderScan, runScan, type ScanOptions } from "./commands/scan.js";
 import { renderExplain, runExplain, type ExplainOptions } from "./commands/explain.js";
 import { renderReport, runReport, type ReportFormat, type ReportOptions } from "./commands/report.js";
 import {
+  renderProfileList,
+  renderProfileValidate,
+  runProfileList,
+  runProfileValidate,
+} from "./commands/profile.js";
+import {
   renderBaselineCheck,
   renderBaselineCreate,
   runBaselineCheck,
@@ -68,6 +74,7 @@ const COMMANDS = [
   ["adopt", "Plan or explicitly apply a managed Skill lock snapshot."],
   ["test", "Run fixture preflight or explicit sandbox execution."],
   ["runner", "Validate a local Runner image contract."],
+  ["profile", "Validate and list agent capability profiles."],
   ["ci", "Run CI-oriented checks and emit machine-readable findings."],
 ] as const;
 
@@ -118,6 +125,7 @@ type ScanCliOptions = Omit<ScanOptions, "paths"> & {
 type CompatCliOptions = Omit<CompatOptions, "paths" | "targets"> & {
   path?: string[];
   target?: string;
+  profileDir?: string;
   format?: string;
 };
 
@@ -155,6 +163,7 @@ type VerifyCliOptions = Omit<VerifyOptions, "paths" | "targets" | "policy"> & {
   path?: string[];
   target?: string;
   policy?: string;
+  profileDir?: string;
   format?: string;
 };
 
@@ -251,12 +260,14 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .description("Check compatibility against a target agent profile.")
     .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
     .option("--target <targets>", "Comma-separated target profiles", "codex,claude-code,cursor")
+    .option("--profile-dir <path>", "Additional directory containing external profile YAML")
     .option("--follow-symlinks", "Follow only symlinks that remain inside the Skill root")
     .option("--format <format>", "Output format: text, json, or sarif", "text")
     .action(async (options: CompatCliOptions) => {
       const report = await runCompat({
         paths: options.path ?? [],
         targets: options.target?.split(",") ?? [],
+        profileDir: options.profileDir,
         followSymlinks: options.followSymlinks,
       });
       io.writeOut(renderCompat(report, options.format));
@@ -271,6 +282,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
     .option("--target <targets>", "Comma-separated target profiles", "codex,claude-code,cursor")
     .option("--policy <path>", "YAML or JSON policy file")
+    .option("--profile-dir <path>", "Additional directory containing external profile YAML")
     .option("--follow-symlinks", "Follow only symlinks that remain inside the Skill root")
     .option("--format <format>", "Output format: text, json, or sarif", "text")
     .action(async (options: VerifyCliOptions) => {
@@ -278,6 +290,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
         paths: options.path ?? [],
         targets: options.target?.split(",") ?? [],
         policyPath: options.policy,
+        profileDir: options.profileDir,
         followSymlinks: options.followSymlinks,
       });
       const format = parseOutputFormat(options.format);
@@ -635,6 +648,26 @@ export function createCli(io: CliIO = defaultCliIO): Command {
       }
     });
 
+  const profile = program.command("profile").description("Validate and list agent capability profiles.");
+  profile
+    .command("validate")
+    .description("Validate an external profile YAML file.")
+    .requiredOption("--path <path>", "Profile YAML file to validate")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: { path: string; format?: string }) => {
+      const report = await runProfileValidate({ path: options.path });
+      io.writeOut(renderProfileValidate(report, options.format));
+    });
+  profile
+    .command("list")
+    .description("List builtin and discovered external profiles.")
+    .option("--profile-dir <path>", "Additional directory containing external profile YAML")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: { profileDir?: string; format?: string }) => {
+      const report = await runProfileList({ profileDir: options.profileDir });
+      io.writeOut(renderProfileList(report, options.format));
+    });
+
   for (const [name, description] of COMMANDS) {
     if (
       name === "scan" ||
@@ -649,6 +682,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
       name === "adopt" ||
       name === "test" ||
       name === "runner" ||
+      name === "profile" ||
       name === "ci"
     ) {
       continue;

@@ -54,6 +54,11 @@ jobs:
       - run: npm run type-check
       - run: npm run lint
       - run: npm pack --dry-run
+      - name: Generate SBOM preview (non-blocking)
+        run: |
+          npm sbom --sbom-format cyclonedx --sbom-type library > /tmp/sbom.cyclonedx.json 2>&1 || true
+          if [ -f /tmp/sbom.cyclonedx.json ]; then echo "SBOM preview OK ($(wc -c < /tmp/sbom.cyclonedx.json) bytes)"; fi
+        continue-on-error: true
 
   verify:
     runs-on: ubuntu-latest

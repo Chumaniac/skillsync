@@ -6,7 +6,7 @@ import { normalizeRelativePath } from "../../domain/digest.js";
 import { evaluateCompatibility } from "../../domain/compatibility.js";
 import type { Finding } from "../../domain/result.js";
 import type { Skill } from "../../domain/skill.js";
-import { loadCapabilityProfiles } from "../../profiles/loader.js";
+import { loadProfilesForTargets } from "../../profiles/registry.js";
 import type { CapabilityProfile } from "../../profiles/types.js";
 import { formatOutput, parseOutputFormat, type OutputFormat } from "../output.js";
 
@@ -14,6 +14,7 @@ export type CompatOptions = {
   paths: string[];
   targets: string[];
   followSymlinks?: boolean;
+  profileDir?: string;
 };
 
 export type CompatibilityReport = {
@@ -54,8 +55,9 @@ export async function runCompat(options: CompatOptions): Promise<CompatibilityRe
   const inventory: Inventory = await scanInventory(targets, {
     followSymlinks: options.followSymlinks,
   });
-  const profiles = await loadCapabilityProfiles(
+  const profiles = await loadProfilesForTargets(
     options.targets.length > 0 ? options.targets : ["codex", "claude-code", "cursor"],
+    { profileDir: options.profileDir },
   );
   const findings = [...inventory.findings];
 

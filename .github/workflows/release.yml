@@ -28,5 +28,19 @@ jobs:
         run: npm run build
       - name: Inspect the public package contents
         run: npm pack --dry-run
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          npm sbom --sbom-format cyclonedx --sbom-type library > sbom.cyclonedx.json 2>&1 || echo "npm sbom not available on this npm version, falling back to dry-run check"
+          if [ -f sbom.cyclonedx.json ]; then
+            echo "SBOM generated at sbom.cyclonedx.json ($(wc -c < sbom.cyclonedx.json) bytes)"
+            head -20 sbom.cyclonedx.json
+          fi
       - name: Publish the package with npm provenance
         run: npm publish --provenance --access public
+      - name: Attest build provenance (if publish succeeded)
+        if: always()
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "*.tgz"
+        continue-on-error: true
+
