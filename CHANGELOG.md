@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `report` now requires matching plan digests when both an ActionPlan and an
+  ApplyReceipt are supplied. Mismatched evidence fails before rendering any
+  Markdown, JSON, or SARIF output, with an error that does not expose local
+  paths or input digests. Standalone reports and optional evidence remain supported.
+
 ## 0.1.2 - 2026-08-31
 
 - Aligned publish contract: unified `package.json`/`docs`/`templates` to `0.1.2`, added OIDC provenance + SBOM (`npm sbom` cyclonedx + `actions/attest-build-provenance`) to `release.yml` and `skillsync.yml`, clarified `README` install channels (`npx 0.1.0` stable vs `0.1.2` from source), and cleaned stale `npm-*` worktrees.

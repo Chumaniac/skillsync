@@ -66,6 +66,10 @@ export function createEvidenceReport(input: {
   baseline?: Baseline;
   toolVersion: string;
 }): EvidenceReport {
+  if (input.plan !== undefined && input.receipt !== undefined &&
+    input.plan.planDigest !== input.receipt.planDigest) {
+    throw new Error("ApplyReceipt does not match ActionPlan.");
+  }
   return {
     schema_version: 1,
     conclusion: input.after.exitCode === 0 ? "verified" : "not-verified",

@@ -53,6 +53,34 @@ function validReceiptPayload() {
 }
 
 describe("skillsync report", () => {
+  it.each(["markdown", "json", "sarif"])("rejects unrelated plan and receipt evidence in %s output", async (format) => {
+    const root = await createSkillRoot();
+    const source = await verificationReport(root);
+    const beforePath = join(root, "before.json");
+    const afterPath = join(root, "after.json");
+    const planPath = join(root, "plan.json");
+    const receiptPath = join(root, "receipt.json");
+    await writeFile(beforePath, JSON.stringify(source));
+    await writeFile(afterPath, JSON.stringify({ ...source, exitCode: 0, issues: [] }));
+    await writeFile(planPath, JSON.stringify(validPlanPayload(root, source.issues.map((issue) => issue.id))));
+    const unrelatedDigest = `sha256:${"b".repeat(64)}`;
+    await writeFile(receiptPath, JSON.stringify({ ...validReceiptPayload(), planDigest: unrelatedDigest }));
+
+    const args = ["report", "--before", beforePath, "--after", afterPath, "--plan", planPath,
+      "--receipt", receiptPath, "--format", format];
+    const unrelated = await runCli(args);
+    expect(unrelated.exitCode).toBe(1);
+    expect(unrelated.stderr).toContain("ApplyReceipt does not match ActionPlan.");
+    expect(unrelated.stdout).toBe("");
+    expect(unrelated.stderr).not.toContain(root);
+    expect(unrelated.stderr).not.toContain(unrelatedDigest);
+
+    await writeFile(receiptPath, JSON.stringify(validReceiptPayload()));
+    const matching = await runCli(args);
+    expect(matching.exitCode).toBe(0);
+    expect(matching.stderr).toBe("");
+  });
+
   it("classifies issue changes and never verifies a blocking after report", async () => {
     const root = await createSkillRoot();
     const source = await verificationReport(root);

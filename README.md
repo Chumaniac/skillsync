@@ -38,6 +38,9 @@ The command above verifies the included sample Skill. Replace the fixture path w
 - `scan` inventories local Skills, while `compat` checks their declared features against agent profiles.
 - `diff` shows the meaningful changes between two Skill versions before you accept them.
 - The trust loop is explicit: `verify`, review the findings, use `fix --plan`, confirm with `fix --apply`, run `verify` again, then use `report` to compare the before and after evidence.
+- When `report` includes both `--plan` and `--receipt`, their plan digests must
+  match. This consistency check does not authenticate externally supplied
+  evidence or replace a fresh verification run.
 
 `pass`, `warn`, `fail`, and `unknown` are findings to review, not an automatic approval. `fix --apply` records an explicit change; only a subsequent `verify` establishes the new state.
 

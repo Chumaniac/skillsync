@@ -222,3 +222,16 @@ This closeout confirms public distribution and local consumer usability. It does
 not approve live network access, provider credentials, Docker/microVM execution,
 or remote Worker execution; those remain separate security and controlled-runtime
 gates.
+
+## Source report consistency follow-up (2026-10-04)
+
+When both an ActionPlan and an ApplyReceipt are attached, `report` now checks
+that their plan digests match before creating evidence. This is an input
+consistency check, not authentication of supplied files.
+
+Local verification reproduced the mismatch in Markdown, JSON, and SARIF before
+the fix. After the fix, all 440 tests passed across 69 files, with the opt-in
+Docker integration test skipped. Type-check, lint, build, and package dry-run
+passed. Matching evidence and reports without optional attachments remain
+supported; errors contain no local paths or input digests. No npm publication
+or real runtime capability activation was performed.
