@@ -1,0 +1,3 @@
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":0,"atMs":0,"type":"run.started","payload":{"agent":"codex","skillPath":"skill","inputDigest":"__SKILLSYNC_INPUT_DIGEST__"}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":1,"atMs":1,"type":"fs.write","payload":{"path":"workspace/export.csv","bytes":45,"digest":"sha256:6aba797bc10e195a929a7cbd58f1df9ac542827a4b8046bc40074a1506e52b4d"}}
+{"protocol":"skillsync.runner.v1","runId":"__SKILLSYNC_RUN_ID__","seq":2,"atMs":2,"type":"run.finished","payload":{"status":"passed","exitCode":0}}

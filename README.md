@@ -46,6 +46,8 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 ## Reference
 
+- [Project overview](https://chumanic.com/projects/skillsync/)
+- [Offline domain adaptation](./docs/domain-adaptation.md)
 - [Security and privacy](./docs/security-boundary.md)
 - [Compatibility profiles](./docs/compatibility.md)
 - [CI](./docs/ci.md)

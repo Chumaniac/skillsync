@@ -11,6 +11,7 @@ import {
   type BehaviorFinding,
 } from "../../domain/behavior-execution.js";
 import { scanInventory } from "../../domain/inventory.js";
+import { redactLocalPaths } from "../../reporters/local-paths.js";
 import { BehaviorCommandError, runBehaviorV2Test } from "./test-v2.js";
 
 export type BehaviorTestOptions = {
@@ -318,9 +319,10 @@ export async function listBehaviorFixtures(rootPath: string): Promise<BehaviorFi
 }
 
 export function renderBehaviorTest(
-  value: BehaviorTestReport | BehaviorExecutionReport | BehaviorFixtureListReport,
+  report: BehaviorTestReport | BehaviorExecutionReport | BehaviorFixtureListReport,
   format: string | undefined,
 ): string {
+  const value = redactLocalPaths(report);
   if (format === "json") {
     return `${JSON.stringify(value, null, 2)}\n`;
   }
