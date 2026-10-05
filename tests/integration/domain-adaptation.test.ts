@@ -24,13 +24,14 @@ afterEach(async () => {
 
 describe("domain adaptation fixtures", () => {
   it("redacts local paths in fixture listings for JSON and text", () => {
+    const localRoot = join(tmpdir(), "skillsync-synthetic-paths");
     const report = {
       schema_version: 1 as const,
-      fixtures: [{ id: "domain-code-review", path: "/Users/synthetic/local-materials", description: "Reference at /Users/synthetic/source.diff" }],
+      fixtures: [{ id: "domain-code-review", path: join(localRoot, "materials"), description: `Reference at ${join(localRoot, "source.diff")}` }],
     };
     for (const format of ["json", "text"]) {
       const rendered = renderBehaviorTest(report, format);
-      expect(rendered).not.toContain("/Users/synthetic");
+      expect(rendered).not.toContain(localRoot);
       expect(rendered).toContain("<local-path>");
       expect(rendered).toContain("domain-code-review");
     }
