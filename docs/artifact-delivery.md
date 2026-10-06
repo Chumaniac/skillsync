@@ -1,0 +1,72 @@
+# Actual artifact delivery checks
+
+The candidate source command `artifacts` checks local output files against a
+versioned contract. It opens actual bytes; it does not execute a Skill, Replay,
+Docker, provider or remote service. This command is not in the published npm0.1.0
+package. Existing `test` preflight and Replay event evidence keep their semantics.
+
+## Run a physical check
+
+```bash
+npm ci
+npm run build
+node dist/cli/index.js artifacts \
+  --contract fixtures/product/order-summary/contract.json \
+  --path fixtures/product/order-summary/artifacts --format json
+```
+
+Use `--delivery /path/to/bundle` instead of `--path` for a SkillTape source bundle
+created by `verify --delivery-dir`. The checker validates its layout, exact
+Receipt hash, artifact hashes/sizes, and deterministic artifact-set digest before
+accepting a complete result. A consistently rewritten manifest is not signed or
+authenticated evidence; the report marks provenance as not authenticated.
+
+## Declared requirements
+
+The [synthetic contract](../fixtures/product/order-summary/contract.json) declares:
+
+- capacity ceilings and a complete allowlist of required files;
+- exact CSV headers, scalar types, real calendar dates, row limits, unique keys,
+  optional expected hashes, and rejection of formula-risk text prefixes;
+- JSON top-level field types, required values and optional rejection of extras;
+- independently recomputed CSV record counts and safe integer sums compared with
+  declared JSON fields. Integer sums avoid unspecified floating-point tolerances.
+
+`bytes` rules check integrity and capacity without interpreting content. JSON
+checks cover declared top-level fields, not full JSON Schema or arbitrary
+expressions. Contract files are limited to 64 KiB. Limits must be explicit and
+within the shared 10,000-file/16 MiB-file/64 MiB-total workspace ceilings.
+Duplicate JSON keys are rejected, including escaped-key aliases in metadata and
+payloads. JSON depth is capped at 64 and object keys at 100,000; individual keys
+are at most 1,024 characters. CSV rows stop at the declared field count instead
+of allocating an array for millions of separators. Manifest order is checked
+by UTF-8 path bytes. Directory allowlists use precomputed prefix sets.
+
+The inventory is streamed and checked before payload reads. Extra paths, links,
+special files, excess depth/entries and capacity overruns fail. Single-file reads
+are bounded and no-follow where supported; metadata and content changes during
+inspection fail. This is inspection of a stable caller-selected snapshot, not an
+OS sandbox against a same-privilege process actively replacing directory parents.
+
+CSV parsing preserves spaces and supports quoted commas, multiline values,
+escaped quotes and CRLF, plus the common LF extension. The format basis is
+[RFC 4180](https://www.rfc-editor.org/rfc/rfc4180.html). Text-prefix checks include
+ASCII/full-width formula starters and leading controls discussed by
+[OWASP CSV Injection](https://community.owasp.org/attacks/CSV_Injection).
+The checker rejects risky parsed cells; it neither rewrites files nor guarantees
+safe interpretation in every spreadsheet application or locale.
+
+## Reports and exit codes
+
+Exit0 means declared checks passed, exit1 an artifact finding, and exit2 invalid
+input/contract. JSON/text reports contain relative paths, digests, sizes, record
+counts and stable findings, not raw cells, JSON values, process output or host
+absolute paths. Cross-file totals remain internal. Findings identify the file,
+declared field and data-record number where appropriate.
+
+The [fixture](../fixtures/product/order-summary/README.md) proves physical file
+checks with fictional outputs. The complete cross-project example separately
+runs a local summarizer, preserves a SkillTape bundle, passes this checker and
+rejects corruption and an internally inconsistent summary in copies. None of
+those checks establishes customer-data truth, model/Agent acceptance or a live
+production/business integration.

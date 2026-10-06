@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Candidate `artifacts` command validates actual local files with strict capacity,
+  CSV/JSON contracts, digest binding and cross-file summaries. Reports omit values
+  and local paths. Shared scans use bounded reads, metadata allowlists, streamed
+  enumeration, no-follow file opens and snapshot-change checks.
 - `report` now requires matching plan digests when both an ActionPlan and an
   ApplyReceipt are supplied. Mismatched evidence fails before rendering any
   Markdown, JSON, or SARIF output, with an error that does not expose local

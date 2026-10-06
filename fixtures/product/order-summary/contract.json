@@ -1,0 +1,78 @@
+{
+  "schema": "skillsync.artifacts/v1",
+  "limits": {
+    "max_files": 8,
+    "max_file_bytes": 1048576,
+    "max_total_bytes": 8388608
+  },
+  "files": [
+    {
+      "path": "metrics.csv",
+      "format": "csv",
+      "max_rows": 1000,
+      "unique_by": [
+        "day"
+      ],
+      "columns": [
+        {
+          "name": "day",
+          "type": "date"
+        },
+        {
+          "name": "orders",
+          "type": "integer",
+          "min": 0
+        },
+        {
+          "name": "total_cents",
+          "type": "integer",
+          "min": 0
+        }
+      ]
+    },
+    {
+      "path": "summary.json",
+      "format": "json",
+      "fields": [
+        {
+          "name": "schema_version",
+          "type": "integer",
+          "equals": 1
+        },
+        {
+          "name": "row_count",
+          "type": "integer",
+          "min": 0
+        },
+        {
+          "name": "total_orders",
+          "type": "integer",
+          "min": 0
+        },
+        {
+          "name": "total_cents",
+          "type": "integer",
+          "min": 0
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "csv_summary",
+      "csv": "metrics.csv",
+      "json": "summary.json",
+      "row_count_field": "row_count",
+      "sums": [
+        {
+          "column": "orders",
+          "field": "total_orders"
+        },
+        {
+          "column": "total_cents",
+          "field": "total_cents"
+        }
+      ]
+    }
+  ]
+}
