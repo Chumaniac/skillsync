@@ -34,6 +34,9 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 ## What you get
 
+- The local source candidate `artifacts` command independently checks actual
+  CSV/JSON delivery files, Receipt/file hashes and cross-file count/integer sums.
+  See [actual artifact checks](docs/artifact-delivery.md); it runs no Skill code.
 - `verify` reviews one local Skill for provenance, target compatibility, and changes without running its scripts.
 - `scan` inventories local Skills, while `compat` checks their declared features against agent profiles.
 - `diff` shows the meaningful changes between two Skill versions before you accept them.

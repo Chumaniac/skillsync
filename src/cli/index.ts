@@ -38,6 +38,7 @@ import {
   type FixPlanOptions,
 } from "./commands/fix.js";
 import { ActionPlanApplyError } from "../domain/patch-application.js";
+import { runArtifacts, renderArtifacts, type ArtifactsOptions } from "./commands/artifacts.js";
 import {
   listBehaviorFixtures,
   renderBehaviorTest,
@@ -561,6 +562,19 @@ export function createCli(io: CliIO = defaultCliIO): Command {
       if (reportExitCode !== 0) {
         io.setExitCode?.(reportExitCode);
       }
+    });
+
+  program.command("artifacts")
+    .description("Inspect actual local delivery artifacts against a bounded contract.")
+    .requiredOption("--contract <path>", "JSON or YAML artifact contract")
+    .option("--delivery <path>", "SkillTape delivery bundle directory")
+    .option("--path <path>", "Standalone artifact directory; choose this or --delivery")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: ArtifactsOptions & { format?: string }) => {
+      if (options.format !== "text" && options.format !== "json") throw new Error("artifacts format must be text or json");
+      const report = await runArtifacts(options);
+      io.writeOut(renderArtifacts(report, options.format));
+      if (report.exitCode) io.setExitCode?.(report.exitCode);
     });
 
   const runner = program
