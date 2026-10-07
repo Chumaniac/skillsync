@@ -32,6 +32,22 @@ The [synthetic contract](../fixtures/product/order-summary/contract.json) declar
 - independently recomputed CSV record counts and safe integer sums compared with
   declared JSON fields. Integer sums avoid unspecified floating-point tolerances.
 
+The local `source-url-contract` candidate adds `https_url` scalar fields to CSV
+columns and JSON top-level fields. Every such field requires `allowed_hosts`:
+1–16 unique, exact lowercase ASCII DNS names. Wildcards, bare localhost and IP
+literals are not host declarations. URL values are limited to 2,048 characters;
+literal whitespace/control/format characters and backslashes are rejected.
+The native URL parser must return HTTPS, the exact declared hostname, no userinfo
+and the default port (explicit443 is accepted). Host suffixes and undeclared
+subdomains fail. Other scalar types cannot carry `allowed_hosts`.
+
+The [synthetic knowledge source inventory](../fixtures/product/source-index/README.md)
+uses real CSV/JSON files plus existing unique-ID, date, capacity and summary rules.
+This extension is not yet in main or npm0.1.0. It does not fetch URLs, resolve DNS,
+follow redirects, assess the source text or prove that a named host is public or
+trustworthy. Exact URL spelling remains unchanged for uniqueness comparisons.
+Optional JSON fields may be omitted; an empty URL does not represent a source.
+
 `bytes` rules check integrity and capacity without interpreting content. JSON
 checks cover declared top-level fields, not full JSON Schema or arbitrary
 expressions. Contract files are limited to 64 KiB. Limits must be explicit and

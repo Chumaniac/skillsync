@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Local candidate `https_url` artifact fields validate bounded HTTPS addresses
+  against exact declared DNS hosts, with an offline knowledge-source inventory.
+  The checker never fetches sources, retains URL values in reports or proves truth.
 - Candidate `artifacts` command validates actual local files with strict capacity,
   CSV/JSON contracts, digest binding and cross-file summaries. Reports omit values
   and local paths. Shared scans use bounded reads, metadata allowlists, streamed

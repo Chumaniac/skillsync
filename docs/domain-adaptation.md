@@ -43,7 +43,10 @@ not vendor certification, and unknown/runtime-dependent features stay explicit.
 
 ## Next slices
 
-- Add versioned input-schema checks and bounded fixture resources.
+- Current local candidate: the [knowledge source inventory](../fixtures/product/source-index/README.md)
+  checks actual bounded CSV/JSON, exact HTTPS host declarations and independent
+  reference counts. It is unmerged and does not verify external source truth.
+- Add further versioned input-schema checks and bounded fixture resources.
 - Add references and output-evidence requirements for additional domains.
 - Validate a separately approved local execution backend using synthetic inputs
   before describing it as an actual integration.

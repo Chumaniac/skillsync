@@ -7,9 +7,14 @@ const safePath = z.string().min(1).max(1024).refine(path =>
   !/^[A-Za-z]:/.test(path) && path.split("/").every(part => part && part !== "." && part !== ".."),
 "artifact paths must be safe and relative");
 const hash = z.string().regex(/^[0-9a-f]{64}$/);
+const allowedHost = z.string().min(3).max(253).regex(
+  /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/,
+  "source hosts must be exact lowercase DNS names",
+);
 const scalar = z.object({
   name: z.string().min(1).max(128),
-  type: z.enum(["string", "integer", "number", "boolean", "date", "array", "object"]),
+  type: z.enum(["string", "integer", "number", "boolean", "date", "https_url", "array", "object"]),
+  allowed_hosts: z.array(allowedHost).min(1).max(16).optional(),
   required: z.boolean().default(true),
   equals: z.union([z.string(), z.number().finite(), z.boolean()]).optional(),
   min: z.number().finite().optional(), max: z.number().finite().optional(),
@@ -51,10 +56,12 @@ export const artifactContractSchema = z.object({ schema: z.literal("skillsync.ar
     const rules = file.format === "csv" ? file.columns : file.format === "json" ? file.fields : [];
     if (new Set(rules.map(rule => rule.name)).size !== rules.length) fail();
     for (const rule of rules) {
+      if (rule.type === "https_url" ? !rule.allowed_hosts ||
+        new Set(rule.allowed_hosts).size !== rule.allowed_hosts.length : rule.allowed_hosts !== undefined) fail();
       if ((rule.min !== undefined || rule.max !== undefined) && !["integer", "number"].includes(rule.type)) fail();
       if (rule.equals !== undefined && ((rule.type === "integer" && !Number.isSafeInteger(rule.equals)) ||
         (rule.type === "number" && typeof rule.equals !== "number") ||
-        (["string", "date"].includes(rule.type) && typeof rule.equals !== "string") ||
+        (["string", "date", "https_url"].includes(rule.type) && typeof rule.equals !== "string") ||
         (rule.type === "boolean" && typeof rule.equals !== "boolean") || ["array", "object"].includes(rule.type))) fail();
     }
     if (file.format === "csv" && (file.min_rows > file.max_rows ||

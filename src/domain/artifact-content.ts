@@ -43,11 +43,23 @@ function validDate(value: string): boolean {
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value;
 }
 
+function validSourceUrl(value: unknown, rule: ArtifactScalarRule): boolean {
+  // Parse one bounded scalar; never resolve DNS, fetch a source or retain its value.
+  if (typeof value !== "string" || value.length > 2048 || !/^https:\/\//i.test(value) ||
+    /[\p{Cc}\p{Cf}\s\\]/u.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && !url.port &&
+      (rule.allowed_hosts ?? []).includes(url.hostname);
+  } catch { return false; }
+}
+
 function scalarValid(value: unknown, rule: ArtifactScalarRule): boolean {
   if (rule.type === "integer" && (typeof value !== "number" || !Number.isSafeInteger(value))) return false;
   if (rule.type === "number" && (typeof value !== "number" || !Number.isFinite(value))) return false;
   if (rule.type === "string" && (typeof value !== "string" || (!rule.allow_empty && !value.length))) return false;
   if (rule.type === "date" && (typeof value !== "string" || !validDate(value))) return false;
+  if (rule.type === "https_url" && !validSourceUrl(value, rule)) return false;
   if (rule.type === "boolean" && typeof value !== "boolean") return false;
   if (rule.type === "array" && !Array.isArray(value)) return false;
   if (rule.type === "object" && (!value || typeof value !== "object" || Array.isArray(value))) return false;
