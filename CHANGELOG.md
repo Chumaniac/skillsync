@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Source artifact contracts support bounded CSV `reference_exists` checks with
+  exact string IDs and declared unique target keys. An offline citation example
+  rejects dangling references without exposing values; the aggregate index is
+  capped at 100,000 referenced cells, including repeats.
 - Source string artifact fields support bounded exact `one_of` options for
   classification labels, with a physical CSV/JSON material-intake example.
   Unknown labels fail without value disclosure; classifications do not prove approval.

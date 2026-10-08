@@ -67,6 +67,22 @@ the actual string values.
 checks cover declared top-level fields, not full JSON Schema or arbitrary
 expressions. Contract files are limited to 64 KiB. Limits must be explicit and
 within the shared 10,000-file/16 MiB-file/64 MiB-total workspace ceilings.
+
+`reference_exists` checks an exact nonempty string ID from one CSV against a
+declared single-column `unique_by` key in another CSV. Both columns must be
+declared required strings with `allow_empty: false`. File traversal order does
+not affect references. IDs are not trimmed, normalized or folded; numeric IDs,
+JSON references and composite keys are unsupported. Existing scalar, formula,
+duplicate-key and physical inventory checks continue to fail independently.
+The [synthetic citation catalog](../fixtures/product/reference-integrity/README.md)
+includes a runnable contract and explains adaptations for review, knowledge and
+operations data. Only declared reference fields are retained as SHA-256
+fingerprints with source row numbers. At most 100,000 referenced cells are
+indexed per invocation, counting repeated IDs and deduplicating field declarations.
+Exceeding this ceiling releases indexes and fails with `artifact.reference-capacity`.
+Missing references report relative file, field and data-row number, never the ID
+or fingerprint. This checks internal consistency without authenticating records.
+
 Duplicate JSON keys are rejected, including escaped-key aliases in metadata and
 payloads. JSON depth is capped at 64 and object keys at 100,000; individual keys
 are at most 1,024 characters. CSV rows stop at the declared field count instead

@@ -37,6 +37,8 @@ const comparison = z.object({ type: z.literal("csv_summary"), csv: safePath, jso
   row_count_field: z.string().min(1).max(128),
   sums: z.array(z.object({ column: z.string().min(1).max(128), field: z.string().min(1).max(128) }).strict()).max(128),
 }).strict();
+const referenceField = z.object({ path: safePath, field: z.string().min(1).max(128) }).strict();
+const reference = z.object({ type: z.literal("reference_exists"), source: referenceField, target: referenceField }).strict();
 
 export const artifactContractSchema = z.object({ schema: z.literal("skillsync.artifacts/v1"),
   limits: z.object({
@@ -45,7 +47,7 @@ export const artifactContractSchema = z.object({ schema: z.literal("skillsync.ar
     max_total_bytes: z.number().int().positive().max(WORKSPACE_TREE_LIMITS.maxTotalBytes),
   }).strict(),
   files: z.array(z.discriminatedUnion("format", [bytes, csv, json])).max(WORKSPACE_TREE_LIMITS.maxFiles),
-  checks: z.array(comparison).max(128).default([]),
+  checks: z.array(z.discriminatedUnion("type", [comparison, reference])).max(128).default([]),
 }).strict().superRefine((contract, context) => {
   const fail = () => context.addIssue({ code: z.ZodIssueCode.custom, message: "inconsistent artifact declarations" });
   const files = new Map(contract.files.map(file => [file.path, file]));
@@ -75,6 +77,17 @@ export const artifactContractSchema = z.object({ schema: z.literal("skillsync.ar
       file.unique_by.some(name => !file.columns.some(column => column.name === name)))) fail();
   }
   for (const check of contract.checks) {
+    if (check.type === "reference_exists") {
+      const source = files.get(check.source.path), target = files.get(check.target.path);
+      if (source?.format !== "csv" || target?.format !== "csv") { fail(); continue; }
+      const sourceColumn = source.columns.find(column => column.name === check.source.field);
+      const targetColumn = target.columns.find(column => column.name === check.target.field);
+      // Exact nonempty string IDs only; a component of a composite key is not unique.
+      if (sourceColumn?.type !== "string" || targetColumn?.type !== "string" ||
+        sourceColumn.allow_empty || targetColumn.allow_empty ||
+        target.unique_by.length !== 1 || target.unique_by[0] !== check.target.field) fail();
+      continue;
+    }
     const csv = files.get(check.csv), json = files.get(check.json);
     if (csv?.format !== "csv" || json?.format !== "json") { fail(); continue; }
     const integerField = (name: string) => json.fields.some(field => field.name === name && field.type === "integer" && field.required);
