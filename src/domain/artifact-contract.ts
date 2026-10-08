@@ -15,6 +15,8 @@ const scalar = z.object({
   name: z.string().min(1).max(128),
   type: z.enum(["string", "integer", "number", "boolean", "date", "https_url", "array", "object"]),
   allowed_hosts: z.array(allowedHost).min(1).max(16).optional(),
+  one_of: z.array(z.string().max(256).refine(value => value === value.trim() &&
+    !/[\p{Cc}\p{Cf}]/u.test(value), "options must be exact plain strings")).min(1).max(32).optional(),
   required: z.boolean().default(true),
   equals: z.union([z.string(), z.number().finite(), z.boolean()]).optional(),
   min: z.number().finite().optional(), max: z.number().finite().optional(),
@@ -56,6 +58,10 @@ export const artifactContractSchema = z.object({ schema: z.literal("skillsync.ar
     const rules = file.format === "csv" ? file.columns : file.format === "json" ? file.fields : [];
     if (new Set(rules.map(rule => rule.name)).size !== rules.length) fail();
     for (const rule of rules) {
+      if (rule.one_of !== undefined && (rule.type !== "string" ||
+        new Set(rule.one_of).size !== rule.one_of.length ||
+        (!rule.allow_empty && rule.one_of.includes("")) ||
+        (rule.equals !== undefined && (typeof rule.equals !== "string" || !rule.one_of.includes(rule.equals))))) fail();
       if (rule.type === "https_url" ? !rule.allowed_hosts ||
         new Set(rule.allowed_hosts).size !== rule.allowed_hosts.length : rule.allowed_hosts !== undefined) fail();
       if ((rule.min !== undefined || rule.max !== undefined) && !["integer", "number"].includes(rule.type)) fail();

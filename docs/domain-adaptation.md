@@ -47,6 +47,10 @@ not vendor certification, and unknown/runtime-dependent features stay explicit.
   checks actual bounded CSV/JSON, exact HTTPS host declarations and independent
   reference counts. It is not in npm0.1.0 and does not verify external source truth.
 - Add further versioned input-schema checks and bounded fixture resources.
+- The source [material intake catalog](../fixtures/product/review-intake/README.md)
+  checks caller-declared domain/decision labels in real CSV/JSON with bounded
+  `one_of` string options. Labels are exact data classifications, not authenticated
+  approval or semantic review; this source extension is not in npm0.1.0.
 - Add references and output-evidence requirements for additional domains.
 - Validate a separately approved local execution backend using synthetic inputs
   before describing it as an actual integration.

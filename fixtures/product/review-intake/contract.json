@@ -1,0 +1,31 @@
+{
+  "schema": "skillsync.artifacts/v1",
+  "limits": { "max_files": 2, "max_file_bytes": 16384, "max_total_bytes": 32768 },
+  "files": [
+    {
+      "path": "materials.csv",
+      "format": "csv",
+      "columns": [
+        { "name": "material_id", "type": "string" },
+        { "name": "domain", "type": "string", "one_of": ["code-review", "knowledge-reference", "data-ops"] },
+        { "name": "decision", "type": "string", "one_of": ["ready", "needs-review", "blocked"] },
+        { "name": "reference_count", "type": "integer", "min": 0, "max": 10 }
+      ],
+      "min_rows": 1,
+      "max_rows": 1000,
+      "unique_by": ["material_id"]
+    },
+    {
+      "path": "summary.json",
+      "format": "json",
+      "fields": [
+        { "name": "schema_version", "type": "integer", "equals": 1 },
+        { "name": "row_count", "type": "integer", "min": 1, "max": 1000 },
+        { "name": "total_references", "type": "integer", "min": 0, "max": 10000 },
+        { "name": "queue", "type": "string", "one_of": ["manual-review", "triage"] }
+      ]
+    }
+  ],
+  "checks": [{ "type": "csv_summary", "csv": "materials.csv", "json": "summary.json",
+    "row_count_field": "row_count", "sums": [{ "column": "reference_count", "field": "total_references" }] }]
+}

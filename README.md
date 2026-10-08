@@ -34,11 +34,13 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 ## What you get
 
-- The local source candidate `artifacts` command independently checks actual
+- The source `artifacts` command independently checks actual
   CSV/JSON delivery files, Receipt/file hashes and cross-file count/integer sums.
   See [actual artifact checks](docs/artifact-delivery.md); it runs no Skill code.
   The [knowledge source inventory](fixtures/product/source-index/README.md) adds
   exact declared HTTPS hosts to physical CSV/JSON checks without fetching sources.
+  The [material intake catalog](fixtures/product/review-intake/README.md) rejects
+  unknown classification labels using bounded `one_of` strings; labels do not prove approval.
 - `verify` reviews one local Skill for provenance, target compatibility, and changes without running its scripts.
 - `scan` inventories local Skills, while `compat` checks their declared features against agent profiles.
 - `diff` shows the meaningful changes between two Skill versions before you accept them.
