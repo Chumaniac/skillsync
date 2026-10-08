@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Source string artifact fields support bounded exact `one_of` options for
+  classification labels, with a physical CSV/JSON material-intake example.
+  Unknown labels fail without value disclosure; classifications do not prove approval.
 - Source `https_url` artifact fields validate bounded HTTPS addresses
   against exact declared DNS hosts, with an offline knowledge-source inventory.
   The checker never fetches sources, retains URL values in reports or proves truth.

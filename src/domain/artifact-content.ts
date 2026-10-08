@@ -63,6 +63,8 @@ function scalarValid(value: unknown, rule: ArtifactScalarRule): boolean {
   if (rule.type === "boolean" && typeof value !== "boolean") return false;
   if (rule.type === "array" && !Array.isArray(value)) return false;
   if (rule.type === "object" && (!value || typeof value !== "object" || Array.isArray(value))) return false;
+  // One bounded literal list; do not coerce, normalize, evaluate or retain values.
+  if (rule.one_of !== undefined && (typeof value !== "string" || !rule.one_of.includes(value))) return false;
   if (rule.equals !== undefined && value !== rule.equals) return false;
   if (typeof value === "number" && ((rule.min !== undefined && value < rule.min) || (rule.max !== undefined && value > rule.max))) return false;
   return true;

@@ -48,6 +48,21 @@ follow redirects, assess the source text or prove that a named host is public or
 trustworthy. Exact URL spelling remains unchanged for uniqueness comparisons.
 Optional JSON fields may be omitted; an empty URL does not represent a source.
 
+String fields can declare `one_of` with 1–32 unique exact options, each limited
+to 256 UTF-16 code units. Options cannot contain surrounding whitespace, control
+or format characters. Other scalar types cannot carry `one_of`; an `equals`
+value must also be in the declared list. An empty option requires
+`allow_empty: true`. Matching does not trim, normalize, fold case or coerce types;
+CSV formula rejection still applies. Optional JSON fields may still be omitted.
+
+For example, `{ "name": "currency", "type": "string", "one_of": ["CNY", "USD"] }`
+checks only that the label is one of the caller's declarations. The
+[material intake catalog](../fixtures/product/review-intake/README.md) demonstrates
+domain and decision labels in physical CSV/JSON plus independent reference totals.
+These classifications do not authenticate reviewers, authorize actions or prove
+business correctness. This source extension is not in npm0.1.0; findings omit
+the actual string values.
+
 `bytes` rules check integrity and capacity without interpreting content. JSON
 checks cover declared top-level fields, not full JSON Schema or arbitrary
 expressions. Contract files are limited to 64 KiB. Limits must be explicit and
