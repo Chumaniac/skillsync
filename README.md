@@ -32,8 +32,12 @@ node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target
 
 Tagged builds now publish a CLI tarball, checksums, a validated CycloneDX SBOM
 and a source manifest on [GitHub Releases](https://github.com/Chumaniac/skillsync/releases).
-The current source candidate is 0.1.4; its release is complete only after the
-matching immutable tag workflow succeeds. Installation still uses Node.js 20+
+[GitHub v0.1.4](https://github.com/Chumaniac/skillsync/releases/tag/v0.1.4)
+is published. Release run 37897733439 passed its source/main binding, tests,
+actual package allowlist, locked production SBOM and required GitHub provenance.
+The downloaded archive, SBOM and source manifest matched their checksums and
+public asset digests; an isolated install reported 0.1.4 and passed the packaged
+synthetic delivery-coverage example with `execution: not-run`. Installation still uses Node.js 20+
 and fetches the package's public dependencies; it needs no npm login.
 
 ```bash

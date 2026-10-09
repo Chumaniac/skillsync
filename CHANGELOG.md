@@ -1,5 +1,9 @@
 ## 0.1.4 - 2026-10-09
 
+GitHub release run `37897733439` succeeded. Downloaded package/SBOM/manifest
+checksums and asset digests matched; isolated installation and the packaged
+synthetic delivery-coverage check passed with `execution: not-run`.
+
 - Publish new tagged packages through GitHub Releases with SHA256 checksums,
   validated CycloneDX SBOM and required GitHub provenance, without an npm account.
 - Keep npm-based CI defaults on the actually public 0.1.0 package; source and
