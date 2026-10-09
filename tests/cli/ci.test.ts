@@ -40,7 +40,7 @@ describe("skillsync ci", () => {
       cwd: root,
     });
     expect(planned.applied).toBe(false);
-    expect(planned.content).toContain("@chumanic/skillsync@0.1.2 verify --format sarif");
+    expect(planned.content).toContain("@chumanic/skillsync@0.1.3 verify --format sarif");
     await expect(access(join(root, ".github/workflows/skillsync.yml"))).rejects.toThrow();
 
     const applied = await runCiInit({
@@ -51,7 +51,7 @@ describe("skillsync ci", () => {
       apply: true,
     });
     expect(applied.applied).toBe(true);
-    expect(await readFile(applied.outputPath, "utf8")).toContain("@chumanic/skillsync@0.1.2 verify --format sarif");
+    expect(await readFile(applied.outputPath, "utf8")).toContain("@chumanic/skillsync@0.1.3 verify --format sarif");
 
     await expect(
       runCiInit({

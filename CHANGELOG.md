@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 - 2026-10-09
 
-- Local candidate `require_all_targets` adds opt-in coverage of declared CSV
+- Optional `require_all_targets` adds opt-in coverage of declared CSV
   targets, detecting expected records with no delivery/evidence rows. Reports
   contain only target locations; existing capacity and finding limits remain.
-  This candidate is not pushed or published.
+  This release candidate is not yet published to npm.
 - Source artifact contracts support bounded CSV `reference_exists` checks with
   exact string IDs and declared unique target keys. An offline citation example
   rejects dangling references without exposing values; the aggregate index is

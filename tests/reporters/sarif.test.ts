@@ -44,7 +44,7 @@ describe("renderSarif", () => {
 
     expect(sarif.version).toBe("2.1.0");
     expect(sarif.runs[0]?.tool.driver.name).toBe("skillsync");
-    expect(sarif.runs[0]?.tool.driver.version).toBe("0.1.2");
+    expect(sarif.runs[0]?.tool.driver.version).toBe("0.1.3");
     expect(sarif.runs[0]?.tool.driver.rules[0]?.id).toBe("structure.missing-reference");
     expect(sarif.runs[0]?.tool.driver.rules[0]?.help?.text).toBe("Add the referenced file.");
     expect(sarif.runs[0]?.results[0]?.ruleId).toBe("structure.missing-reference");

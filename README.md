@@ -2,7 +2,7 @@
 
 **Verify Agent Skills before you trust them.** SkillSync checks a local Skill's provenance, compatibility, and changes without executing it.
 
-> **Alpha · v0.1.2 · Node.js 20+**
+> **Alpha · v0.1.3 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
@@ -18,7 +18,7 @@ npm install -g @chumanic/skillsync@0.1.0
 skillsync verify --path . --target codex
 ```
 
-**From source (latest 0.1.2):**
+**From source (latest 0.1.3):**
 
 ```bash
 git clone https://github.com/Chumaniac/skillsync.git
@@ -28,7 +28,7 @@ npm run build
 node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex
 ```
 
-> `0.1.2` is tagged as `v0.1.2` and will be published via the OIDC provenance workflow (`npm publish --provenance --access public` with `id-token: write`, no long-lived token). Until the Trusted Publisher is verified on npm, use `0.1.0` via `npx` or run `0.1.2` from source. The `skillsync ci init` template pins `0.1.2` by default; override with `--package-version 0.1.0` on npm today.
+> `0.1.3` is a release candidate prepared for the OIDC provenance workflow (`npm publish --provenance --access public` with `id-token: write`, no long-lived token). Until the Trusted Publisher is verified on npm, use `0.1.0` via `npx` or run `0.1.3` from source. The `skillsync ci init` template pins `0.1.3` by default; override with `--package-version 0.1.0` on npm today.
 
 The command above verifies the included sample Skill. Replace the fixture path with a directory containing your own `SKILL.md` when you are ready.
 
@@ -39,6 +39,8 @@ The command above verifies the included sample Skill. Replace the fixture path w
   See [actual artifact checks](docs/artifact-delivery.md); it runs no Skill code.
   The [knowledge source inventory](fixtures/product/source-index/README.md) adds
   exact declared HTTPS hosts to physical CSV/JSON checks without fetching sources.
+  Optional target coverage catches expected records with no delivery/evidence rows;
+  see the [delivery coverage example](fixtures/product/delivery-coverage/README.md).
   CSV `reference_exists` checks also bind exact string IDs to a declared unique
   CSV target, with a 100,000-cell reference limit and no raw IDs in findings.
   The [reference-integrity example](fixtures/product/reference-integrity/README.md)

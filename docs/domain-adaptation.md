@@ -37,7 +37,7 @@ change. A `report` with both plan and receipt requires matching plan digests.
 These findings are review material, not automatic permission to run a Skill.
 
 The examples are current source additions, not part of the published npm0.1.0
-package. Keep npm installation and source0.1.2 capabilities separate. Capability
+package. Keep npm installation and source0.1.3 capabilities separate. Capability
 profiles are maintained by this project using Agent documentation; a profile is
 not vendor certification, and unknown/runtime-dependent features stay explicit.
 

@@ -86,7 +86,7 @@ have no reference in that check's source field. It reports
 Omitting the option keeps coverage disabled and preserves existing normalized
 contract digests; ordinary reference catalogs may contain unused targets.
 The [local delivery coverage candidate](../fixtures/product/delivery-coverage/README.md)
-demonstrates expected-order omissions; this option is not in GitHub main or npm.
+demonstrates expected-order omissions; this release candidate is not yet published to npm.
 Target rows and optional source fingerprint sets share the existing 100,000-cell
 intake limit and are released together on exhaustion. Findings remain capped at 256.
 Coverage means reference presence, not completed work or authenticated approval.

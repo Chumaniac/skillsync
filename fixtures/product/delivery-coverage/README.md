@@ -27,5 +27,5 @@ All relation checks remain within the shared 100,000-cell index and 256-finding
 ceilings; the indexes store fingerprints and row numbers rather than ID contents.
 No runtime, network, account or real business integration is executed.
 
-As of this candidate, the new coverage option is local, not pushed to GitHub main
-or included in a public npm package.
+The new coverage option is in the 0.1.3 source release candidate; npm publication
+is separately verified after its release workflow succeeds.
