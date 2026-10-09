@@ -60,7 +60,7 @@ import { renderSarif } from "../reporters/sarif.js";
 import { renderText } from "../reporters/text.js";
 import { parseOutputFormat } from "./output.js";
 
-const VERSION = "0.1.4";
+import { VERSION } from "../version.js";
 
 const COMMANDS = [
   ["scan", "Inspect skill files without executing their instructions."],

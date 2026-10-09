@@ -21,6 +21,48 @@ Receipt hash, artifact hashes/sizes, and deterministic artifact-set digest befor
 accepting a complete result. A consistently rewritten manifest is not signed or
 authenticated evidence; the report marks provenance as not authenticated.
 
+## Per-key integer reconciliation
+
+Source candidate 0.1.5 supports `keyed_integer_sum_equals`. It is absent from
+published npm0.1.0 and the existing GitHub0.1.4 package. Each side declares a CSV
+path, required nonempty string `key`, and required integer `value` column.
+The two paths must be distinct; comparing a file with itself is rejected before
+artifact reads, including when different columns are selected:
+
+```json
+{
+  "type": "keyed_integer_sum_equals",
+  "source": { "path": "expected.csv", "key": "order_id", "value": "amount_cents" },
+  "target": { "path": "allocations.csv", "key": "order_id", "value": "amount_cents" }
+}
+```
+
+Both key sets and each key's accumulated value must match. Repeated rows can
+represent split deliveries; `unique_by` remains a separate caller requirement.
+IDs are compared exactly, without trimming, case folding or numeric coercion.
+Safe integer intermediate totals are required per key, even when a global total
+remains safe. No floating-point tolerances or expressions are accepted.
+
+The [reproducible example](../fixtures/product/keyed-reconciliation/README.md)
+keeps hashes, reference coverage, row counts and global totals consistent while
+allocating amounts to the wrong orders. Per-key checks detect two mismatches.
+The same mechanism can compare counts per changed file, citation source or task.
+
+Reconciliation observes at most 100,000 selected cells per invocation, counting
+each key/value pair per unique path/key/value grouping. Identical grouping
+declarations reuse one index. Key values are retained only as internal SHA-256
+fingerprints; source fields are hashed once per row. Exhaustion releases partial
+indexes and produces `artifact.reconciliation-capacity`. Unsafe per-key sums or
+invalid artifacts produce `unknown` summaries, without incomplete numeric
+conclusions. Existing physical and scalar failures remain authoritative.
+
+JSON reports include optional `reconciliations` with declared metadata and
+counts of source/target, missing, unexpected and mismatched keys. They expose no
+raw ID, fingerprint or amount. Text reports include the same bounded counts.
+Without the rule, existing normalized contracts and report shapes are unchanged.
+Reports still say `execution: not-run` and `provenance: not-authenticated`;
+equality does not authenticate the expected input or approve a business action.
+
 ## Declared requirements
 
 The [synthetic contract](../fixtures/product/order-summary/contract.json) declares:

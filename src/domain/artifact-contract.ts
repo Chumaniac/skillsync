@@ -41,6 +41,8 @@ const referenceField = z.object({ path: safePath, field: z.string().min(1).max(1
 const reference = z.object({ type: z.literal("reference_exists"), source: referenceField, target: referenceField,
   require_all_targets: z.boolean().optional(),
 }).strict();
+const keyedSide = z.object({ path: safePath, key: z.string().min(1).max(128), value: z.string().min(1).max(128) }).strict();
+const reconciliation = z.object({ type: z.literal("keyed_integer_sum_equals"), source: keyedSide, target: keyedSide }).strict();
 
 export const artifactContractSchema = z.object({ schema: z.literal("skillsync.artifacts/v1"),
   limits: z.object({
@@ -49,7 +51,7 @@ export const artifactContractSchema = z.object({ schema: z.literal("skillsync.ar
     max_total_bytes: z.number().int().positive().max(WORKSPACE_TREE_LIMITS.maxTotalBytes),
   }).strict(),
   files: z.array(z.discriminatedUnion("format", [bytes, csv, json])).max(WORKSPACE_TREE_LIMITS.maxFiles),
-  checks: z.array(z.discriminatedUnion("type", [comparison, reference])).max(128).default([]),
+  checks: z.array(z.discriminatedUnion("type", [comparison, reference, reconciliation])).max(128).default([]),
 }).strict().superRefine((contract, context) => {
   const fail = () => context.addIssue({ code: z.ZodIssueCode.custom, message: "inconsistent artifact declarations" });
   const files = new Map(contract.files.map(file => [file.path, file]));
@@ -79,6 +81,18 @@ export const artifactContractSchema = z.object({ schema: z.literal("skillsync.ar
       file.unique_by.some(name => !file.columns.some(column => column.name === name)))) fail();
   }
   for (const check of contract.checks) {
+    if (check.type === "keyed_integer_sum_equals") {
+      if (check.source.path === check.target.path) fail();
+      for (const side of [check.source, check.target]) {
+        const file = files.get(side.path);
+        if (file?.format !== "csv") { fail(); continue; }
+        const key = file.columns.find(column => column.name === side.key);
+        const value = file.columns.find(column => column.name === side.value);
+        if (key?.type !== "string" || key.allow_empty || !key.required ||
+          value?.type !== "integer" || !value.required) fail();
+      }
+      continue;
+    }
     if (check.type === "reference_exists") {
       const source = files.get(check.source.path), target = files.get(check.target.path);
       if (source?.format !== "csv" || target?.format !== "csv") { fail(); continue; }

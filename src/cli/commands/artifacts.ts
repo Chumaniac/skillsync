@@ -8,6 +8,7 @@ import { parseArtifactContract } from "../../domain/artifact-contract.js";
 import { parseStrictJson } from "../../domain/strict-json.js";
 import { inspectArtifactContent, type ArtifactFacts, type ArtifactFinding } from "../../domain/artifact-content.js";
 import { createArtifactReferenceIndex } from "../../domain/artifact-references.js";
+import { createArtifactReconciliationIndex, type ReconciliationSummary } from "../../domain/artifact-reconciliation.js";
 import { redactLocalPaths } from "../../reporters/local-paths.js";
 import { readWorkspaceFile, scanStagedWorkspace, WorkspaceTreeError } from "../../sandbox/workspace-tree.js";
 
@@ -26,6 +27,7 @@ export type ArtifactReport = {
   contract_sha256?: string; artifact_set_sha256?: string;
   files: Array<{ path: string; bytes: number; sha256: string; rows?: number }>;
   findings: ArtifactFinding[];
+  reconciliations?: ReconciliationSummary[];
 };
 
 function setHash(files: ArtifactReport["files"]): string {
@@ -87,6 +89,7 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
   }
   const facts = new Map<string, ArtifactFacts>();
   const references = createArtifactReferenceIndex(contract);
+  const reconciliation = createArtifactReconciliationIndex(contract);
   try {
     const rules = new Map(contract.files.map(file => [file.path, file]));
     const tree = await scanStagedWorkspace(root, {
@@ -95,15 +98,16 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
       inspectFile(path, content, observation) {
         const rule = rules.get(path)!;
         const sha256 = observation.digest.slice("sha256:".length);
-        if (rule.sha256 && rule.sha256 !== sha256) issue("artifact.digest-mismatch", path);
-        const inspected = inspectArtifactContent(rule, content, references.observer(path));
+        if (rule.sha256 && rule.sha256 !== sha256) { issue("artifact.digest-mismatch", path); reconciliation.invalidate(path); }
+        const inspected = inspectArtifactContent(rule, content, references.observer(path), reconciliation.observer(path));
+        if (inspected.findings.length) reconciliation.invalidate(path);
         facts.set(path, inspected.facts);
         for (const finding of inspected.findings) if (report.findings.length < 256) report.findings.push(finding);
         report.files.push({ path, bytes: observation.bytes, sha256, ...(inspected.facts.rows !== undefined ? { rows: inspected.facts.rows } : {}) });
       },
     });
     const found = new Set(tree.files.map(file => file.path.slice("workspace/".length)));
-    for (const file of contract.files) if (!found.has(file.path)) issue("artifact.missing", file.path);
+    for (const file of contract.files) if (!found.has(file.path)) { issue("artifact.missing", file.path); reconciliation.invalidate(file.path); }
   } catch (error) {
     report.files = [];
     report.findings = [];
@@ -134,6 +138,9 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
     for (const sum of check.sums) if (csv.integers.get(sum.column) !== json.integers.get(sum.field)) issue("artifact.summary-sum", check.json, sum.field);
   }
   for (const finding of references.findings()) if (report.findings.length < 256) report.findings.push(finding);
+  const reconciled = reconciliation.finish();
+  if (reconciled.summaries.length) report.reconciliations = reconciled.summaries;
+  for (const finding of reconciled.findings) if (report.findings.length < 256) report.findings.push(finding);
   if (!report.findings.length) { report.status = "passed"; report.exitCode = 0; }
   return report;
 }
@@ -142,5 +149,6 @@ export function renderArtifacts(report: ArtifactReport, format = "text"): string
   const safe = redactLocalPaths(report);
   if (format === "json") return JSON.stringify(safe, null, 2) + "\n";
   return [`Artifact validation: ${safe.status}`, `Evidence: physical files; execution: not-run; receipt binding: ${safe.receipt_binding}`,
-    `Files: ${safe.files.length}`, ...safe.findings.map(finding => `${finding.code}${finding.path ? ` file=${JSON.stringify(finding.path)}` : ""}${finding.field ? ` field=${JSON.stringify(finding.field)}` : ""}${finding.row !== undefined ? ` row=${finding.row}` : ""}${finding.message ? ` ${finding.message}` : ""}`)].join("\n") + "\n";
+    `Files: ${safe.files.length}`, ...(safe.reconciliations ?? []).map(item => `Record reconciliation: ${item.status}${item.status !== "unknown" ? `; source keys=${item.sourceKeys}; target keys=${item.targetKeys}; missing=${item.missingKeys}; unexpected=${item.unexpectedKeys}; mismatched values=${item.valueMismatches}` : ""}`),
+    ...safe.findings.map(finding => `${finding.code}${finding.path ? ` file=${JSON.stringify(finding.path)}` : ""}${finding.field ? ` field=${JSON.stringify(finding.field)}` : ""}${finding.row !== undefined ? ` row=${finding.row}` : ""}${finding.message ? ` ${finding.message}` : ""}`)].join("\n") + "\n";
 }
