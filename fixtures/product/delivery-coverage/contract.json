@@ -1,0 +1,13 @@
+{
+  "schema": "skillsync.artifacts/v1",
+  "limits": { "max_files": 2, "max_file_bytes": 4096, "max_total_bytes": 8192 },
+  "files": [
+    { "path": "order-lines.csv", "format": "csv", "max_rows": 20,
+      "columns": [{ "name": "order_id", "type": "string" }, { "name": "item_id", "type": "string" }] },
+    { "path": "expected-orders.csv", "format": "csv", "max_rows": 20, "unique_by": ["order_id"],
+      "columns": [{ "name": "order_id", "type": "string" }] }
+  ],
+  "checks": [{ "type": "reference_exists", "require_all_targets": true,
+    "source": { "path": "order-lines.csv", "field": "order_id" },
+    "target": { "path": "expected-orders.csv", "field": "order_id" } }]
+}

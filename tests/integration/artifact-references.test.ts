@@ -88,3 +88,66 @@ describe("physical CSV references", () => {
     expect(report.findings[0].code).toBe("artifact.structure-or-snapshot"); expect(report.files).toEqual([]);
   });
 });
+
+describe("required target coverage", () => {
+  it("preserves the normalized contract digest of the existing citation fixture", async () => {
+    const root = join(import.meta.dirname, "../../fixtures/product/reference-integrity");
+    const report = await runArtifacts({ contract: join(root, "contract.json"), path: join(root, "artifacts") });
+    expect(report.exitCode).toBe(0);
+    expect(report.contract_sha256).toBe("3023d7b5d113d867f7651e8743f352ef27025cfa151e9463701e0b3748677308");
+  });
+  it("keeps unused targets allowed by default and by an explicit false option", async () => {
+    const defaults = await fixture("customer\nC1\n", "id\nC1\nC2\n");
+    expect((await runArtifacts(defaults)).status).toBe("passed");
+    const contract = declaration(); Object.assign(contract.checks[0], { require_all_targets: false });
+    expect((await runArtifacts(await fixture("customer\nC1\n", "id\nC1\nC2\n", contract))).status).toBe("passed");
+  });
+  it("passes complete target coverage with repeated forward references", async () => {
+    const contract = declaration(); Object.assign(contract.checks[0], { require_all_targets: true });
+    const report = await runArtifacts(await fixture("customer\nC2\nC1\nC1\n", "id\nC1\nC2\n", contract));
+    expect(report.status).toBe("passed"); expect(report.execution).toBe("not-run");
+  });
+  it("reports the uncovered target row without retaining or rendering its ID", async () => {
+    const contract = declaration(); Object.assign(contract.checks[0], { require_all_targets: true });
+    const report = await runArtifacts(await fixture("customer\nC1\n", "id\nC1\nDO_NOT_DISCLOSE\n", contract));
+    expect(report.findings).toEqual([{ code: "artifact.reference-unused", path: "z-customers.csv", field: "id", row: 2 }]);
+    expect(report.exitCode).toBe(1);
+    expect(renderArtifacts(report, "json") + renderArtifacts(report)).not.toContain("DO_NOT_DISCLOSE");
+  });
+  it("catches an empty delivery while bounding its target findings at 256", async () => {
+    const contract = declaration(); Object.assign(contract.checks[0], { require_all_targets: true });
+    Object.assign(contract.files[0], { min_rows: 0 }); contract.files[1].max_rows = 300;
+    const targets = "id\n" + Array.from({ length: 300 }, (_, row) => `C${row + 1}\n`).join("");
+    const report = await runArtifacts(await fixture("customer\n", targets, contract));
+    expect(report.exitCode).toBe(1); expect(report.findings).toHaveLength(256);
+    expect(report.findings[0]).toEqual({ code: "artifact.reference-unused", path: "z-customers.csv", field: "id", row: 1 });
+    expect(report.findings[255].row).toBe(256);
+  });
+  it("checks each declared target table independently", async () => {
+    const contract = declaration(); Object.assign(contract.checks[0], { require_all_targets: true });
+    contract.limits.max_files = 3;
+    contract.files.push({ ...contract.files[1], path: "other-customers.csv" });
+    contract.checks.push({ ...contract.checks[0], target: { path: "other-customers.csv", field: "id" } });
+    const options = await fixture("customer\nC1\n", "id\nC1\nC2\n", contract);
+    await writeFile(join(options.path, "other-customers.csv"), "id\nC1\n");
+    const report = await runArtifacts(options);
+    expect(report.findings).toEqual([{ code: "artifact.reference-unused", path: "z-customers.csv", field: "id", row: 2 }]);
+  });
+  it("keeps capacity failure ahead of target coverage and releases oversized indexes", async () => {
+    const contract = declaration(); Object.assign(contract.checks[0], { require_all_targets: true });
+    contract.limits = { max_files: 2, max_file_bytes: 1_000_000, max_total_bytes: 2_000_000 };
+    for (const file of contract.files) file.max_rows = 100_000;
+    const source = "customer\n" + "C1\n".repeat(50_000);
+    const target = "id\n" + Array.from({ length: 50_001 }, (_, row) => `C${row + 1}\n`).join("");
+    const report = await runArtifacts(await fixture(source, target, contract));
+    expect(report.findings).toEqual([{ code: "artifact.reference-capacity" }]); expect(report.exitCode).toBe(1);
+  });
+  it("rejects non-boolean coverage options before reading artifact paths", async () => {
+    for (const value of ["true", 1, null, {}]) {
+      const contract = declaration(); Object.assign(contract.checks[0], { require_all_targets: value });
+      const options = await fixture(undefined, undefined, contract);
+      const report = await runArtifacts({ ...options, path: join(options.root, "does-not-exist") });
+      expect(report.exitCode).toBe(2); expect(report.findings[0].code).toBe("artifact.contract-invalid");
+    }
+  });
+});

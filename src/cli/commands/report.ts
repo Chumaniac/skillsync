@@ -278,7 +278,7 @@ export async function runReport(options: ReportOptions): Promise<EvidenceReport>
     ...(resolvedIssueBaseline(beforeReport, before.rootDigest) === undefined
       ? {}
       : { baseline: resolvedIssueBaseline(beforeReport, before.rootDigest) }),
-    toolVersion: options.toolVersion ?? "0.1.2",
+    toolVersion: options.toolVersion ?? "0.1.3",
   });
 }
 
