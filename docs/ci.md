@@ -13,7 +13,7 @@ they can be replaced.
 
 The generated GitHub Action grants `contents: read` and uploads SARIF findings;
 it does not execute Skill scripts. The generated consumer command pins the
-published SkillSync package version (`@chumanic/skillsync@0.1.3` by default); override it
+published SkillSync package version (`@chumanic/skillsync@0.1.0` by default); override it
 with `ci init --package-version <version>` when upgrading. Because the current
 repository publishes a scoped public package, the generated consumer template can
 be used after that package version is available; the repository's own workflow uses
@@ -69,12 +69,13 @@ placeholders is intentionally not accepted as production evidence.
 
 ## Release validation
 
-`.github/workflows/release.yml` runs only for tags matching `v*`. It checks the
-test suite, type-check, lint, build, and `npm pack --dry-run`, then publishes
-`@chumanic/skillsync` with `npm publish --provenance --access public`. The job
-uses GitHub OIDC (`id-token: write`) and no long-lived npm token. npm Trusted
-Publisher configuration is an external prerequisite; a tag is not permission
-to activate a live runtime capability.
+`.github/workflows/release.yml` runs only for tags matching `v*`. It requires the
+exact tagged source to have a successful main repository verification, then
+checks tests, types, lint, build and the actual public package allowlist. It
+publishes a tarball, checksums, validated SBOM and source manifest to GitHub
+Releases only after required GitHub provenance succeeds. Existing releases are
+not overwritten. This distribution needs no npm account or long-lived token;
+the npm registry remains at 0.1.0. A tag does not activate a live runtime.
 
 The operator-facing activation, revocation, rollback, and evidence review
 procedure is in [`runtime-operator-runbook.md`](runtime-operator-runbook.md).

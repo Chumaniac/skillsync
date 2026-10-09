@@ -1,3 +1,12 @@
+## 0.1.4 - 2026-10-09
+
+- Publish new tagged packages through GitHub Releases with SHA256 checksums,
+  validated CycloneDX SBOM and required GitHub provenance, without an npm account.
+- Keep npm-based CI defaults on the actually public 0.1.0 package; source and
+  GitHub packages retain artifact/reference/target coverage capabilities.
+- Preserve the earlier immutable tags and npm 0.1.0. Source, release artifacts
+  and real external integration remain separate evidence.
+
 # Changelog
 
 ## 0.1.3 - 2026-10-09

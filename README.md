@@ -2,7 +2,7 @@
 
 **Verify Agent Skills before you trust them.** SkillSync checks a local Skill's provenance, compatibility, and changes without executing it.
 
-> **Alpha · v0.1.3 · Node.js 20+**
+> **Alpha · v0.1.4 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
@@ -18,7 +18,7 @@ npm install -g @chumanic/skillsync@0.1.0
 skillsync verify --path . --target codex
 ```
 
-**From source (latest 0.1.3):**
+**From source (latest 0.1.4):**
 
 ```bash
 git clone https://github.com/Chumaniac/skillsync.git
@@ -28,7 +28,28 @@ npm run build
 node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex
 ```
 
-> `0.1.3` is a release candidate prepared for the OIDC provenance workflow (`npm publish --provenance --access public` with `id-token: write`, no long-lived token). Until the Trusted Publisher is verified on npm, use `0.1.0` via `npx` or run `0.1.3` from source. The `skillsync ci init` template pins `0.1.3` by default; override with `--package-version 0.1.0` on npm today.
+**From GitHub releases (no npm account required):**
+
+Tagged builds now publish a CLI tarball, checksums, a validated CycloneDX SBOM
+and a source manifest on [GitHub Releases](https://github.com/Chumaniac/skillsync/releases).
+The current source candidate is 0.1.4; its release is complete only after the
+matching immutable tag workflow succeeds. Installation still uses Node.js 20+
+and fetches the package's public dependencies; it needs no npm login.
+
+```bash
+release_base="https://github.com/Chumaniac/skillsync/releases/download/v0.1.4"
+for asset in chumanic-skillsync-0.1.4.tgz checksums.txt sbom.cyclonedx.json release-manifest.json; do
+  curl --fail --location --output "$asset" "$release_base/$asset"
+done
+shasum -a 256 -c checksums.txt
+npm install --prefix ./skillsync-tools ./chumanic-skillsync-0.1.4.tgz
+./skillsync-tools/node_modules/.bin/skillsync --version
+```
+
+The public npm registry remains at 0.1.0. Generated npm-based CI templates pin
+that existing public version; a source/GitHub installation supplies the newer
+artifact and target-coverage commands. Older tags and the existing npm package
+remain available independently of this distribution.
 
 The command above verifies the included sample Skill. Replace the fixture path with a directory containing your own `SKILL.md` when you are ready.
 
