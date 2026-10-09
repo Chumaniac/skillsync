@@ -218,7 +218,7 @@ describe("skillsync report", () => {
 
     const json = await runCli(["report", "--before", beforePath, "--after", afterPath, "--format", "json"]);
     expect(JSON.parse(json.stdout).conclusion).toBe("verified");
-    expect(JSON.parse(json.stdout).toolVersion).toBe("0.1.5");
+    expect(JSON.parse(json.stdout).toolVersion).toBe("0.1.6");
 
     const sarif = await runCli(["report", "--before", beforePath, "--after", afterPath, "--format", "sarif"]);
     const parsedSarif = JSON.parse(sarif.stdout) as {
@@ -229,7 +229,7 @@ describe("skillsync report", () => {
       }>;
     };
     expect(parsedSarif.version).toBe("2.1.0");
-    expect(parsedSarif.runs[0]?.tool.driver.version).toBe("0.1.5");
+    expect(parsedSarif.runs[0]?.tool.driver.version).toBe("0.1.6");
     expect(parsedSarif.runs[0]?.results[0]?.properties.issueId).toMatch(/^iss_/);
   });
 

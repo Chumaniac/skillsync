@@ -2,10 +2,10 @@
 
 **Verify Agent Skills before you trust them.** SkillSync checks a local Skill's provenance, compatibility, and changes without executing it.
 
-> **Alpha · source candidate v0.1.5 · Node.js 20+**
+> **Alpha · source candidate v0.1.6 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
-Source v0.1.5 adds per-key integer reconciliation. The published GitHub package
+Source v0.1.6 adds bounded ordered composite keys to per-key integer reconciliation. The published GitHub package
 is still v0.1.4 and npm is still 0.1.0; neither includes the new rule.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
@@ -21,7 +21,7 @@ npm install -g @chumanic/skillsync@0.1.0
 skillsync verify --path . --target codex
 ```
 
-**From source (0.1.5 candidate):**
+**From source (0.1.6 candidate):**
 
 ```bash
 git clone https://github.com/Chumaniac/skillsync.git
@@ -62,6 +62,9 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 ## What you get
 
+- Source0.1.6 supports ordered two-to-four-column identity tuples for integer
+  reconciliation. The [multi-organization example](fixtures/product/tenant-reconciliation/README.md)
+  separates repeated local IDs, without delimiter collisions or raw ID reporting.
 - Source `keyed_integer_sum_equals` checks compare each record key's integer
   total across CSV files, including split deliveries. They detect balanced but
   wrongly allocated results that global sums cannot identify. The

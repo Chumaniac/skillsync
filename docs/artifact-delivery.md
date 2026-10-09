@@ -23,7 +23,7 @@ authenticated evidence; the report marks provenance as not authenticated.
 
 ## Per-key integer reconciliation
 
-Source candidate 0.1.5 supports `keyed_integer_sum_equals`. It is absent from
+Source candidate 0.1.6 supports `keyed_integer_sum_equals`. It is absent from
 published npm0.1.0 and the existing GitHub0.1.4 package. Each side declares a CSV
 path, required nonempty string `key`, and required integer `value` column.
 The two paths must be distinct; comparing a file with itself is rejected before
@@ -62,6 +62,40 @@ raw ID, fingerprint or amount. Text reports include the same bounded counts.
 Without the rule, existing normalized contracts and report shapes are unchanged.
 Reports still say `execution: not-run` and `provenance: not-authenticated`;
 equality does not authenticate the expected input or approve a business action.
+
+### Ordered composite identities in source 0.1.6
+
+The `key` selector may also be an ordered array of two to four distinct column
+names. Every component must be a declared required nonempty string. Both sides
+must have the same number of components; positional column names may differ.
+One-element arrays, duplicate/empty names, undeclared fields, wrong scalar types,
+nullable components and mixed-width sides are rejected before artifact reads.
+
+```json
+{
+  "type": "keyed_integer_sum_equals",
+  "source": { "path": "expected.csv", "key": ["tenant_id", "order_id"], "value": "amount_cents" },
+  "target": { "path": "allocations.csv", "key": ["tenant_id", "order_id"], "value": "amount_cents" }
+}
+```
+
+Two organizations can use the same local order ID without their totals being
+merged. Component order, whitespace, Unicode spelling and numeric-looking
+strings remain exact. Tuples are internally framed with component count and
+UTF-8 byte lengths before hashing; joining IDs with a separator is not equivalent.
+Single-string keys preserve the existing behavior.
+
+Each unique grouping observes `key components + integer value` cells per row.
+The invocation-wide limit remains 100,000, including repeated rows. Matching
+group declarations reuse an index; matching selectors reuse their fingerprint
+within a row. Exhaustion and unsafe sums preserve `unknown` without partial
+counts. Composite missing-key findings have a `field` array of declared column
+names, while ordinary findings retain a string. No tuple values are reported.
+
+The [multi-organization example](../fixtures/product/tenant-reconciliation/README.md)
+detects a balanced cross-organization shift that a single local ID accepts.
+Composite identities apply to this integer reconciliation rule. The separate
+`reference_exists` rule still uses a single unique string field.
 
 ## Declared requirements
 
