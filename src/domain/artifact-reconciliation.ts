@@ -6,6 +6,7 @@ export const RECONCILIATION_CELL_LIMIT = 100_000;
 type Check = Extract<ArtifactContract["checks"][number], { type: "keyed_integer_sum_equals" }>;
 type Side = Check["source"];
 type Group = { sums: Map<string, number>; overflow: boolean; invalid: boolean };
+type Selection = { side: Side; group: Group; keys: string[]; keyIdentity: string };
 export type ReconciliationSummary = Check & {
   status: "passed" | "failed" | "unknown";
   sourceKeys?: number; targetKeys?: number; missingKeys?: number;
@@ -15,7 +16,7 @@ export type ReconciliationSummary = Check & {
 export function createArtifactReconciliationIndex(contract: ArtifactContract) {
   const checks = contract.checks.filter((check): check is Check => check.type === "keyed_integer_sum_equals");
   const groups = new Map<string, Group>();
-  const byPath = new Map<string, Array<{ side: Side; group: Group }>>();
+  const byPath = new Map<string, Selection[]>();
   const identity = (side: Side) => JSON.stringify([side.path, side.key, side.value]);
   for (const check of checks) for (const side of [check.source, check.target]) {
     const id = identity(side);
@@ -23,7 +24,8 @@ export function createArtifactReconciliationIndex(contract: ArtifactContract) {
     const group: Group = { sums: new Map(), overflow: false, invalid: false };
     groups.set(id, group);
     const entries = byPath.get(side.path) ?? [];
-    entries.push({ side, group }); byPath.set(side.path, entries);
+    const keys = typeof side.key === "string" ? [side.key] : side.key;
+    entries.push({ side, group, keys, keyIdentity: JSON.stringify(keys) }); byPath.set(side.path, entries);
   }
   let observedCells = 0, exhausted = false;
   let completed: { summaries: ReconciliationSummary[]; findings: ArtifactFinding[] } | undefined;
@@ -35,20 +37,34 @@ export function createArtifactReconciliationIndex(contract: ArtifactContract) {
       return values => {
         if (completed) throw new Error("reconciliation index is closed");
         if (exhausted) return;
-        // Hash each selected key field once per row; raw IDs never enter the index.
+        // Hash each selected key tuple once per row; raw IDs never enter the index.
         const fingerprints = new Map<string, string>();
-        for (const { side, group } of entries) {
+        for (const { side, group, keys, keyIdentity } of entries) {
           if (group.invalid || group.overflow) continue;
-          const key = values.get(side.key), value = values.get(side.value);
-          if (typeof key !== "string" || !key.length || typeof value !== "number" || !Number.isSafeInteger(value)) {
+          const components = keys.map(key => values.get(key));
+          const value = values.get(side.value);
+          if (!components.every((key): key is string => typeof key === "string" && key.length > 0) ||
+              typeof value !== "number" || !Number.isSafeInteger(value)) {
             group.invalid = true; group.sums.clear(); continue;
           }
-          observedCells += 2;
+          observedCells += keys.length + 1;
           if (observedCells > RECONCILIATION_CELL_LIMIT) { exhausted = true; release(); return; }
-          let fingerprint = fingerprints.get(side.key);
+          let fingerprint = fingerprints.get(keyIdentity);
           if (!fingerprint) {
-            fingerprint = createHash("sha256").update(key).digest("hex");
-            fingerprints.set(side.key, fingerprint);
+            const hash = createHash("sha256");
+            if (typeof side.key === "string") hash.update(components[0]);
+            else {
+              // Four components at most; frame UTF-8 lengths, never concatenate IDs.
+              const length = Buffer.alloc(8);
+              length.writeBigUInt64BE(BigInt(components.length));
+              hash.update("skillsync.key-tuple/v1\0").update(length);
+              for (const key of components) {
+                length.writeBigUInt64BE(BigInt(Buffer.byteLength(key, "utf8")));
+                hash.update(length).update(key);
+              }
+            }
+            fingerprint = hash.digest("hex");
+            fingerprints.set(keyIdentity, fingerprint);
           }
           const sum = (group.sums.get(fingerprint) ?? 0) + value;
           if (!Number.isSafeInteger(sum)) { group.overflow = true; group.sums.clear(); }

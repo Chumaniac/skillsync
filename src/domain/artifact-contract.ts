@@ -41,7 +41,8 @@ const referenceField = z.object({ path: safePath, field: z.string().min(1).max(1
 const reference = z.object({ type: z.literal("reference_exists"), source: referenceField, target: referenceField,
   require_all_targets: z.boolean().optional(),
 }).strict();
-const keyedSide = z.object({ path: safePath, key: z.string().min(1).max(128), value: z.string().min(1).max(128) }).strict();
+const keyColumn = z.string().min(1).max(128);
+const keyedSide = z.object({ path: safePath, key: z.union([keyColumn, z.array(keyColumn).min(2).max(4)]), value: z.string().min(1).max(128) }).strict();
 const reconciliation = z.object({ type: z.literal("keyed_integer_sum_equals"), source: keyedSide, target: keyedSide }).strict();
 
 export const artifactContractSchema = z.object({ schema: z.literal("skillsync.artifacts/v1"),
@@ -83,13 +84,19 @@ export const artifactContractSchema = z.object({ schema: z.literal("skillsync.ar
   for (const check of contract.checks) {
     if (check.type === "keyed_integer_sum_equals") {
       if (check.source.path === check.target.path) fail();
+      const width = (key: string | string[]) => typeof key === "string" ? 1 : key.length;
+      if (width(check.source.key) !== width(check.target.key)) fail();
       for (const side of [check.source, check.target]) {
         const file = files.get(side.path);
         if (file?.format !== "csv") { fail(); continue; }
-        const key = file.columns.find(column => column.name === side.key);
+        const keys = typeof side.key === "string" ? [side.key] : side.key;
+        if (new Set(keys).size !== keys.length) fail();
+        for (const name of keys) {
+          const key = file.columns.find(column => column.name === name);
+          if (key?.type !== "string" || key.allow_empty || !key.required) fail();
+        }
         const value = file.columns.find(column => column.name === side.value);
-        if (key?.type !== "string" || key.allow_empty || !key.required ||
-          value?.type !== "integer" || !value.required) fail();
+        if (value?.type !== "integer" || !value.required) fail();
       }
       continue;
     }

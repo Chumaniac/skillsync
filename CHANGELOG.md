@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.6 source candidate - 2026-10-10
+
+- Compare ordered two-to-four-column string identities as well as existing
+  single keys. Organization-local IDs no longer need to be flattened into a
+  delimiter string for integer reconciliation.
+- Frame component counts and UTF-8 byte lengths; preserve exact spelling and
+  positional aliases. Count every component and value against the existing
+  100,000-cell limit. Invalid dimensions fail before artifact reads.
+- Composite-key findings contain only the bounded declared column-name array;
+  raw identifiers, fingerprints and amounts remain internal. Existing single-key
+  contracts and reports retain their behavior.
+- Add a reproducible synthetic multi-organization fixture. This source candidate
+  is not a new GitHub/npm release; GitHub0.1.4/npm0.1.0 remain unchanged.
+
 ## 0.1.5 source candidate - 2026-10-09
 
 - Add bounded per-key integer reconciliation across physical CSV files. Split

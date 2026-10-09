@@ -49,6 +49,17 @@ Keep the existing 10,000-file/16 MiB-file/64 MiB-total and 256-finding ceilings.
 
 ## Domain expansion
 
+### Continuation cycle — 2026-10-10
+
+Source0.1.6 implements ordered two-to-four-column string keys for integer
+reconciliation, with positional aliases and unambiguous UTF-8 framing.
+Every component consumes the existing bounded selected-cell budget. The
+multi-organization fixture demonstrates repeated local IDs and balanced shifts;
+review, knowledge and operations can use workspace/file/check or source/version
+dimensions deliberately. This does not add composite references, JSON relations,
+signed identity or any live service. The next producer-consumer journey retains
+actual synthetic deliveries from the existing restricted SkillTape executor.
+
 | Domain | Contract example | Benefit | Evidence limit |
 | --- | --- | --- | --- |
 | Code review | Expected versus delivered findings/counts per changed file | Detect lost or misassigned review materials | No semantic correctness or reviewer authentication. |
