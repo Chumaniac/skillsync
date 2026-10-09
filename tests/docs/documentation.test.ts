@@ -39,7 +39,7 @@ describe("release documentation", () => {
     };
 
     expect(readme).toContain("Verify Agent Skills before you trust them.");
-    expect(readme).toContain("Alpha · v0.1.3 · Node.js 20+");
+    expect(readme).toContain("Alpha · v0.1.4 · Node.js 20+");
     expect(readme).toContain("## Install");
     expect(readme).toContain("npx --yes @chumanic/skillsync@0.1.0 verify");
     expect(readme).toContain([
@@ -51,7 +51,9 @@ describe("release documentation", () => {
       "node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex",
       "```",
     ].join("\n"));
-    expect(readme).toContain("npm publish --provenance --access public");
+    expect(readme).toContain("GitHub releases (no npm account required)");
+    expect(readme).toContain("shasum -a 256 -c checksums.txt");
+    expect(readme).toContain("public npm registry remains at 0.1.0");
     expect(readme).toContain(
       "https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg",
     );
@@ -59,7 +61,7 @@ describe("release documentation", () => {
     expect(terminalDemo).toContain(
       "$ node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex",
     );
-    expect(terminalDemo).not.toContain("@chumanic/skillsync@0.1.3");
+    expect(terminalDemo).not.toContain("@chumanic/skillsync@0.1.4");
     expect(readme).toContain("does not execute Skill scripts");
     expect(readme).toContain("does not read credentials");
     expect(readme).not.toContain("## Documentation index");
@@ -123,15 +125,20 @@ describe("release documentation", () => {
     expect(runbook).toContain("mTLS");
     expect(runbook).toContain("remote Worker");
     expect(releaseWorkflow).toContain('tags: ["v*"]');
-    expect(releaseWorkflow).toContain("npm publish --provenance --access public");
+    expect(releaseWorkflow).toContain("npm pack --json --ignore-scripts");
+    expect(releaseWorkflow).toContain("gh release create");
+    expect(releaseWorkflow).toContain("--verify-tag");
+    expect(releaseWorkflow).toContain("checksums.txt");
+    expect(releaseWorkflow).not.toContain("npm publish");
+    expect(releaseWorkflow).not.toContain("continue-on-error");
     expect(repositoryWorkflow).toContain("git grep -nE");
     expect(repositoryWorkflow).not.toContain("rg -n");
     expect(repositoryWorkflow).toContain("SkillSync-Complete-Design.md");
     expect(repositoryWorkflow).toContain("Competitive-Research-and-Design-Rationale.md");
     expect(repositoryWorkflow).toContain("MVP-Implementation-Plan.md");
-    expect(githubTemplate).toContain("@chumanic/skillsync@0.1.3");
-    expect(preCommitTemplate).toContain("@chumanic/skillsync@0.1.3");
-    expect(ci).toContain("@chumanic/skillsync@0.1.3");
+    expect(githubTemplate).toContain("@chumanic/skillsync@0.1.0");
+    expect(preCommitTemplate).toContain("@chumanic/skillsync@0.1.0");
+    expect(ci).toContain("@chumanic/skillsync@0.1.0");
     expect(changelog).toContain("## 0.1.2 - 2026-08-31");
     expect(changelog).toContain("publish contract");
     expect(changelog).toContain("profile registry");

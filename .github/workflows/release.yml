@@ -1,4 +1,4 @@
-name: SkillSync Release Validation
+name: SkillSync GitHub Release
 
 on:
   push:
@@ -6,41 +6,79 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+  actions: read
 
 jobs:
-  validate:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
           package-manager-cache: false
-      - run: npm ci
-      - name: Run the offline test suite
-        run: npm test
-      - name: Type-check the release candidate
-        run: npm run type-check
-      - name: Lint the release candidate
-        run: npm run lint
-      - name: Build the release candidate
-        run: npm run build
-      - name: Inspect the public package contents
-        run: npm pack --dry-run
-      - name: Generate SBOM (CycloneDX)
+      - name: Bind the immutable tag to an already verified main source
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          npm sbom --sbom-format cyclonedx --sbom-type library > sbom.cyclonedx.json 2>&1 || echo "npm sbom not available on this npm version, falling back to dry-run check"
-          if [ -f sbom.cyclonedx.json ]; then
-            echo "SBOM generated at sbom.cyclonedx.json ($(wc -c < sbom.cyclonedx.json) bytes)"
-            head -20 sbom.cyclonedx.json
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]
+          test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
+          refs=$(git ls-remote origin "refs/tags/$GITHUB_REF_NAME" "refs/tags/$GITHUB_REF_NAME^{}")
+          commit=$(printf '%s\n' "$refs" | awk '/\^\{\}$/ {print $1;exit}')
+          [[ -n "$commit" ]] || commit=$(printf '%s\n' "$refs" | awk 'NR==1 {print $1}')
+          test "$commit" = "$GITHUB_SHA"
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/skillsync.yml/runs?head_sha=$GITHUB_SHA&branch=main&event=push&status=success&per_page=1" > "$RUNNER_TEMP/source-ci.json"
+          node --input-type=module - "$RUNNER_TEMP/source-ci.json" <<'JS'
+          import fs from 'node:fs';
+          const runs=JSON.parse(fs.readFileSync(process.argv[2],'utf8')).workflow_runs;
+          if (!runs.some(run=>run.head_sha===process.env.GITHUB_SHA&&run.head_branch==='main'&&run.conclusion==='success')) process.exit(1);
+          JS
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'An existing release must not be overwritten' >&2
+            exit 1
           fi
-      - name: Publish the package with npm provenance
-        run: npm publish --provenance --access public
-      - name: Attest build provenance (if publish succeeded)
-        if: always()
-        uses: actions/attest-build-provenance@v2
+      - run: npm ci
+      - run: npm test
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm run build
+      - name: Assemble actual package and validated metadata
+        run: |
+          set -euo pipefail
+          mkdir release
+          npm pack --json --ignore-scripts --pack-destination release > "$RUNNER_TEMP/package.json"
+          npm sbom --sbom-format cyclonedx --package-lock-only --omit=dev > release/sbom.cyclonedx.json
+          node --input-type=module - "$RUNNER_TEMP/package.json" <<'JS'
+          import fs from 'node:fs';
+          import crypto from 'node:crypto';
+          const [pack]=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          const version=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+          if(pack.name!=='@chumanic/skillsync'||pack.version!==version||pack.filename!==`chumanic-skillsync-${version}.tgz`) throw new Error('Package identity mismatch');
+          const allowed=/^(dist\/|runner\/|profiles\/|templates\/|fixtures\/(behavior|product|runner|policy)\/|config\/|docs\/[^/]+[.]md$|README[.]md$|LICENSE$|CHANGELOG[.]md$|package[.]json$)/;
+          if(!pack.files.length||pack.files.some(file=>!allowed.test(file.path)||file.path.split('/').some(part=>part.startsWith('.')&&part!=='.skillsync'))) throw new Error('Unexpected public package file');
+          const sbom=JSON.parse(fs.readFileSync('release/sbom.cyclonedx.json','utf8'));
+          if(sbom.bomFormat!=='CycloneDX'||!Array.isArray(sbom.components)) throw new Error('Invalid SBOM');
+          const sha256=crypto.createHash('sha256').update(fs.readFileSync(`release/${pack.filename}`)).digest('hex');
+          fs.writeFileSync('release/release-manifest.json',JSON.stringify({package:pack.name,version,tag:process.env.GITHUB_REF_NAME,source_sha:process.env.GITHUB_SHA,archive:pack.filename,sha256},null,2)+'\n');
+          JS
+          (cd release && sha256sum *.tgz sbom.cyclonedx.json release-manifest.json > checksums.txt)
+      - name: Attest actual package provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: "*.tgz"
-        continue-on-error: true
-
+          subject-path: release/*.tgz
+      - name: Publish immutable GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "SkillSync $GITHUB_REF_NAME" --generate-notes release/*

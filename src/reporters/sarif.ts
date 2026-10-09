@@ -58,7 +58,7 @@ export function renderSarif(report: VerificationReport): string {
         tool: {
           driver: {
             name: "skillsync",
-            version: "0.1.3",
+            version: "0.1.4",
             rules: [...ruleMap.values()],
           },
         },

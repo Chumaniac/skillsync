@@ -139,24 +139,35 @@ describe("live runtime preparation", () => {
     const jobs = asRecord(document.jobs);
 
     expect(push.tags).toEqual(["v*"]);
-    expect(Object.keys(jobs)).toEqual(["validate"]);
+    expect(Object.keys(jobs)).toEqual(["release"]);
 
-    const runs = workflowRuns(document, "validate").join("\n");
+    const runs = workflowRuns(document, "release").join("\n");
     for (const command of [
       "npm test",
       "npm run type-check",
       "npm run lint",
       "npm run build",
-      "npm pack --dry-run",
+      "npm pack --json --ignore-scripts",
     ]) {
       expect(runs).toContain(command);
     }
 
-    expect(runs).toContain("npm publish --provenance --access public");
+    expect(runs).toContain("gh release create");
+    expect(runs).toContain("--verify-tag");
+    expect(runs).toContain("checksums.txt");
+    expect(runs).toContain("branch=main&event=push&status=success");
+    expect(runs).toContain("actions/workflows/skillsync.yml/runs");
+    expect(runs).toContain("An existing release must not be overwritten");
+    const steps = asRecord(jobs.release).steps as Array<Record<string, unknown>>;
+    const attest = steps.find(step => String(step.uses).startsWith("actions/attest@"));
+    expect(asRecord(attest?.with)["subject-path"]).toBe("release/*.tgz");
+    expect(content).not.toContain("continue-on-error");
+    expect(content).not.toContain("npm publish");
     expect(content).toContain('node-version: "24"');
     expect(content).toContain("package-manager-cache: false");
     expect(content).not.toMatch(/npm dist-tag|NODE_AUTH_TOKEN|registry-url|secrets\./i);
-    expect(asRecord(document.permissions)).toEqual({ contents: "read", "id-token": "write" });
+    expect(asRecord(document.permissions)).toEqual({ contents: "read", actions: "read" });
+    expect(asRecord(asRecord(jobs.release).permissions)).toEqual({ contents: "write", actions: "read", "id-token": "write", attestations: "write", "artifact-metadata": "write" });
   });
 
   it("keeps workflow and test sources outside the package artifact allowlist", async () => {
