@@ -7,6 +7,7 @@ import { z } from "zod";
 import { parseArtifactContract } from "../../domain/artifact-contract.js";
 import { parseStrictJson } from "../../domain/strict-json.js";
 import { inspectArtifactContent, type ArtifactFacts, type ArtifactFinding } from "../../domain/artifact-content.js";
+import { createArtifactReferenceIndex } from "../../domain/artifact-references.js";
 import { redactLocalPaths } from "../../reporters/local-paths.js";
 import { readWorkspaceFile, scanStagedWorkspace, WorkspaceTreeError } from "../../sandbox/workspace-tree.js";
 
@@ -85,6 +86,7 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
     root = join(options.delivery, "artifacts");
   }
   const facts = new Map<string, ArtifactFacts>();
+  const references = createArtifactReferenceIndex(contract);
   try {
     const rules = new Map(contract.files.map(file => [file.path, file]));
     const tree = await scanStagedWorkspace(root, {
@@ -94,7 +96,7 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
         const rule = rules.get(path)!;
         const sha256 = observation.digest.slice("sha256:".length);
         if (rule.sha256 && rule.sha256 !== sha256) issue("artifact.digest-mismatch", path);
-        const inspected = inspectArtifactContent(rule, content);
+        const inspected = inspectArtifactContent(rule, content, references.observer(path));
         facts.set(path, inspected.facts);
         for (const finding of inspected.findings) if (report.findings.length < 256) report.findings.push(finding);
         report.files.push({ path, bytes: observation.bytes, sha256, ...(inspected.facts.rows !== undefined ? { rows: inspected.facts.rows } : {}) });
@@ -125,11 +127,13 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
     } catch { issue("delivery.changed-during-check"); }
   }
   for (const check of contract.checks) {
+    if (check.type !== "csv_summary") continue;
     const csv = facts.get(check.csv), json = facts.get(check.json);
     if (!csv || !json) { issue("artifact.comparison-missing", check.csv); continue; }
     if (csv.rows !== json.integers.get(check.row_count_field)) issue("artifact.summary-row-count", check.json, check.row_count_field);
     for (const sum of check.sums) if (csv.integers.get(sum.column) !== json.integers.get(sum.field)) issue("artifact.summary-sum", check.json, sum.field);
   }
+  for (const finding of references.findings()) if (report.findings.length < 256) report.findings.push(finding);
   if (!report.findings.length) { report.status = "passed"; report.exitCode = 0; }
   return report;
 }
