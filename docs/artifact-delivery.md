@@ -80,6 +80,17 @@ operations data. Only declared reference fields are retained as SHA-256
 fingerprints with source row numbers. At most 100,000 referenced cells are
 indexed per invocation, counting repeated IDs and deduplicating field declarations.
 Exceeding this ceiling releases indexes and fails with `artifact.reference-capacity`.
+An optional `require_all_targets: true` also rejects declared target rows that
+have no reference in that check's source field. It reports
+`artifact.reference-unused` at the target file/field/data-row without its ID.
+Omitting the option keeps coverage disabled and preserves existing normalized
+contract digests; ordinary reference catalogs may contain unused targets.
+The [local delivery coverage candidate](../fixtures/product/delivery-coverage/README.md)
+demonstrates expected-order omissions; this option is not in GitHub main or npm.
+Target rows and optional source fingerprint sets share the existing 100,000-cell
+intake limit and are released together on exhaustion. Findings remain capped at 256.
+Coverage means reference presence, not completed work or authenticated approval.
+
 Missing references report relative file, field and data-row number, never the ID
 or fingerprint. This checks internal consistency without authenticating records.
 

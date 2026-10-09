@@ -3,7 +3,7 @@ import type { ArtifactContract } from "./artifact-contract.js";
 import type { ArtifactCellObserver, ArtifactFinding } from "./artifact-content.js";
 
 export const MAX_REFERENCE_CELLS = 100_000;
-type Index = { targets?: Set<string>; sources?: Array<{ digest: string; row: number }> };
+type Index = { targets?: Map<string, number>; sources?: Array<{ digest: string; row: number }>; referenced?: Set<string> };
 
 /** One invocation-local index: declared fields only, hashed IDs, fixed aggregate ceiling. */
 export function createArtifactReferenceIndex(contract: ArtifactContract) {
@@ -18,7 +18,8 @@ export function createArtifactReferenceIndex(contract: ArtifactContract) {
   };
   for (const check of checks) {
     index(check.source.path, check.source.field).sources ??= [];
-    index(check.target.path, check.target.field).targets ??= new Set();
+    index(check.target.path, check.target.field).targets ??= new Map();
+    if (check.require_all_targets) index(check.source.path, check.source.field).referenced ??= new Set();
   }
   let cells = 0, exhausted = false;
   return {
@@ -33,12 +34,13 @@ export function createArtifactReferenceIndex(contract: ArtifactContract) {
         if (cells > MAX_REFERENCE_CELLS) {
           exhausted = true;
           for (const columns of fields.values()) for (const entry of columns.values()) {
-            entry.targets?.clear(); if (entry.sources) entry.sources.length = 0;
+            entry.targets?.clear(); entry.referenced?.clear(); if (entry.sources) entry.sources.length = 0;
           }
           return;
         }
         const digest = createHash("sha256").update("skillsync.references/v1\0string\0").update(value).digest("hex");
-        entry.targets?.add(digest); entry.sources?.push({ digest, row });
+        if (entry.targets && !entry.targets.has(digest)) entry.targets.set(digest, row);
+        entry.sources?.push({ digest, row }); entry.referenced?.add(digest);
       };
     },
     findings(): ArtifactFinding[] {
@@ -50,6 +52,15 @@ export function createArtifactReferenceIndex(contract: ArtifactContract) {
           if (!targets.has(source.digest)) {
             findings.push({ code: "artifact.reference-missing", path: check.source.path, field: check.source.field, row: source.row });
             if (findings.length >= 256) return findings;
+          }
+        }
+        if (check.require_all_targets) {
+          const referenced = index(check.source.path, check.source.field).referenced!;
+          for (const [digest, row] of targets) {
+            if (!referenced.has(digest)) {
+              findings.push({ code: "artifact.reference-unused", path: check.target.path, field: check.target.field, row });
+              if (findings.length >= 256) return findings;
+            }
           }
         }
       }

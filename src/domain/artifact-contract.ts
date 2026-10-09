@@ -38,7 +38,9 @@ const comparison = z.object({ type: z.literal("csv_summary"), csv: safePath, jso
   sums: z.array(z.object({ column: z.string().min(1).max(128), field: z.string().min(1).max(128) }).strict()).max(128),
 }).strict();
 const referenceField = z.object({ path: safePath, field: z.string().min(1).max(128) }).strict();
-const reference = z.object({ type: z.literal("reference_exists"), source: referenceField, target: referenceField }).strict();
+const reference = z.object({ type: z.literal("reference_exists"), source: referenceField, target: referenceField,
+  require_all_targets: z.boolean().optional(),
+}).strict();
 
 export const artifactContractSchema = z.object({ schema: z.literal("skillsync.artifacts/v1"),
   limits: z.object({
