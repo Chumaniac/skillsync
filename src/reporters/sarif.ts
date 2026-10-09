@@ -1,4 +1,5 @@
 import type { Finding } from "../domain/result.js";
+import { VERSION } from "../version.js";
 import { issueIdForFinding } from "../domain/issue.js";
 import type { VerificationReport } from "../cli/commands/verify.js";
 import { isAbsoluteLocalPath, isRedactedLocalPath, redactLocalPaths } from "./local-paths.js";
@@ -58,7 +59,7 @@ export function renderSarif(report: VerificationReport): string {
         tool: {
           driver: {
             name: "skillsync",
-            version: "0.1.4",
+            version: VERSION,
             rules: [...ruleMap.values()],
           },
         },

@@ -2,8 +2,11 @@
 
 **Verify Agent Skills before you trust them.** SkillSync checks a local Skill's provenance, compatibility, and changes without executing it.
 
-> **Alpha · v0.1.4 · Node.js 20+**
+> **Alpha · source candidate v0.1.5 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
+
+Source v0.1.5 adds per-key integer reconciliation. The published GitHub package
+is still v0.1.4 and npm is still 0.1.0; neither includes the new rule.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
@@ -18,7 +21,7 @@ npm install -g @chumanic/skillsync@0.1.0
 skillsync verify --path . --target codex
 ```
 
-**From source (latest 0.1.4):**
+**From source (0.1.5 candidate):**
 
 ```bash
 git clone https://github.com/Chumaniac/skillsync.git
@@ -59,6 +62,11 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 ## What you get
 
+- Source `keyed_integer_sum_equals` checks compare each record key's integer
+  total across CSV files, including split deliveries. They detect balanced but
+  wrongly allocated results that global sums cannot identify. The
+  [synthetic reconciliation example](fixtures/product/keyed-reconciliation/README.md)
+  demonstrates the difference without running Skill code or revealing record IDs.
 - The source `artifacts` command independently checks actual
   CSV/JSON delivery files, Receipt/file hashes and cross-file count/integer sums.
   See [actual artifact checks](docs/artifact-delivery.md); it runs no Skill code.
@@ -87,6 +95,7 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 - [Project overview](https://chumanic.com/projects/skillsync/)
 - [Offline domain adaptation](./docs/domain-adaptation.md)
+- [Expansion and deep optimization roadmap](./docs/deep-optimization-roadmap.md)
 - [Security and privacy](./docs/security-boundary.md)
 - [Compatibility profiles](./docs/compatibility.md)
 - [CI](./docs/ci.md)

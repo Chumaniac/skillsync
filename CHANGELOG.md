@@ -1,3 +1,16 @@
+# Changelog
+
+## 0.1.5 source candidate - 2026-10-09
+
+- Add bounded per-key integer reconciliation across physical CSV files. Split
+  deliveries pass; balanced but wrongly allocated values, missing/extra keys,
+  overflow and exhausted indexes fail without exposing IDs or values. Reject
+  same-file declarations before reading delivery files.
+- Add source-only synthetic allocation fixtures and a full expansion roadmap.
+  Existing physical, reference, coverage and summary rules remain in place.
+- Derive CLI and report versions from the installed package metadata. Public
+  GitHub v0.1.4 and npm0.1.0 remain unchanged; this candidate is not published.
+
 ## 0.1.4 - 2026-10-09
 
 GitHub release run `37897733439` succeeded. Downloaded package/SBOM/manifest
@@ -10,8 +23,6 @@ synthetic delivery-coverage check passed with `execution: not-run`.
   GitHub packages retain artifact/reference/target coverage capabilities.
 - Preserve the earlier immutable tags and npm 0.1.0. Source, release artifacts
   and real external integration remain separate evidence.
-
-# Changelog
 
 ## 0.1.3 - 2026-10-09
 

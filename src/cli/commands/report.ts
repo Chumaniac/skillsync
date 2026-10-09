@@ -1,3 +1,4 @@
+import { VERSION } from "../../version.js";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
@@ -278,7 +279,7 @@ export async function runReport(options: ReportOptions): Promise<EvidenceReport>
     ...(resolvedIssueBaseline(beforeReport, before.rootDigest) === undefined
       ? {}
       : { baseline: resolvedIssueBaseline(beforeReport, before.rootDigest) }),
-    toolVersion: options.toolVersion ?? "0.1.4",
+    toolVersion: options.toolVersion ?? VERSION,
   });
 }
 

@@ -4,6 +4,7 @@ import { parseStrictJson } from "./strict-json.js";
 export type ArtifactFinding = { code: string; path?: string; field?: string; row?: number; message?: string };
 export type ArtifactFacts = { rows?: number; integers: Map<string, number> };
 export type ArtifactCellObserver = (field: string, value: string, row: number) => void;
+export type ArtifactRowObserver = (values: ReadonlyMap<string, string | number>) => void;
 
 function* csvRows(text: string, maxFields: number): Generator<string[]> {
   let field = "", row: string[] = [], quoted = false, afterQuote = false, active = false;
@@ -84,7 +85,7 @@ function formula(value: string): boolean {
   return /^[\t\r\n]/.test(value) || /^[=+@\-\uFF1D\uFF0B\uFF0D\uFF20]/.test(value.trimStart());
 }
 
-export function inspectArtifactContent(rule: ArtifactFileRule, bytes: Uint8Array, observe?: ArtifactCellObserver): { facts: ArtifactFacts; findings: ArtifactFinding[] } {
+export function inspectArtifactContent(rule: ArtifactFileRule, bytes: Uint8Array, observe?: ArtifactCellObserver, observeRow?: ArtifactRowObserver): { facts: ArtifactFacts; findings: ArtifactFinding[] } {
   const facts: ArtifactFacts = { integers: new Map() }, findings: ArtifactFinding[] = [];
   const issue = (code: string, field?: string, row?: number) => {
     if (findings.length < 64) findings.push({ code, path: rule.path, ...(field ? { field } : {}), ...(row !== undefined ? { row } : {}) });
@@ -126,11 +127,13 @@ export function inspectArtifactContent(rule: ArtifactFileRule, bytes: Uint8Array
         if (keys.has(key)) issue("artifact.csv-duplicate", undefined, count);
         keys.add(key);
       }
+      const values = observeRow ? new Map<string, string | number>() : undefined;
       for (const [index, column] of rule.columns.entries()) {
         const value = csvValue(row[index], column);
         const riskyFormula = rule.reject_formulas && ["string", "date"].includes(column.type) && formula(row[index]);
         if (riskyFormula) issue("artifact.csv-formula", column.name, count);
         if (!scalarValid(value, column)) { issue("artifact.csv-value", column.name, count); continue; }
+        if (!riskyFormula && (typeof value === "string" || typeof value === "number")) values?.set(column.name, value);
         if (!riskyFormula && column.type === "string") observe?.(column.name, value as string, count);
         if (column.type === "integer") {
           const total = (facts.integers.get(column.name) ?? 0) + (value as number);
@@ -138,6 +141,7 @@ export function inspectArtifactContent(rule: ArtifactFileRule, bytes: Uint8Array
           else facts.integers.set(column.name, total);
         }
       }
+      if (values) observeRow?.(values);
     }
     facts.rows = count;
     if (count < rule.min_rows) issue("artifact.csv-too-few-rows");

@@ -39,7 +39,9 @@ describe("release documentation", () => {
     };
 
     expect(readme).toContain("Verify Agent Skills before you trust them.");
-    expect(readme).toContain("Alpha · v0.1.4 · Node.js 20+");
+    expect(readme).toContain("Alpha · source candidate v0.1.5 · Node.js 20+");
+    expect(readme).toContain("published GitHub package");
+    expect(readme).toContain("still v0.1.4");
     expect(readme).toContain("## Install");
     expect(readme).toContain("npx --yes @chumanic/skillsync@0.1.0 verify");
     expect(readme).toContain([
