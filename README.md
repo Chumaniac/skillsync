@@ -39,6 +39,11 @@ The command above verifies the included sample Skill. Replace the fixture path w
   See [actual artifact checks](docs/artifact-delivery.md); it runs no Skill code.
   The [knowledge source inventory](fixtures/product/source-index/README.md) adds
   exact declared HTTPS hosts to physical CSV/JSON checks without fetching sources.
+  CSV `reference_exists` checks also bind exact string IDs to a declared unique
+  CSV target, with a 100,000-cell reference limit and no raw IDs in findings.
+  The [reference-integrity example](fixtures/product/reference-integrity/README.md)
+  demonstrates missing citations using synthetic files; it does not fetch or
+  authenticate sources.
   The [material intake catalog](fixtures/product/review-intake/README.md) rejects
   unknown classification labels using bounded `one_of` strings; labels do not prove approval.
 - `verify` reviews one local Skill for provenance, target compatibility, and changes without running its scripts.
