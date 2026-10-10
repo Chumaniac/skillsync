@@ -10,6 +10,7 @@ import { inspectArtifactContent, type ArtifactFacts, type ArtifactFinding } from
 import { createArtifactReferenceIndex } from "../../domain/artifact-references.js";
 import { createArtifactReconciliationIndex, type ReconciliationSummary } from "../../domain/artifact-reconciliation.js";
 import { redactLocalPaths } from "../../reporters/local-paths.js";
+import { renderArtifactsHtml } from "../../reporters/artifacts-html.js";
 import { readWorkspaceFile, scanStagedWorkspace, WorkspaceTreeError } from "../../sandbox/workspace-tree.js";
 
 const hash = (bytes: Uint8Array | string) => createHash("sha256").update(bytes).digest("hex");
@@ -19,7 +20,7 @@ const manifestSchema = z.object({ schema: z.literal("skilltape.dev/delivery/v1")
   files: z.array(z.object({ path: z.string().min(1).max(1024), bytes: z.number().int().min(0).max(16 * 1024 * 1024), sha256: sha }).strict()).max(10_000),
 }).strict();
 
-export type ArtifactsOptions = { contract: string; delivery?: string; path?: string };
+export type ArtifactsOptions = { contract: string; delivery?: string; path?: string; includeRowEvidence?: boolean };
 export type ArtifactReport = {
   schema: "skillsync.artifacts-report/v1"; status: "passed" | "failed"; exitCode: number;
   evidence: "physical-files"; execution: "not-run"; provenance: "not-authenticated";
@@ -89,7 +90,7 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
   }
   const facts = new Map<string, ArtifactFacts>();
   const references = createArtifactReferenceIndex(contract);
-  const reconciliation = createArtifactReconciliationIndex(contract);
+  const reconciliation = createArtifactReconciliationIndex(contract, { rowEvidence: options.includeRowEvidence });
   try {
     const rules = new Map(contract.files.map(file => [file.path, file]));
     const tree = await scanStagedWorkspace(root, {
@@ -146,6 +147,7 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
 }
 
 export function renderArtifacts(report: ArtifactReport, format = "text"): string {
+  if (format === "html") return renderArtifactsHtml(report);
   const safe = redactLocalPaths(report);
   if (format === "json") return JSON.stringify(safe, null, 2) + "\n";
   return [`Artifact validation: ${safe.status}`, `Evidence: physical files; execution: not-run; receipt binding: ${safe.receipt_binding}`,

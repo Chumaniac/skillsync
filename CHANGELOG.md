@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.7 source candidate - 2026-10-10
+
+- Add `artifacts --format html`: a self-contained offline delivery review with
+  declared-check status, file/Receipt binding, record-identity defects, incomplete
+  checks, observed metadata and concrete review actions.
+- Preserve JSON/text and exit semantics. HTML uses the same local-path redaction,
+  escapes every metadata field, includes no script or external request, and keeps
+  source truth, author authentication and business approval separate.
+- Locate affected CSV data records in preserved expected/delivered files, including
+  split groups, without reporting IDs or amounts. Keep 8 row references per group,
+  32 examples per check and 64 total; unknown positions are never invented.
+  Default JSON/text observation and report shapes stay intact.
+- Show at most 100 file details and 64 reconciliation cards, prioritizing failed
+  and incomplete checks. Keep full-scope counts and explicit shortening notices;
+  raw IDs, values and file contents never enter the report.
+- This is a source update. GitHub0.1.4/npm0.1.0 remain the published packages.
+
 ## 0.1.6 source candidate - 2026-10-10
 
 - Compare ordered two-to-four-column string identities as well as existing

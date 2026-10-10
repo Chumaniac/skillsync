@@ -49,6 +49,16 @@ Keep the existing 10,000-file/16 MiB-file/64 MiB-total and 256-finding ceilings.
 
 ## Domain expansion
 
+### Visible business continuation — 2026-10-10
+
+Source0.1.7 converts physical-file and composite-identity results into an offline
+acceptance report. Operations reviewers can see which declared relation needs
+attention, whether counts are incomplete, and which original files/columns to
+review without exposing the underlying record identities or values. The local
+CLI generates the HTML from the real inspection result; it does not embed a
+fabricated dashboard or claim that an automated check supplies business approval.
+The source-only HTML and current published packages remain separate.
+
 ### Continuation cycle — 2026-10-10
 
 Source0.1.6 implements ordered two-to-four-column string keys for integer
