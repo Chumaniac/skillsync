@@ -569,10 +569,10 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .requiredOption("--contract <path>", "JSON or YAML artifact contract")
     .option("--delivery <path>", "SkillTape delivery bundle directory")
     .option("--path <path>", "Standalone artifact directory; choose this or --delivery")
-    .option("--format <format>", "Output format: text or json", "text")
+    .option("--format <format>", "Output format: text, json or offline html", "text")
     .action(async (options: ArtifactsOptions & { format?: string }) => {
-      if (options.format !== "text" && options.format !== "json") throw new Error("artifacts format must be text or json");
-      const report = await runArtifacts(options);
+      if (options.format !== "text" && options.format !== "json" && options.format !== "html") throw new Error("artifacts format must be text, json or html");
+      const report = await runArtifacts({ ...options, includeRowEvidence: options.format === "html" });
       io.writeOut(renderArtifacts(report, options.format));
       if (report.exitCode) io.setExitCode?.(report.exitCode);
     });

@@ -4,7 +4,7 @@ import { parseStrictJson } from "./strict-json.js";
 export type ArtifactFinding = { code: string; path?: string; field?: string | string[]; row?: number; message?: string };
 export type ArtifactFacts = { rows?: number; integers: Map<string, number> };
 export type ArtifactCellObserver = (field: string, value: string, row: number) => void;
-export type ArtifactRowObserver = (values: ReadonlyMap<string, string | number>) => void;
+export type ArtifactRowObserver = (values: ReadonlyMap<string, string | number>, dataRecord?: number) => void;
 
 function* csvRows(text: string, maxFields: number): Generator<string[]> {
   let field = "", row: string[] = [], quoted = false, afterQuote = false, active = false;
@@ -141,7 +141,7 @@ export function inspectArtifactContent(rule: ArtifactFileRule, bytes: Uint8Array
           else facts.integers.set(column.name, total);
         }
       }
-      if (values) observeRow?.(values);
+      if (values) observeRow?.(values, count);
     }
     facts.rows = count;
     if (count < rule.min_rows) issue("artifact.csv-too-few-rows");

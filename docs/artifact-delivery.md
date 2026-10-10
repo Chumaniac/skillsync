@@ -21,6 +21,54 @@ Receipt hash, artifact hashes/sizes, and deterministic artifact-set digest befor
 accepting a complete result. A consistently rewritten manifest is not signed or
 authenticated evidence; the report marks provenance as not authenticated.
 
+## Hand a visible report to a reviewer
+
+Source0.1.7 adds `--format html`. The report opens directly in a browser, with no
+server, script, login, provider or network request. A reviewer sees the declared
+result, supplied file/Receipt binding, failed or incomplete reconciliation,
+affected file/column metadata and a concrete next review step.
+
+```bash
+# Build the current source first. Use a new destination; keep shell no-clobber.
+(set -C; node dist/cli/index.js artifacts \
+  --contract fixtures/product/tenant-reconciliation/contract.json \
+  --path fixtures/product/tenant-reconciliation/artifacts \
+  --format html > acceptance.html)
+```
+
+For a retained physical delivery, select `--delivery` instead. Exit0 means the
+declared local checks passed, exit1 retains findings/incomplete checks, and exit2
+reports invalid setup. A failed inspection still produces a reviewable HTML
+report; caller-side redirect errors remain the caller's responsibility.
+
+Reconciliation cards separate expected/delivered identity counts, missing or
+unexpected identities, and mismatched values. Unknown checks never display zero
+mismatches as accepted evidence. The review actions point to saved originals,
+declared identity columns and reviewed expectations; they do not execute a
+correction or establish business approval.
+
+HTML also requests bounded CSV record positions for affected identity groups.
+Expand "Locate affected CSV records" to find the expected and delivered data
+records in the original local files. Positions are 1-based, exclude the header,
+and count a quoted multiline record once; they are not physical text-line numbers.
+Up to8 positions per group, 32 examples per check and 64 examples across the
+invocation are retained. Truncated or unavailable positions are explicit, and
+unknown checks carry no position evidence. No IDs, fingerprints or amounts are
+returned. Ordinary JSON/text inspections do not request or retain this metadata.
+
+HTML shows at most 100 file details, 64 reconciliation cards and the existing
+256 findings. Failed/incomplete cards appear first, full-scope counts remain
+visible, and metadata longer than160 characters is shortened. Use the existing
+JSON output when complete metadata is required. HTML retains no raw record IDs,
+integer values, contents, key fingerprints or absolute host paths. Every visible
+field is escaped after the existing path redaction. CSP disables scripts and
+external resources. The output is bounded by the report ceilings and has no
+client timers or caches.
+
+The report is a captured local snapshot. Keep the successful original delivery;
+rerun read-only checks on its files to capture a later state. Source0.1.7 HTML is
+absent from the published GitHub0.1.4/npm0.1.0 packages.
+
 ## Per-key integer reconciliation
 
 Source candidate 0.1.6 supports `keyed_integer_sum_equals`. It is absent from
