@@ -71,6 +71,43 @@ absent from the published GitHub0.1.4/npm0.1.0 packages.
 
 ## Per-key integer reconciliation
 
+### Review a correction against its previous report
+
+The source CLI accepts `--compare <previous-artifacts.json>`. Save an ordinary
+JSON inspection before correcting a separate copy of the delivery, then inspect
+the corrected directory using the same contract:
+
+```bash
+(set -C; node dist/cli/index.js artifacts --contract reviewed-contract.json \
+  --path preserved-original --format json > previous-artifacts.json)
+(set -C; node dist/cli/index.js artifacts --contract reviewed-contract.json \
+  --path corrected-copy --compare previous-artifacts.json --format html > correction-review.html)
+```
+
+The first command may exit1 for a complete failed check; preserve that report.
+The second reads at most1MiB of strict UTF-8 JSON through the existing bounded
+stable-file reader. Invalid schema, duplicate keys, inconsistent digests/counts,
+duplicate files, symlinks, over-limit input and read changes fail setup before
+inspecting the current directory. Histories with an earlier derived comparison
+are structurally checked; their derived transitions are not reused.
+
+Matching contract hashes and ordered reconciliation declarations are required.
+Unknown checks, failed Receipt binding, missing file-set identity or a saturated
+256-finding list make comparison unavailable; no omitted finding is declared
+resolved. Unavailable comparison returns exit2 and a failed overall result, while
+`comparison.current_status` retains the independently observed current status.
+Ordinary inspections without `--compare` keep their existing outputs and exits.
+
+Comparable reports show new, ongoing and resolved **finding categories** by
+code/file/column, and improved, regressed, mixed or unchanged defect counts per
+declared reconciliation. Record identities and row positions are not compared;
+the same counts can refer to different records. At most128 transitions are
+retained and64 are displayed in HTML, with full-scope counts. Previous messages,
+record positions and raw values are not forwarded. A report byte hash identifies
+the caller-supplied history, which is not authenticated or a reviewed content
+pin. Passing checks or fewer defects do not establish business approval. This
+addition is source-only and does not change any public package or release.
+
 Source candidate 0.1.6 supports `keyed_integer_sum_equals`. It is absent from
 published npm0.1.0 and the existing GitHub0.1.4 package. Each side declares a CSV
 path, required nonempty string `key`, and required integer `value` column.

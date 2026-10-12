@@ -60,6 +60,21 @@ function reconciliationCard(check: ReconciliationSummary, rowBudget: { remaining
     </article>`;
 }
 
+function comparisonSection(report: ArtifactReport): string {
+  const value = report.comparison;
+  if (!value) return "";
+  const checks = value.checks ?? [];
+  return `<section id="comparison" aria-labelledby="comparison-title"><h2 id="comparison-title">Changes since baseline review</h2>
+    <p>Caller-supplied history is not authenticated. The current directory was inspected again; previous messages and record positions are not copied into this comparison.</p>
+    <p>Previous result: <strong>${text(value.baseline_status)}</strong> · Current inspection: <strong>${text(value.current_status)}</strong></p>
+    ${value.status === "unavailable" ? `<p class="notice">Comparison unavailable: ${text(value.reason)}. No improvement or resolution is established.</p>` : `<p>Finding categories: <strong>${text(value.findings?.added)}</strong> new · <strong>${text(value.findings?.ongoing)}</strong> ongoing · <strong>${text(value.findings?.resolved)}</strong> resolved. Categories use code, file and column, not record identities.</p>
+    <p>Record checks: ${checks.filter(check => check.change === "improved").length} improved · ${checks.filter(check => check.change === "regressed").length} regressed · ${checks.filter(check => check.change === "changed").length} mixed changes · ${checks.filter(check => check.change === "unchanged").length} unchanged. Reduced defect counts are not business approval.</p>
+    <p>Showing ${Math.min(CHECK_DETAILS, checks.length)} of ${checks.length} check transitions, in declaration order.</p>
+    <div class="table-wrap" tabindex="0" aria-label="Record check changes"><table><thead><tr><th>Declared check</th><th>Previous</th><th>Current</th><th>Change</th></tr></thead><tbody>
+    ${checks.slice(0, CHECK_DETAILS).map(check => `<tr><td>${text(check.index + 1)}</td><td>${text(check.before)}</td><td>${text(check.after)}</td><td>${text(check.change)}</td></tr>`).join("") || '<tr><td colspan="4">No integer reconciliation was declared.</td></tr>'}</tbody></table></div>`}
+    <details><summary>Baseline report identity</summary><code>${text(value.baseline_report_sha256)}</code><p>SHA-256 binds the supplied JSON bytes; it does not establish their author or truth.</p></details></section>`;
+}
+
 /** Use the same path policy as text/JSON, including when called directly. */
 export function renderArtifactsHtml(rawReport: ArtifactReport): string {
   const report = redactLocalPaths(rawReport);
@@ -84,6 +99,7 @@ export function renderArtifactsHtml(rawReport: ArtifactReport): string {
 <p>${passed ? "The observed files satisfy the declared local checks. Review the expectations and responsible approval before using this result." : "This delivery has findings or incomplete checks. Use the file and identity metadata below to review the affected requirement."}</p>
 <div class="metrics"><div class="metric"><strong>${report.files.length}</strong><span>Observed files</span></div><div class="metric"><strong>${report.findings.length}</strong><span>Review findings</span></div><div class="metric"><strong>${failedChecks}</strong><span>Failed record checks</span></div><div class="metric"><strong>${incomplete}</strong><span>Incomplete record checks</span></div></div>
 <div class="binding"><strong>Receipt / file binding</strong><span class="badge">${text(report.receipt_binding)}</span><small>Hash consistency with supplied local evidence; author identity is not authenticated.</small></div></div>
+${comparisonSection(report)}
 <section id="checks" aria-labelledby="check-title"><h2 id="check-title">Allocation and identity checks</h2><p>Showing ${Math.min(CHECK_DETAILS, checks.length)} of ${checks.length} reconciliation checks. Failed and incomplete checks appear first.</p>
 ${ordered.slice(0, CHECK_DETAILS).map(check => reconciliationCard(check, rowBudget)).join("") || "<p>No record reconciliation was declared. Other declared file checks are reflected in the result.</p>"}</section>
 <section id="issues" aria-labelledby="issue-title"><h2 id="issue-title">Review actions</h2>${report.findings.length ? `<div class="table-wrap" tabindex="0" aria-label="Review findings table"><table><thead><tr><th>Finding</th><th>Affected metadata</th><th>Next review step</th></tr></thead><tbody>${report.findings.slice(0, 256).map(findingRow).join("")}</tbody></table></div>` : "<p>No finding was reported for the declared scope. This does not authenticate source truth or establish business approval.</p>"}</section>
