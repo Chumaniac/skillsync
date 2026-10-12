@@ -5,7 +5,12 @@
 > **Alpha · source candidate v0.1.7 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
-Source v0.1.7 adds an offline human acceptance report on top of bounded composite-key reconciliation. The published GitHub package
+Source v0.1.7 adds an offline human acceptance report on top of bounded composite-key reconciliation.
+Use `artifacts --compare <previous-artifacts.json>` to review whether a corrected
+delivery resolves finding categories or improves individual reconciliation counts.
+Changed contracts and incomplete history remain unavailable, without copying old
+messages or record values. See the [correction review guide](docs/artifact-delivery.md#review-a-correction-against-its-previous-report).
+The published GitHub package
 is still v0.1.4 and npm is still 0.1.0; neither includes the new rule.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)

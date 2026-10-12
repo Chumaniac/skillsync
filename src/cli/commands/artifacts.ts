@@ -9,6 +9,7 @@ import { parseStrictJson } from "../../domain/strict-json.js";
 import { inspectArtifactContent, type ArtifactFacts, type ArtifactFinding } from "../../domain/artifact-content.js";
 import { createArtifactReferenceIndex } from "../../domain/artifact-references.js";
 import { createArtifactReconciliationIndex, type ReconciliationSummary } from "../../domain/artifact-reconciliation.js";
+import { artifactSetHash, compareArtifactReports, parseArtifactReport, type ArtifactComparison } from "../../domain/artifact-report-comparison.js";
 import { redactLocalPaths } from "../../reporters/local-paths.js";
 import { renderArtifactsHtml } from "../../reporters/artifacts-html.js";
 import { readWorkspaceFile, scanStagedWorkspace, WorkspaceTreeError } from "../../sandbox/workspace-tree.js";
@@ -20,7 +21,7 @@ const manifestSchema = z.object({ schema: z.literal("skilltape.dev/delivery/v1")
   files: z.array(z.object({ path: z.string().min(1).max(1024), bytes: z.number().int().min(0).max(16 * 1024 * 1024), sha256: sha }).strict()).max(10_000),
 }).strict();
 
-export type ArtifactsOptions = { contract: string; delivery?: string; path?: string; includeRowEvidence?: boolean };
+export type ArtifactsOptions = { contract: string; delivery?: string; path?: string; includeRowEvidence?: boolean; compare?: string };
 export type ArtifactReport = {
   schema: "skillsync.artifacts-report/v1"; status: "passed" | "failed"; exitCode: number;
   evidence: "physical-files"; execution: "not-run"; provenance: "not-authenticated";
@@ -29,22 +30,34 @@ export type ArtifactReport = {
   files: Array<{ path: string; bytes: number; sha256: string; rows?: number }>;
   findings: ArtifactFinding[];
   reconciliations?: ReconciliationSummary[];
+  comparison?: ArtifactComparison;
 };
-
-function setHash(files: ArtifactReport["files"]): string {
-  const digest = createHash("sha256");
-  for (const file of [...files].sort((left, right) => Buffer.compare(Buffer.from(left.path), Buffer.from(right.path)))) {
-    const size = Buffer.alloc(8); size.writeBigUInt64BE(BigInt(file.bytes));
-    digest.update(file.path); digest.update(Buffer.from([0])); digest.update(size); digest.update(file.sha256);
-  }
-  return digest.digest("hex");
-}
 
 function readJson(bytes: Uint8Array): unknown {
   return parseStrictJson(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 }
 
 export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactReport> {
+  if (!options.compare) return inspectArtifacts(options);
+  let before: ArtifactReport, bytes: Uint8Array;
+  try {
+    bytes = await readWorkspaceFile(options.compare, 1024 * 1024);
+    before = parseArtifactReport(readJson(bytes));
+  } catch {
+    return { schema: "skillsync.artifacts-report/v1", status: "failed", exitCode: 2,
+      evidence: "physical-files", execution: "not-run", provenance: "not-authenticated",
+      receipt_binding: "not-provided", files: [], findings: [{ code: "artifact.baseline-invalid" }] };
+  }
+  const report = await inspectArtifacts(options);
+  report.comparison = compareArtifactReports(before, report, hash(bytes));
+  if (report.comparison.status === "unavailable") {
+    report.status = "failed"; report.exitCode = 2;
+    if (report.findings.length < 256) report.findings.push({ code: "artifact.baseline-unavailable" });
+  }
+  return report;
+}
+
+async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactReport> {
   const report: ArtifactReport = { schema: "skillsync.artifacts-report/v1", status: "failed", exitCode: 1,
     evidence: "physical-files", execution: "not-run", provenance: "not-authenticated",
     receipt_binding: options.delivery ? "failed" : "not-provided", files: [], findings: [] };
@@ -117,7 +130,7 @@ export async function runArtifacts(options: ArtifactsOptions): Promise<ArtifactR
     return report;
   }
   report.files.sort((left, right) => Buffer.compare(Buffer.from(left.path), Buffer.from(right.path)));
-  report.artifact_set_sha256 = setHash(report.files);
+  report.artifact_set_sha256 = artifactSetHash(report.files);
   if (manifest) {
     if (manifest.artifact_set_sha256 !== report.artifact_set_sha256) issue("delivery.artifact-set-digest");
     for (const file of report.files) {
@@ -151,6 +164,9 @@ export function renderArtifacts(report: ArtifactReport, format = "text"): string
   const safe = redactLocalPaths(report);
   if (format === "json") return JSON.stringify(safe, null, 2) + "\n";
   return [`Artifact validation: ${safe.status}`, `Evidence: physical files; execution: not-run; receipt binding: ${safe.receipt_binding}`,
+    ...(safe.comparison ? [`Baseline comparison: ${safe.comparison.status}${safe.comparison.reason ? `; ${safe.comparison.reason}` : ""}`,
+      ...(safe.comparison.findings ? [`Finding categories: ${safe.comparison.findings.added} new; ${safe.comparison.findings.ongoing} ongoing; ${safe.comparison.findings.resolved} resolved`] : [])] : []),
+    ...(safe.comparison?.checks ? [`Record check changes: ${safe.comparison.checks.filter(check => check.change === "improved").length} improved; ${safe.comparison.checks.filter(check => check.change === "regressed").length} regressed; ${safe.comparison.checks.filter(check => check.change === "changed").length} mixed changes; ${safe.comparison.checks.filter(check => check.change === "unchanged").length} unchanged`] : []),
     `Files: ${safe.files.length}`, ...(safe.reconciliations ?? []).map(item => `Record reconciliation: ${item.status}${item.status !== "unknown" ? `; source keys=${item.sourceKeys}; target keys=${item.targetKeys}; missing=${item.missingKeys}; unexpected=${item.unexpectedKeys}; mismatched values=${item.valueMismatches}` : ""}`),
     ...safe.findings.map(finding => `${finding.code}${finding.path ? ` file=${JSON.stringify(finding.path)}` : ""}${finding.field ? ` field=${JSON.stringify(finding.field)}` : ""}${finding.row !== undefined ? ` row=${finding.row}` : ""}${finding.message ? ` ${finding.message}` : ""}`)].join("\n") + "\n";
 }

@@ -1,5 +1,15 @@
 # Changelog
 
+## Source continuation — 2026-10-12
+
+- Add `artifacts --compare` to review actual corrected files against a preserved
+  JSON inspection from the same contract, with visible HTML/text/JSON transitions.
+- Separate finding-category resolution and reconciliation count improvements
+  from business acceptance; reject invalid or incomplete comparison evidence.
+- Bound historical reads to1MiB and existing report ceilings, reuse stable-file
+  reads and strict JSON parsing, and omit previous messages/record positions.
+- Preserve source0.1.7 and existing public releases; no publishing is performed.
+
 ## 0.1.7 source candidate - 2026-10-10
 
 - Add `artifacts --format html`: a self-contained offline delivery review with
