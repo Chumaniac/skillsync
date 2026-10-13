@@ -35,6 +35,36 @@ async function bind(bundle: string) {
 }
 
 describe("physical artifact validation", () => {
+  it.each([
+    ["path", "missing"], ["path", "file"], ["path", "symlink"],
+    ["delivery", "missing"], ["delivery", "file"], ["delivery", "symlink"],
+  ] as const)("reports invalid %s %s directories as setup errors", async (mode, kind) => fixture(async (root, contract, data) => {
+    const target = join(root, "invalid-input");
+    if (kind === "file") await writeFile(target, "PRIVATE_SETUP_CONTENT");
+    if (kind === "symlink") await symlink(data, target);
+    const report = await runArtifacts({ contract, [mode]: target });
+    expect(report.exitCode).toBe(2);
+    expect(report.status).toBe("failed");
+    expect(report.files).toEqual([]);
+    expect(renderArtifacts(report, "html")).toContain("Check setup required");
+    for (const format of ["json", "text", "html"]) {
+      const rendered = renderArtifacts(report, format);
+      expect(rendered).not.toContain(root);
+      expect(rendered).not.toContain("PRIVATE_SETUP_CONTENT");
+    }
+    let exitCode = 0;
+    const program = createCli({ writeOut: () => undefined, writeErr: () => undefined, setExitCode: code => { exitCode = code; } });
+    await program.parseAsync(["node", "skillsync", "artifacts", "--contract", contract, `--${mode}`, target]);
+    expect(exitCode).toBe(2);
+  }));
+  it("keeps malformed delivery contents as artifact findings", async () => fixture(async (root, contract) => {
+    const bundle = join(root, "incomplete");
+    await mkdir(bundle);
+    const report = await runArtifacts({ contract, delivery: bundle });
+    expect(report.exitCode).toBe(1);
+    expect(report.findings).toEqual([{ code: "delivery.layout" }]);
+    expect(renderArtifacts(report, "html")).toContain("Review required");
+  }));
   it("rejects an ambiguous receipt and an unsorted manifest", async () => fixture(async (root, contract, data) => {
     const bundle = join(root, "bundle"); await mkdir(bundle); await cp(data, join(bundle, "artifacts"), { recursive: true }); await bind(bundle);
     const manifest = JSON.parse(await readFile(join(bundle, "delivery.json"), "utf8"));

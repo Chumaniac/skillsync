@@ -1,5 +1,14 @@
 # Changelog
 
+## Source maintenance — 2026-10-13
+
+- Return exit2 for missing, non-directory, or symbolic-link artifact input roots.
+  The offline HTML report now asks for corrected setup instead of suggesting
+  that the selected delivery was inspected.
+- Keep malformed delivery contents and failed artifact checks at exit1, preserve
+  originals, and omit local paths and input contents from every report format.
+- No package publication or runtime execution is performed.
+
 ## Source continuation — 2026-10-12
 
 - Add `artifacts --compare` to review actual corrected files against a preserved

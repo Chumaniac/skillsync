@@ -278,7 +278,10 @@ safe interpretation in every spreadsheet application or locale.
 ## Reports and exit codes
 
 Exit0 means declared checks passed, exit1 an artifact finding, and exit2 invalid
-input/contract. JSON/text reports contain relative paths, digests, sizes, record
+input/contract. A missing, non-directory, or symbolic-link `--path`/`--delivery`
+root is a setup error (exit2). Once a valid directory is selected, malformed
+delivery metadata, missing artifacts, and changed contents remain findings
+(exit1). JSON/text reports contain relative paths, digests, sizes, record
 counts and stable findings, not raw cells, JSON values, process output or host
 absolute paths. Cross-file totals remain internal. Findings identify the file,
 declared field and data-record number where appropriate.

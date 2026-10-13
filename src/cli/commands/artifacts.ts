@@ -72,12 +72,16 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
     report.contract_sha256 = hash(JSON.stringify(contract));
   } catch { issue("artifact.contract-invalid"); report.exitCode = 2; return report; }
   let root = options.path ?? join(options.delivery!, "artifacts");
+  try {
+    const selected = await lstat(options.delivery ?? root);
+    if (!selected.isDirectory() || selected.isSymbolicLink()) throw new Error("directory invalid");
+  } catch {
+    issue("artifact.directory-invalid"); report.exitCode = 2; return report;
+  }
   let manifest: z.infer<typeof manifestSchema> | undefined;
   let metadataHashes: { receipt: string; manifest: string } | undefined;
   if (options.delivery) {
     try {
-      const metadata = await lstat(options.delivery);
-      if (!metadata.isDirectory() || metadata.isSymbolicLink()) throw new Error("directory invalid");
       const entries = await readdir(options.delivery);
       if (entries.length !== 3 || !["artifacts", "receipt.json", "delivery.json"].every(name => entries.includes(name))) {
         issue("delivery.layout"); return report;

@@ -24,6 +24,7 @@ function action(code: string): string {
   if (code === "artifact.reconciliation-keys" || code === "artifact.reconciliation-sum") return "Compare expected and delivered records using the declared key columns. Preserve the original delivery while reviewing a corrected copy.";
   if (code.startsWith("artifact.reconciliation-")) return "No partial result is accepted. Review the declared types, integer range and selected-cell capacity before checking again.";
   if (code === "artifact.contract-invalid") return "Review the contract declaration and directory selection before inspecting files. No file acceptance is established.";
+  if (code === "artifact.directory-invalid") return "Select an existing directory, not a file or symbolic link, and check read access before inspecting the delivery.";
   if (code.includes("digest") || code.includes("changed") || code.includes("snapshot")) return "Retain this copy for comparison. Recover known successful originals and recheck the same reviewed expectations.";
   if (code.includes("missing")) return "Recover missing files from the saved successful delivery, then recheck the complete required scope.";
   if (code.includes("capacity")) return "Review the documented capacity bounds. A partial check cannot accept the whole delivery.";
