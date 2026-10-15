@@ -42,7 +42,13 @@ External profiles are discovered in order:
 2. `~/.config/skillsync/profiles/*.yaml` (user local overrides)
 3. `--profile-dir <path>` (explicit per-invocation, wins on collision)
 
-Each file must pass `CapabilityProfileDocumentSchema` (`id` matches `^[a-z0-9][a-z0-9-]*$`, `version` positive int, `docsUrl` https, `skill_path`, `features`, `semantics`). Invalid files are skipped in `compat`/`verify` but `profile validate` surfaces the error with stable `profile.invalid` diagnostics.
+Each file must pass `CapabilityProfileDocumentSchema` (`id` matches `^[a-z0-9][a-z0-9-]*$`, `version` positive int, `docsUrl` https, `skill_path`, `features`, `semantics`). Malformed optional contrib/user files are skipped. An explicitly supplied
+`--profile-dir` must exist and contain valid regular YAML profile files; invalid
+or oversized files cause `profile.invalid-input` and exit 2. A requested unknown
+target causes `profile.unknown-target` and exit 2 rather than silently skipping
+its compatibility checks. `profile validate` retains its `profile.invalid`
+diagnostics. Each directory is limited to 1,000 entries and 64 YAML files;
+each file is limited to 1 MiB, and each command accepts at most 64 targets.
 
 Verification policy can be supplied explicitly without changing the scanned
 Skill files:

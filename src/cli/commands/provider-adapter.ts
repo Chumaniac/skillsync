@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import {
   parseProviderAdapterManifest,
   parseProviderAdapterPolicy,
@@ -8,6 +6,7 @@ import {
   verifyProviderAdapter,
   type ProviderAdapterFinding,
 } from "../../sandbox/provider-adapter.js";
+import { CONTROL_INPUT_BYTES, readWorkspaceText } from "../../sandbox/workspace-tree.js";
 
 const IMMUTABLE_IMAGE = /^[^\s@]+@sha256:[0-9a-f]{64}$/;
 const POLICY_DIGEST = /^sha256:[0-9a-f]{64}$/;
@@ -95,7 +94,7 @@ export async function runProviderAdapterValidate(
 
   let content: string;
   try {
-    content = await readFile(options.configPath, "utf8");
+    content = await readWorkspaceText(options.configPath, CONTROL_INPUT_BYTES);
   } catch {
     return failed(options.configPath, "provider.config-unreadable", "Provider adapter manifest could not be read.", options.image);
   }
@@ -112,7 +111,7 @@ export async function runProviderAdapterValidate(
 
   let policyContent: string;
   try {
-    policyContent = await readFile(options.policyPath, "utf8");
+    policyContent = await readWorkspaceText(options.policyPath, CONTROL_INPUT_BYTES);
   } catch {
     return failed(options.configPath, "provider.policy-unreadable", "Provider adapter policy could not be read.", options.image);
   }

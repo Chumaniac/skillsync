@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import {
   parseRunnerImageConfig,
   RunnerImageContractError,
@@ -9,6 +7,7 @@ import {
   type CommandRunner,
   type ProcessSpec,
 } from "../../sandbox/command.js";
+import { CONTROL_INPUT_BYTES, readWorkspaceText } from "../../sandbox/workspace-tree.js";
 import {
   parseRunnerProvenance,
   RunnerProvenanceError,
@@ -124,7 +123,7 @@ async function validateProvenance(
 
   let content: string;
   try {
-    content = await readFile(options.provenancePath, "utf8");
+    content = await readWorkspaceText(options.provenancePath, CONTROL_INPUT_BYTES);
   } catch {
     return {
       code: "runner.provenance-invalid",
@@ -218,7 +217,7 @@ export async function runRunnerValidate(options: RunnerValidateOptions): Promise
 
   let content: string;
   try {
-    content = await readFile(options.configPath!, "utf8");
+    content = await readWorkspaceText(options.configPath!, CONTROL_INPUT_BYTES);
   } catch {
     return failedReport("config", {
       code: "runner.config-unreadable",

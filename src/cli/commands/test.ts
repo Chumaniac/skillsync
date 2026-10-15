@@ -1,4 +1,4 @@
-import { lstat, readFile, readdir } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { normalizeRelativePath } from "../../domain/digest.js";
@@ -10,6 +10,7 @@ import {
   type BehaviorExecutionReport,
   type BehaviorFinding,
 } from "../../domain/behavior-execution.js";
+import { CONTROL_INPUT_BYTES, readDirectoryEntries, readWorkspaceText } from "../../sandbox/workspace-tree.js";
 import { scanInventory } from "../../domain/inventory.js";
 import { redactLocalPaths } from "../../reporters/local-paths.js";
 import { BehaviorCommandError, runBehaviorV2Test } from "./test-v2.js";
@@ -106,7 +107,7 @@ async function readManifest(fixtureRoot: string): Promise<BehaviorFixture> {
 
   let content: string;
   try {
-    content = await readFile(manifestPath, "utf8");
+    content = await readWorkspaceText(manifestPath, CONTROL_INPUT_BYTES);
   } catch (error: unknown) {
     throw new Error(`Cannot read behavior fixture ${manifestPath}: ${firstLine(error)}`);
   }
@@ -280,7 +281,7 @@ export async function listBehaviorFixtures(rootPath: string): Promise<BehaviorFi
   const root = resolve(rootPath);
   let entries;
   try {
-    entries = await readdir(root, { withFileTypes: true });
+    entries = await readDirectoryEntries(root, 1000);
   } catch (error: unknown) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
       return [];

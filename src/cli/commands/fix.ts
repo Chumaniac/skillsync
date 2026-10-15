@@ -1,4 +1,5 @@
-import { lstat, readFile, stat, writeFile } from "node:fs/promises";
+import { parseStrictJson } from "../../domain/strict-json.js";
+import { lstat, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { createActionPlan, type ActionPlan } from "../../domain/action-plan.js";
@@ -10,6 +11,7 @@ import {
 } from "../../domain/patch-application.js";
 import { runVerification } from "./verify.js";
 import { IssueCommandError } from "./explain.js";
+import { CONTROL_INPUT_BYTES, readWorkspaceText } from "../../sandbox/workspace-tree.js";
 
 export type FixPlanOptions = {
   paths: string[];
@@ -45,7 +47,7 @@ function selectIssues(issues: Issue[], issueIds: string[] | undefined): Issue[] 
 
 function planFromJson(content: string, path: string): ActionPlan {
   try {
-    return JSON.parse(content) as ActionPlan;
+    return parseStrictJson(content) as ActionPlan;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message.split("\n", 1)[0] : String(error);
     throw new Error(`Cannot parse ActionPlan ${path}: ${message}`);
@@ -95,7 +97,7 @@ export async function runFixApply(options: FixApplyOptions): Promise<ApplyReceip
   const path = resolve(options.planPath);
   let content: string;
   try {
-    content = await readFile(path, "utf8");
+    content = await readWorkspaceText(path, CONTROL_INPUT_BYTES);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message.split("\n", 1)[0] : String(error);
     throw new Error(`Cannot read ActionPlan ${path}: ${message}`);

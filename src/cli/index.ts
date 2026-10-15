@@ -195,6 +195,7 @@ type ReportCliOptions = Omit<ReportOptions, "beforePath" | "afterPath" | "planPa
   plan?: string;
   receipt?: string;
   format?: ReportFormat;
+  failOnUnverified?: boolean;
 };
 
 type BaselineCliOptions = {
@@ -399,6 +400,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .requiredOption("--after <report.json>", "Later verification report JSON file")
     .option("--plan <plan.json>", "Optional ActionPlan JSON file")
     .option("--receipt <receipt.json>", "Optional ApplyReceipt JSON file")
+    .option("--fail-on-unverified", "Exit 1 when the supplied after-report is not verified; does not rerun verification")
     .requiredOption("--format <format>", "Output format: markdown, json, or sarif")
     .action(async (options: ReportCliOptions) => {
       const report = await runReport({
@@ -408,6 +410,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
         receiptPath: options.receipt,
       });
       io.writeOut(renderReport(report, options.format ?? "markdown"));
+      if (options.failOnUnverified && report.conclusion !== "verified") io.setExitCode?.(1);
     });
 
   program

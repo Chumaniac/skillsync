@@ -103,6 +103,32 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 `pass`, `warn`, `fail`, and `unknown` are findings to review, not an automatic approval. `fix --apply` records an explicit change; only a subsequent `verify` establishes the new state.
 
+## Bounded inputs and CI decisions (current source)
+
+Inventory shares one budget across all requested paths: 10,000 files, 1,000
+Skills, 64 targets, 20,000 directory entries, depth 64, 16 MiB per file and
+64 MiB total. Oversized, unreadable or changing inputs stop the scan with exit 2;
+no partial inventory is presented as complete. Internal symlink targets count
+against the same budget when following links is explicitly enabled.
+
+Report, lock, baseline, fix-plan, Runner and fixture control files are limited
+to 8 MiB. Policy and external profile files are limited to 1 MiB. Inputs must
+be stable regular UTF-8 files; duplicate JSON keys are rejected in reports,
+locks, baselines and fix plans. Staging applies the file/tree budgets before
+copying and binds its input digest to the staged Skill bytes.
+
+`report` normally renders supplied evidence and exits successfully even if its
+conclusion is unverified. For a CI gate, use the source-only option:
+
+```bash
+skillsync report --before before.json --after after.json --fail-on-unverified
+```
+
+This returns exit 1 for an unverified conclusion, or exit 2 for invalid report
+input. It evaluates the supplied after-report; it does not rerun verification
+or authenticate that report. Run `verify` on the current files first. These
+maintenance changes are in source and are not in the npm 0.1.0/GitHub v0.1.4 releases.
+
 ## Reference
 
 - [Project overview](https://chumanic.com/projects/skillsync/)

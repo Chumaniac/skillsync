@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 
 import {
   computeEventDigest,
@@ -14,6 +14,7 @@ import type {
   TeardownResult,
   VirtualFileObservation,
 } from "./types.js";
+import { WORKSPACE_TREE_LIMITS, readWorkspaceText } from "./workspace-tree.js";
 import type { RunSpec } from "../domain/behavior-v2.js";
 
 const RUN_ID_MARKER = "__SKILLSYNC_RUN_ID__";
@@ -92,7 +93,10 @@ export class ReplayBackend implements SandboxBackend {
       throw new Error("Replay execution requires replayTracePath");
     }
 
-    const content = bindTraceMarkers(await readFile(spec.replayTracePath, "utf8"), spec);
+    const content = bindTraceMarkers(
+      await readWorkspaceText(spec.replayTracePath, WORKSPACE_TREE_LIMITS.maxFileBytes),
+      spec,
+    );
     const parsed = parseRunnerTrace(content, {
       runId: spec.runId,
       inputDigest: spec.inputDigest,

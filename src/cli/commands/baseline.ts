@@ -1,9 +1,11 @@
+import { parseStrictJson } from "../../domain/strict-json.js";
 import { createHash } from "node:crypto";
-import { lstat, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { lstat, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { compareIssues, createBaseline, type Baseline, type IssueComparison } from "../../domain/baseline.js";
 import { scanInventory } from "../../domain/inventory.js";
+import { CONTROL_INPUT_BYTES, readWorkspaceText } from "../../sandbox/workspace-tree.js";
 import { runVerification } from "./verify.js";
 
 export type BaselineCreateOptions = {
@@ -82,13 +84,13 @@ async function requireDirectSkillRoot(path: string): Promise<string> {
 async function readBaseline(path: string): Promise<Baseline> {
   let content: string;
   try {
-    content = await readFile(path, "utf8");
+    content = await readWorkspaceText(path, CONTROL_INPUT_BYTES);
   } catch {
     throw new Error("Cannot read baseline file.");
   }
   let value: unknown;
   try {
-    value = JSON.parse(content) as unknown;
+    value = parseStrictJson(content) as unknown;
   } catch {
     throw new Error("Cannot parse baseline file.");
   }
@@ -110,7 +112,7 @@ async function readBaseline(path: string): Promise<Baseline> {
 async function policyFingerprint(path: string | undefined): Promise<string> {
   if (path === undefined) return digest({ policy: "default" });
   try {
-    return digest(await readFile(path, "utf8"));
+    return digest(await readWorkspaceText(path, CONTROL_INPUT_BYTES));
   } catch {
     throw new Error("Cannot read policy file.");
   }

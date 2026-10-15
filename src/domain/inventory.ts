@@ -1,9 +1,100 @@
-import { lstat, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
+import type { Dirent, Stats } from "node:fs";
+import { lstat, opendir, readlink, realpath, stat } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 
 import { computeSkillDigest, normalizeRelativePath } from "./digest.js";
 import type { Finding } from "./result.js";
 import type { Skill, SkillFile } from "./skill.js";
+import { readWorkspaceFile, WORKSPACE_TREE_LIMITS, WorkspaceTreeError } from "../sandbox/workspace-tree.js";
+
+export const INVENTORY_LIMITS = Object.freeze({
+  ...WORKSPACE_TREE_LIMITS,
+  maxTargets: 64,
+  maxSkills: 1_000,
+  maxEntries: 20_000,
+  maxDepth: 64,
+});
+export type InventoryLimits = { [Key in keyof typeof INVENTORY_LIMITS]: number };
+
+class InventoryInputError extends Error {
+  readonly exitCode = 2;
+  constructor(readonly code: string, message: string) {
+    super(`${code}: ${message}`);
+    this.name = "InventoryInputError";
+  }
+}
+
+export class InventoryCapacityError extends InventoryInputError {
+  constructor(readonly bound: keyof InventoryLimits, limit: number) {
+    super("inventory.capacity", `${bound} limit (${limit}) exceeded or unsupported. Scan smaller explicit roots; no partial inventory was returned.`);
+    this.name = "InventoryCapacityError";
+  }
+}
+
+function sameMetadata(left: Stats, right: Stats): boolean {
+  return left.dev === right.dev && left.ino === right.ino && left.mode === right.mode &&
+    left.size === right.size && left.mtimeMs === right.mtimeMs && left.ctimeMs === right.ctimeMs;
+}
+
+class InventoryBudget {
+  readonly limits: InventoryLimits;
+  readonly observations = new Map<string, Stats>();
+  entries = 0;
+  files = 0;
+  bytes = 0;
+  skills = 0;
+
+  constructor(options: InventoryOptions) {
+    this.limits = { ...INVENTORY_LIMITS, ...options.limits };
+    for (const key of Object.keys(INVENTORY_LIMITS) as Array<keyof InventoryLimits>) {
+      if (!Number.isSafeInteger(this.limits[key]) || this.limits[key] < 1 || this.limits[key] > INVENTORY_LIMITS[key]) {
+        throw new InventoryCapacityError(key, INVENTORY_LIMITS[key]);
+      }
+    }
+  }
+
+  check(bound: keyof InventoryLimits, value: number): void {
+    if (!Number.isSafeInteger(value) || value < 0 || value > this.limits[bound]) {
+      throw new InventoryCapacityError(bound, this.limits[bound]);
+    }
+  }
+
+  file(bytes: number): void {
+    this.check("maxFileBytes", bytes);
+    this.check("maxFiles", this.files + 1);
+    this.check("maxTotalBytes", this.bytes + bytes);
+    this.files += 1;
+    this.bytes += bytes;
+  }
+
+  observe(path: string, metadata: Stats): void {
+    const previous = this.observations.get(path);
+    if (previous && !sameMetadata(previous, metadata)) {
+      throw new InventoryInputError("inventory.changed", "Skill input changed during inspection. Retry with fixed input roots.");
+    }
+    this.observations.set(path, metadata);
+  }
+
+  async verifyStable(): Promise<void> {
+    for (const [path, before] of this.observations) {
+      if (!sameMetadata(before, await lstat(path))) {
+        throw new InventoryInputError("inventory.changed", "Skill input changed during inspection. Retry with fixed input roots.");
+      }
+    }
+  }
+}
+
+async function readEntries(directory: string, budget: InventoryBudget): Promise<Dirent[]> {
+  const entries: Dirent[] = [];
+  for await (const entry of await opendir(directory)) {
+    budget.check("maxEntries", ++budget.entries);
+    if (entry.name.includes("\\") || /\p{Cc}/u.test(entry.name)) {
+      throw new InventoryInputError("inventory.path", "Use portable member names without control characters or backslashes.");
+    }
+    entries.push(entry);
+  }
+  return entries.sort((left, right) => left.name.localeCompare(right.name));
+}
 
 export type ScanTarget = {
   name: string;
@@ -20,6 +111,8 @@ export type Inventory = {
 
 export type InventoryOptions = {
   followSymlinks?: boolean;
+  /** Limits may be reduced, but cannot exceed the shared scan ceilings. */
+  limits?: Partial<InventoryLimits>;
 };
 
 type FindingStatus = Pick<Finding, "level" | "severity" | "status">;
@@ -93,28 +186,35 @@ async function collectFiles(
   skillName: string,
   options: InventoryOptions,
   findings: Finding[],
+  budget: InventoryBudget,
 ): Promise<SkillFile[]> {
   const files: SkillFile[] = [];
   const visitedDirectories = new Set<string>();
   const canonicalRoot = await realpath(skillRoot);
 
-  async function walk(directory: string): Promise<void> {
+  async function walk(directory: string, depth = 0): Promise<void> {
+    budget.check("maxDepth", depth);
     const canonicalDirectory = await realpath(directory);
+    if (!isPathInside(canonicalRoot, canonicalDirectory)) {
+      throw new InventoryInputError("inventory.changed", "A directory escaped the selected Skill root.");
+    }
+    budget.observe(directory, await lstat(directory));
+    budget.observe(canonicalDirectory, await lstat(canonicalDirectory));
     if (visitedDirectories.has(canonicalDirectory)) {
       return;
     }
     visitedDirectories.add(canonicalDirectory);
 
-    const entries = await readdir(directory, { withFileTypes: true });
-    entries.sort((left, right) => left.name.localeCompare(right.name));
+    const entries = await readEntries(directory, budget);
 
     for (const entry of entries) {
       const fullPath = join(directory, entry.name);
       const relativePath = normalizeRelativePath(relative(skillRoot, fullPath));
       const metadata = await lstat(fullPath);
+      budget.observe(fullPath, metadata);
 
       if (metadata.isDirectory()) {
-        await walk(fullPath);
+        await walk(fullPath, depth + 1);
         continue;
       }
 
@@ -126,14 +226,16 @@ async function collectFiles(
           const canonicalTarget = await realpath(fullPath);
           if (isPathInside(canonicalRoot, canonicalTarget)) {
             const targetMetadata = await stat(fullPath);
+            budget.observe(canonicalTarget, targetMetadata);
             if (targetMetadata.isDirectory()) {
-              await walk(fullPath);
+              await walk(fullPath, depth + 1);
               continue;
             }
             if (targetMetadata.isFile()) {
+              budget.file(targetMetadata.size);
               files.push({
                 relativePath,
-                content: await readFile(fullPath),
+                content: await readWorkspaceFile(canonicalTarget, budget.limits.maxFileBytes, targetMetadata),
                 mode: metadata.mode,
                 isSymlink: true,
               });
@@ -156,6 +258,7 @@ async function collectFiles(
           }
         }
 
+        budget.file(Buffer.byteLength(linkTarget));
         files.push({
           relativePath,
           content: Buffer.from(linkTarget),
@@ -166,12 +269,15 @@ async function collectFiles(
       }
 
       if (metadata.isFile()) {
+        budget.file(metadata.size);
         files.push({
           relativePath,
-          content: await readFile(fullPath),
+          content: await readWorkspaceFile(fullPath, budget.limits.maxFileBytes, metadata),
           mode: metadata.mode,
           isSymlink: false,
         });
+      } else {
+        throw new InventoryInputError("inventory.unsupported-type", "Skill members must be regular files, directories or explicit symlinks.");
       }
     }
   }
@@ -183,18 +289,21 @@ async function collectFiles(
 async function discoverSkillRoots(
   target: ScanTarget,
   options: InventoryOptions,
+  budget: InventoryBudget,
 ): Promise<string[]> {
   const targetPath = resolve(target.path);
   if (await hasSkillMd(targetPath)) {
+    budget.check("maxSkills", ++budget.skills);
     return [targetPath];
   }
 
-  const entries = await readdir(targetPath, { withFileTypes: true });
+  const entries = await readEntries(targetPath, budget);
   const roots: string[] = [];
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+  for (const entry of entries) {
     const entryPath = join(targetPath, entry.name);
     if (entry.isDirectory()) {
       if (await hasSkillMd(entryPath)) {
+        budget.check("maxSkills", ++budget.skills);
         roots.push(entryPath);
       }
       continue;
@@ -204,6 +313,7 @@ async function discoverSkillRoots(
       const canonicalTarget = await realpath(entryPath);
       if (isPathInside(await realpath(targetPath), canonicalTarget) && (await stat(entryPath)).isDirectory()) {
         if (await hasSkillMd(entryPath)) {
+          budget.check("maxSkills", ++budget.skills);
           roots.push(entryPath);
         }
       }
@@ -215,6 +325,7 @@ async function discoverSkillRoots(
 async function scanTarget(
   target: ScanTarget,
   options: InventoryOptions,
+  budget: InventoryBudget,
 ): Promise<{ skills: Skill[]; findings: Finding[] }> {
   const findings: Finding[] = [];
   const skills: Skill[] = [];
@@ -222,6 +333,7 @@ async function scanTarget(
 
   try {
     const metadata = await lstat(targetPath);
+    budget.observe(targetPath, metadata);
     if (!metadata.isDirectory()) {
       findings.push(
         finding({
@@ -258,10 +370,10 @@ async function scanTarget(
     return { skills, findings };
   }
 
-  const roots = await discoverSkillRoots(target, options);
+  const roots = await discoverSkillRoots(target, options, budget);
   for (const skillRoot of roots) {
     const skillName = basename(skillRoot);
-    const files = await collectFiles(skillRoot, target, skillName, options, findings);
+    const files = await collectFiles(skillRoot, target, skillName, options, findings, budget);
     const digest = computeSkillDigest(files);
     skills.push({
       name: skillName,
@@ -321,11 +433,21 @@ export async function scanInventory(
 ): Promise<Inventory> {
   const skills: Skill[] = [];
   const findings: Finding[] = [];
-
-  for (const target of targets) {
-    const result = await scanTarget(target, options);
-    skills.push(...result.skills);
-    findings.push(...result.findings);
+  const budget = new InventoryBudget(options);
+  budget.check("maxTargets", targets.length);
+  try {
+    for (const target of targets) {
+      const result = await scanTarget(target, options, budget);
+      skills.push(...result.skills);
+      findings.push(...result.findings);
+    }
+    await budget.verifyStable();
+  } catch (error) {
+    if (error instanceof InventoryInputError) throw error;
+    if (error instanceof WorkspaceTreeError || (typeof error === "object" && error !== null && "code" in error)) {
+      throw new InventoryInputError("inventory.unreadable", "Skill input is inaccessible or changed. Fix the input and retry; no partial inventory was returned.");
+    }
+    throw error;
   }
 
   addDuplicateFindings(skills, targets, findings);

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readWorkspaceText } from "../../sandbox/workspace-tree.js";
 import { resolve } from "node:path";
 
 import { parse as parseYaml } from "yaml";
@@ -89,29 +89,24 @@ function summarize(findings: Finding[]): VerificationSummary {
   );
 }
 
-function firstLine(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.split("\n", 1)[0] ?? "Unknown policy error";
-}
-
 async function loadPolicyFile(path: string): Promise<{ value: unknown; error?: string }> {
   const policyPath = resolve(path);
   let content: string;
   try {
-    content = await readFile(policyPath, "utf8");
-  } catch (error: unknown) {
+    content = await readWorkspaceText(policyPath, 1024 * 1024);
+  } catch {
     return {
       value: null,
-      error: `Cannot read policy file ${policyPath}: ${firstLine(error)}`,
+      error: "Cannot read policy file: expected a stable regular UTF-8 file within 1 MiB",
     };
   }
 
   try {
-    return { value: parseYaml(content, { uniqueKeys: true }) };
-  } catch (error: unknown) {
+    return { value: parseYaml(content, { uniqueKeys: true, maxAliasCount: 100, prettyErrors: false, logLevel: "silent" }) };
+  } catch {
     return {
       value: null,
-      error: `Cannot parse policy file ${policyPath}: ${firstLine(error)}`,
+      error: "Cannot parse policy file: expected valid YAML with unique keys",
     };
   }
 }

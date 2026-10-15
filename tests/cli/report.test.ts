@@ -53,6 +53,43 @@ function validReceiptPayload() {
 }
 
 describe("skillsync report", () => {
+  it("can fail CI on an unverified report without changing rendering defaults", async () => {
+    const root = await createSkillRoot();
+    const source = await verificationReport(root);
+    const before = join(root, "before-gate.json"), after = join(root, "after-gate.json");
+    await writeFile(before, JSON.stringify(source));
+    await writeFile(after, JSON.stringify(source));
+    const args = ["report", "--before", before, "--after", after, "--format", "json"];
+    expect((await runCli(args)).exitCode).toBe(0);
+    const gated = await runCli([...args, "--fail-on-unverified"]);
+    expect(gated.exitCode).toBe(1);
+    expect(JSON.parse(gated.stdout).conclusion).toBe("not-verified");
+    await writeFile(after, JSON.stringify({ ...source, exitCode: 0 }));
+    expect((await runCli([...args, "--fail-on-unverified"])).exitCode).toBe(0);
+  });
+
+  it("rejects duplicate-key JSON instead of silently accepting the last value", async () => {
+    const root = await createSkillRoot(), source = await verificationReport(root);
+    const before = join(root, "before-duplicate.json"), after = join(root, "after-duplicate.json");
+    await writeFile(before, JSON.stringify(source));
+    await writeFile(after, JSON.stringify(source).replace('"exitCode":1', '"exitCode":1,"exitCode":0'));
+    const result = await runCli(["report", "--before", before, "--after", after, "--format", "json"]);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stdout).toBe("");
+  });
+
+  it("rejects oversized report inputs before parsing them", async () => {
+    const root = await createSkillRoot(), source = await verificationReport(root);
+    const before = join(root, "before-large.json"), after = join(root, "after-large.json");
+    await writeFile(before, JSON.stringify(source));
+    await writeFile(after, " ".repeat(8 * 1024 * 1024) + JSON.stringify(source));
+    const result = await runCli(["report", "--before", before, "--after", after, "--format", "json"]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("report.capacity");
+    expect(result.stdout).toBe("");
+    expect(result.stderr).not.toContain(root);
+  });
+
   it.each(["markdown", "json", "sarif"])("rejects unrelated plan and receipt evidence in %s output", async (format) => {
     const root = await createSkillRoot();
     const source = await verificationReport(root);

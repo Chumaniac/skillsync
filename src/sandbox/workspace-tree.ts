@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { constants, type Stats } from "node:fs";
+import { constants, type Dirent, type Stats } from "node:fs";
 import { lstat, open, opendir } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
@@ -11,6 +11,7 @@ export const WORKSPACE_TREE_LIMITS = {
   maxFileBytes: 16 * 1024 * 1024,
   maxTotalBytes: 64 * 1024 * 1024,
 } as const;
+export const CONTROL_INPUT_BYTES = 8 * 1024 * 1024;
 
 export class WorkspaceTreeError extends Error {
   readonly code: "workspace.tree-invalid" | "workspace.tree-too-large";
@@ -82,6 +83,24 @@ export async function readWorkspaceFile(path: string, maxBytes: number, expected
     if (error instanceof WorkspaceTreeError) throw error;
     throw new WorkspaceTreeError("workspace file is inaccessible or changed");
   }
+}
+
+/** Bound enumeration before allocating a directory listing. */
+export async function readDirectoryEntries(path: string, maxEntries: number): Promise<Dirent[]> {
+  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1 || maxEntries > 20_000) {
+    throw new WorkspaceTreeLimitError("invalid directory read limit");
+  }
+  const entries: Dirent[] = [];
+  for await (const entry of await opendir(path)) {
+    if (entries.length >= maxEntries) throw new WorkspaceTreeLimitError("directory entry count exceeds the limit");
+    entries.push(entry);
+  }
+  return entries;
+}
+
+/** Read a bounded regular text input without silent UTF-8 replacement. */
+export async function readWorkspaceText(path: string, maxBytes: number): Promise<string> {
+  return new TextDecoder("utf-8", { fatal: true }).decode(await readWorkspaceFile(path, maxBytes));
 }
 
 export async function scanStagedWorkspace(rootPath: string, options: WorkspaceTreeScanOptions = {}): Promise<WorkspaceTree> {
