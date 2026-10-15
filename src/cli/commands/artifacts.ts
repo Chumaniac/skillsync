@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, readdir } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
@@ -12,7 +12,7 @@ import { createArtifactReconciliationIndex, type ReconciliationSummary } from ".
 import { artifactSetHash, compareArtifactReports, parseArtifactReport, type ArtifactComparison } from "../../domain/artifact-report-comparison.js";
 import { redactLocalPaths } from "../../reporters/local-paths.js";
 import { renderArtifactsHtml } from "../../reporters/artifacts-html.js";
-import { readWorkspaceFile, scanStagedWorkspace, WorkspaceTreeError } from "../../sandbox/workspace-tree.js";
+import { readDirectoryEntries, readWorkspaceFile, scanStagedWorkspace, WorkspaceTreeError } from "../../sandbox/workspace-tree.js";
 
 const hash = (bytes: Uint8Array | string) => createHash("sha256").update(bytes).digest("hex");
 const sha = z.string().regex(/^[0-9a-f]{64}$/);
@@ -82,7 +82,7 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
   let metadataHashes: { receipt: string; manifest: string } | undefined;
   if (options.delivery) {
     try {
-      const entries = await readdir(options.delivery);
+      const entries = (await readDirectoryEntries(options.delivery, 4)).map(entry => entry.name);
       if (entries.length !== 3 || !["artifacts", "receipt.json", "delivery.json"].every(name => entries.includes(name))) {
         issue("delivery.layout"); return report;
       }
@@ -142,7 +142,7 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
       if (declared.bytes !== file.bytes || declared.sha256 !== file.sha256) issue("delivery.artifact-digest", file.path);
     }
     try {
-      const entries = await readdir(options.delivery!);
+      const entries = (await readDirectoryEntries(options.delivery!, 4)).map(entry => entry.name);
       if (entries.length !== 3 || !["artifacts", "receipt.json", "delivery.json"].every(name => entries.includes(name)) ||
         hash(await readWorkspaceFile(join(options.delivery!, "receipt.json"), 1024 * 1024)) !== metadataHashes!.receipt ||
         hash(await readWorkspaceFile(join(options.delivery!, "delivery.json"), 1024 * 1024)) !== metadataHashes!.manifest) issue("delivery.changed-during-check");

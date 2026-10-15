@@ -1,5 +1,14 @@
 # Changelog
 
+## Source quality — 2026-10-15
+
+- Bound inventory, control inputs, profile discovery and sandbox staging; reject
+  changing files, oversized inputs and duplicate JSON keys without partial success.
+- Fail with setup exit 2 for unknown targets or invalid explicit profile directories.
+- Bind behavior input digests to staged Skill bytes and clean up failed staging.
+- Add optional `report --fail-on-unverified` for supplied-evidence CI decisions;
+  ordinary report rendering and published package versions remain unchanged.
+
 ## Source maintenance — 2026-10-13
 
 - Return exit2 for missing, non-directory, or symbolic-link artifact input roots.

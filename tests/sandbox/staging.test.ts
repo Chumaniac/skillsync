@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, open, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -41,6 +41,20 @@ async function createFixture(): Promise<string> {
 }
 
 describe("behavior fixture staging", () => {
+  it("rejects an oversized source before copying and removes the failed stage", async () => {
+    const fixtureRoot = await createFixture();
+    const handle = await open(join(fixtureRoot, "skill", "large.bin"), "w");
+    await handle.truncate(16 * 1024 * 1024 + 1);
+    await handle.close();
+    const runId = `oversized-${process.pid}`;
+    await expect(stageBehaviorFixture({ fixtureRoot, manifest, skillPath: "skill", runId })).rejects.toThrow(/too-large|limit/);
+    expect((await readdir(tmpdir())).filter((name) => name.startsWith(`skillsync-sandbox-${runId}-`))).toEqual([]);
+  });
+
+  it("rejects path separators in a run identifier", async () => {
+    const fixtureRoot = await createFixture();
+    await expect(stageBehaviorFixture({ fixtureRoot, manifest, skillPath: "skill", runId: "../escape" })).rejects.toThrow(/run identifier/);
+  });
   it("copies only the declared Skill and trace and cleans up idempotently", async () => {
     const fixtureRoot = await createFixture();
     const staged = await stageBehaviorFixture({

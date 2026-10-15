@@ -1,10 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { parseStrictJson } from "../../domain/strict-json.js";
 import { resolve } from "node:path";
 
 import { scanInventory } from "../../domain/inventory.js";
 import { validateLock, type SkillLock } from "../../domain/lockfile.js";
 import type { Finding } from "../../domain/result.js";
 import type { Skill } from "../../domain/skill.js";
+import { CONTROL_INPUT_BYTES, readWorkspaceText } from "../../sandbox/workspace-tree.js";
 
 export type LockOptions = {
   paths: string[];
@@ -43,7 +44,7 @@ const DEFAULT_PATHS = [".agents/skills", ".claude/skills", ".cursor/skills"];
 
 function parseLockJson(content: string, path: string): unknown {
   try {
-    return JSON.parse(content) as unknown;
+    return parseStrictJson(content) as unknown;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message.split("\n", 1)[0] : String(error);
     throw new Error(`Cannot parse lock file ${path}: ${message}`);
@@ -54,7 +55,7 @@ async function readLock(path: string): Promise<SkillLock> {
   const resolvedPath = resolve(path);
   let content: string;
   try {
-    content = await readFile(resolvedPath, "utf8");
+    content = await readWorkspaceText(resolvedPath, CONTROL_INPUT_BYTES);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message.split("\n", 1)[0] : String(error);
     throw new Error(`Cannot read lock file ${resolvedPath}: ${message}`);

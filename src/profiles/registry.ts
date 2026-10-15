@@ -1,11 +1,17 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 import { parse as parseYaml } from "yaml";
 
+import { readDirectoryEntries, readWorkspaceText } from "../sandbox/workspace-tree.js";
+
 import { parseCapabilityProfile, type CapabilityProfile } from "./types.js";
 import { PROFILE_IDS, type ProfileId, loadCapabilityProfile, normalizeProfileId } from "./loader.js";
+
+class ProfileInputError extends Error {
+  readonly exitCode = 2;
+}
 
 export const BUILTIN_PROFILE_IDS = [...PROFILE_IDS] as const;
 
@@ -31,25 +37,31 @@ async function isDirectory(path: string): Promise<boolean> {
 }
 
 async function loadExternalProfileFile(filePath: string): Promise<CapabilityProfile> {
-  const content = await readFile(filePath, "utf8");
-  const doc = parseYaml(content, { uniqueKeys: true });
+  const content = await readWorkspaceText(filePath, 1024 * 1024);
+  const doc = parseYaml(content, { uniqueKeys: true, maxAliasCount: 100, prettyErrors: false, logLevel: "silent" });
   const profile = parseCapabilityProfile(doc);
   return profile;
 }
 
-async function discoverInDir(dir: string, registry: ProfileRegistry): Promise<void> {
-  if (!(await isDirectory(dir))) return;
-  const entries = await readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isFile()) continue;
+async function discoverInDir(dir: string, registry: ProfileRegistry, explicit = false): Promise<void> {
+  if (!(await isDirectory(dir))) {
+    if (explicit) throw new ProfileInputError("profile.invalid-input: explicit profile directory is unavailable");
+    return;
+  }
+  let entries;
+  try { entries = await readDirectoryEntries(dir, 1000); }
+  catch { throw new ProfileInputError("profile.invalid-input: profile directory is unreadable or exceeds 1000 entries"); }
+  let count = 0;
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.name.endsWith(".yaml") && !entry.name.endsWith(".yml")) continue;
-    const filePath = join(dir, entry.name);
+    if (++count > 64) throw new ProfileInputError("profile.invalid-input: profile directory exceeds 64 profiles");
     try {
-      const profile = await loadExternalProfileFile(filePath);
+      if (!entry.isFile()) throw new Error("profile must be a regular file");
+      const profile = await loadExternalProfileFile(join(dir, entry.name));
       registry.set(normalizeId(profile.id), profile);
     } catch {
-      // Invalid external profile is ignored here; `profile validate` will surface it.
-      // Registry silently skips malformed contrib files to keep builtin flow stable.
+      if (explicit) throw new ProfileInputError("profile.invalid-input: explicit profile must be valid YAML within 1 MiB");
+      // Optional ambient profiles stay best-effort; explicit inputs fail closed.
     }
   }
 }
@@ -104,7 +116,7 @@ export async function createProfileRegistry(options: RegistryLoadOptions = {}): 
   if (options.profileDir) dirs.push(resolve(options.profileDir));
 
   for (const dir of dirs) {
-    await discoverInDir(dir, registry);
+    await discoverInDir(dir, registry, dir === (options.profileDir ? resolve(options.profileDir) : undefined));
   }
 
   if (options.targets && options.targets.length > 0) {
@@ -135,6 +147,7 @@ export async function loadProfilesForTargets(
   const registry = await createProfileRegistry({ ...options, targets: targetIds });
   const requested = targetIds.flatMap((v) => v.split(",")).map((v) => v.trim()).filter(Boolean);
   const ids = requested.length > 0 ? requested : [...BUILTIN_PROFILE_IDS];
+  if (ids.length > 64) throw new ProfileInputError("profile.invalid-input: at most 64 targets are supported");
   const profiles: CapabilityProfile[] = [];
   for (const raw of ids) {
     const key = normalizeId(raw);
@@ -150,9 +163,7 @@ export async function loadProfilesForTargets(
     }
     if (profile) profiles.push(profile);
     else {
-      // Unknown profile: create a synthetic placeholder that will yield `unknown` findings.
-      // We do not throw; compatibility layer will report unknown for this target.
-      // Placeholder is not added to registry; caller can synthesize `unknown` handling.
+      throw new ProfileInputError("profile.unknown-target: requested target has no valid capability profile");
     }
   }
   return profiles;

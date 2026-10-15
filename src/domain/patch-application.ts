@@ -1,4 +1,4 @@
-import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -7,6 +7,7 @@ import { planDigest } from "./action-plan.js";
 import type { ActionPlan } from "./action-plan.js";
 import { normalizeRelativePath } from "./digest.js";
 import type { PatchChange } from "./resolution.js";
+import { readWorkspaceText, WORKSPACE_TREE_LIMITS } from "../sandbox/workspace-tree.js";
 
 export type ApplyReceipt = {
   schema_version: 1;
@@ -137,7 +138,11 @@ async function replaceFileContents(targetPath: string, content: string, mode: nu
 }
 
 async function restoreBackup(backup: Backup): Promise<void> {
-  await replaceFileContents(backup.targetPath, await readFile(backup.backupFilePath, "utf8"), backup.mode);
+  await replaceFileContents(
+    backup.targetPath,
+    await readWorkspaceText(backup.backupFilePath, WORKSPACE_TREE_LIMITS.maxFileBytes),
+    backup.mode,
+  );
   await chmod(backup.targetPath, backup.mode);
 }
 
@@ -220,7 +225,7 @@ export async function applyActionPlan(
     }
 
     const mode = targetStat.mode & 0o777;
-    const content = await readFile(targetPath, "utf8");
+    const content = await readWorkspaceText(targetPath, WORKSPACE_TREE_LIMITS.maxFileBytes);
     if (hasContentPatch(change) && content !== change.before) {
       throw new Error(`Patch target content is stale: ${normalizedPath}`);
     }

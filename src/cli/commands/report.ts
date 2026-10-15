@@ -1,6 +1,5 @@
 import { VERSION } from "../../version.js";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 
 import type { ActionPlan } from "../../domain/action-plan.js";
@@ -9,6 +8,18 @@ import { createEvidenceReport, type EvidenceReport, type VerificationSnapshot } 
 import type { Issue } from "../../domain/issue.js";
 import type { ApplyReceipt } from "../../domain/patch-application.js";
 import type { VerificationReport } from "./verify.js";
+import { parseStrictJson } from "../../domain/strict-json.js";
+import { readWorkspaceFile, WorkspaceTreeLimitError } from "../../sandbox/workspace-tree.js";
+
+export const REPORT_INPUT_BYTES = 8 * 1024 * 1024;
+
+class ReportCapacityError extends Error {
+  readonly exitCode = 2;
+  constructor(label: string) {
+    super(`report.capacity: ${label} exceeds the ${REPORT_INPUT_BYTES} byte input limit. Use a smaller report or plan.`);
+    this.name = "ReportCapacityError";
+  }
+}
 
 export type ReportOptions = {
   beforePath: string;
@@ -157,14 +168,15 @@ function validateVerificationReport(value: unknown): VerificationReport {
 }
 
 async function readJson(path: string, label: string): Promise<unknown> {
-  let content: string;
+  let content: Buffer;
   try {
-    content = await readFile(path, "utf8");
-  } catch {
+    content = await readWorkspaceFile(path, REPORT_INPUT_BYTES);
+  } catch (error) {
+    if (error instanceof WorkspaceTreeLimitError) throw new ReportCapacityError(label);
     throw new Error(`Cannot read ${label}.`);
   }
   try {
-    return JSON.parse(content) as unknown;
+    return parseStrictJson(new TextDecoder("utf-8", { fatal: true }).decode(content));
   } catch {
     throw new Error(`Cannot parse ${label}.`);
   }
