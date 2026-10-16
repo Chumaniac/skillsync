@@ -7,6 +7,17 @@ import { describe, expect, it } from "vitest";
 import { runCli } from "../../src/cli/index";
 
 describe("skillsync verify", () => {
+  it("exports an offline HTML review with actionable findings", async () => {
+    const root = await mkdtemp(join(tmpdir(), "skillsync-html-"));
+    await writeFile(join(root, "SKILL.md"), "---\nname: review\ndescription: Review\n---\n[missing](missing.md)\n");
+    const result = await runCli(["verify", "--path", root, "--target", "codex", "--format", "html"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("<!doctype html>");
+    expect(result.stdout).toContain("Add the referenced file");
+    expect(result.stdout).toContain("Content-Security-Policy");
+    expect(result.stdout).not.toContain(root);
+  });
+
   it("aggregates structure, compatibility, and provenance findings without executing scripts", async () => {
     const root = await mkdtemp(join(tmpdir(), "skillsync-verify-"));
     const skillRoot = join(root, "review");
