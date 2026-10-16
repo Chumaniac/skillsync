@@ -139,3 +139,7 @@ maintenance changes are in source and are not in the npm 0.1.0/GitHub v0.1.4 rel
 - [CI](./docs/ci.md)
 - [Runner](./docs/runner-contract.md)
 - [Full design](./SkillSync-Complete-Design.md)
+
+### Offline verification review
+
+Build the source checkout, then run `skillsync verify --path ./skills --format html > verification.html`. Open the report locally to review severity groups, causes, and next steps. Summary counts cover all findings; details are capped at 256 deduplicated issues. JSON retains complete evidence. No scripts, network assets, Skill execution, or automatic fixes are added. Inspired by [MLflow's reviewable tracking UI](https://mlflow.org/docs/latest/ml/tracking/). This option is source functionality until a new package is published.
