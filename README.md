@@ -12,30 +12,11 @@ Changed contracts and incomplete history remain unavailable, without copying old
 messages or record values. See the [correction review guide](docs/artifact-delivery.md#review-a-correction-against-its-previous-report).
 The published GitHub package is v0.1.7 and includes these capabilities.
 The public npm registry remains at 0.1.0; use the verified GitHub archive below
-for the new features. npm publication is pending maintainer authentication.
+for the new features. This release is distributed through GitHub.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
 ## Install
-
-**From npm (stable 0.1.0):**
-
-```bash
-npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex
-# or install globally
-npm install -g @chumanic/skillsync@0.1.0
-skillsync verify --path . --target codex
-```
-
-**From source (0.1.7):**
-
-```bash
-git clone https://github.com/Chumaniac/skillsync.git
-cd skillsync
-npm ci
-npm run build
-node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex
-```
 
 **From GitHub releases (no npm account required):**
 
@@ -66,6 +47,25 @@ The public npm registry remains at 0.1.0. Generated npm-based CI templates pin
 that existing public version; a source/GitHub installation supplies the newer
 artifact and target-coverage commands. Older tags and the existing npm package
 remain available independently of this distribution.
+
+**Earlier npm package (0.1.0):**
+
+```bash
+npx --yes @chumanic/skillsync@0.1.0 verify --path . --target codex
+# or install globally
+npm install -g @chumanic/skillsync@0.1.0
+skillsync verify --path . --target codex
+```
+
+**From source (0.1.7):**
+
+```bash
+git clone https://github.com/Chumaniac/skillsync.git
+cd skillsync
+npm ci
+npm run build
+node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target codex
+```
 
 The command above verifies the included sample Skill. Replace the fixture path with a directory containing your own `SKILL.md` when you are ready.
 

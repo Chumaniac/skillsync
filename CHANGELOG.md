@@ -8,7 +8,7 @@
   redaction and the default no-execution boundary.
 - Release run `38862793975` passed; all three downloaded payload checksums and
   GitHub provenance matched. An isolated install reported 0.1.7 and produced
-  the new HTML review. npm remains 0.1.0 pending maintainer authentication.
+  the new HTML review. This release uses GitHub distribution; npm remains 0.1.0.
 - Earlier source-candidate entries below record the state at their original dates.
 
 ## Source quality — 2026-10-15
