@@ -2,16 +2,17 @@
 
 **Verify Agent Skills before you trust them.** SkillSync checks a local Skill's provenance, compatibility, and changes without executing it.
 
-> **Alpha · source candidate v0.1.7 · Node.js 20+**
+> **Alpha · GitHub release v0.1.7 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
-Source v0.1.7 adds an offline human acceptance report on top of bounded composite-key reconciliation.
+GitHub v0.1.7 adds an offline human acceptance report on top of bounded composite-key reconciliation.
 Use `artifacts --compare <previous-artifacts.json>` to review whether a corrected
 delivery resolves finding categories or improves individual reconciliation counts.
 Changed contracts and incomplete history remain unavailable, without copying old
 messages or record values. See the [correction review guide](docs/artifact-delivery.md#review-a-correction-against-its-previous-report).
-The published GitHub package
-is still v0.1.4 and npm is still 0.1.0; neither includes the new rule.
+The published GitHub package is v0.1.7 and includes these capabilities.
+The public npm registry remains at 0.1.0; use the verified GitHub archive below
+for the new features. npm publication is pending maintainer authentication.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
@@ -26,7 +27,7 @@ npm install -g @chumanic/skillsync@0.1.0
 skillsync verify --path . --target codex
 ```
 
-**From source (0.1.7 candidate):**
+**From source (0.1.7):**
 
 ```bash
 git clone https://github.com/Chumaniac/skillsync.git
@@ -40,21 +41,24 @@ node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target
 
 Tagged builds now publish a CLI tarball, checksums, a validated CycloneDX SBOM
 and a source manifest on [GitHub Releases](https://github.com/Chumaniac/skillsync/releases).
-[GitHub v0.1.4](https://github.com/Chumaniac/skillsync/releases/tag/v0.1.4)
-is published. Release run 37897733439 passed its source/main binding, tests,
-actual package allowlist, locked production SBOM and required GitHub provenance.
-The downloaded archive, SBOM and source manifest matched their checksums and
-public asset digests; an isolated install reported 0.1.4 and passed the packaged
-synthetic delivery-coverage example with `execution: not-run`. Installation still uses Node.js 20+
-and fetches the package's public dependencies; it needs no npm login.
+[GitHub v0.1.7](https://github.com/Chumaniac/skillsync/releases/tag/v0.1.7)
+is published from main commit `7d302f3f69f007c94abfaf427e960c35b9e8b1fc`.
+[Release run 38862793975](https://github.com/Chumaniac/skillsync/actions/runs/38862793975)
+passed source/main binding, tests, package allowlist, SBOM and provenance checks.
+The downloaded archive, SBOM and source manifest matched all three checksums;
+GitHub attestation verification and an isolated install passed. The installed
+0.1.7 CLI generated the offline HTML review with the same findings and exit code
+as JSON, without exposing local paths or executing a Skill.
+Installation uses Node.js 20+ and fetches the package's public dependencies;
+it needs no npm login.
 
 ```bash
-release_base="https://github.com/Chumaniac/skillsync/releases/download/v0.1.4"
-for asset in chumanic-skillsync-0.1.4.tgz checksums.txt sbom.cyclonedx.json release-manifest.json; do
+release_base="https://github.com/Chumaniac/skillsync/releases/download/v0.1.7"
+for asset in chumanic-skillsync-0.1.7.tgz checksums.txt sbom.cyclonedx.json release-manifest.json; do
   curl --fail --location --output "$asset" "$release_base/$asset"
 done
 shasum -a 256 -c checksums.txt
-npm install --prefix ./skillsync-tools ./chumanic-skillsync-0.1.4.tgz
+npm install --prefix ./skillsync-tools ./chumanic-skillsync-0.1.7.tgz
 ./skillsync-tools/node_modules/.bin/skillsync --version
 ```
 
@@ -67,19 +71,19 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 ## What you get
 
-- Source0.1.7 produces an offline acceptance report with `artifacts --format html`.
+- v0.1.7 produces an offline acceptance report with `artifacts --format html`.
   Reviewers see file binding, failed or incomplete identity checks, affected
   metadata and concrete review actions in a browser. The report includes no raw
   record values, scripts or network requests; see [the visible review guide](docs/artifact-delivery.md#hand-a-visible-report-to-a-reviewer).
-- Source0.1.6 supports ordered two-to-four-column identity tuples for integer
+- v0.1.7 supports ordered two-to-four-column identity tuples for integer
   reconciliation. The [multi-organization example](fixtures/product/tenant-reconciliation/README.md)
   separates repeated local IDs, without delimiter collisions or raw ID reporting.
-- Source `keyed_integer_sum_equals` checks compare each record key's integer
+- `keyed_integer_sum_equals` checks compare each record key's integer
   total across CSV files, including split deliveries. They detect balanced but
   wrongly allocated results that global sums cannot identify. The
   [synthetic reconciliation example](fixtures/product/keyed-reconciliation/README.md)
   demonstrates the difference without running Skill code or revealing record IDs.
-- The source `artifacts` command independently checks actual
+- The `artifacts` command independently checks actual
   CSV/JSON delivery files, Receipt/file hashes and cross-file count/integer sums.
   See [actual artifact checks](docs/artifact-delivery.md); it runs no Skill code.
   The [knowledge source inventory](fixtures/product/source-index/README.md) adds
@@ -127,7 +131,7 @@ skillsync report --before before.json --after after.json --fail-on-unverified
 This returns exit 1 for an unverified conclusion, or exit 2 for invalid report
 input. It evaluates the supplied after-report; it does not rerun verification
 or authenticate that report. Run `verify` on the current files first. These
-maintenance changes are in source and are not in the npm 0.1.0/GitHub v0.1.4 releases.
+maintenance changes are included in GitHub v0.1.7 and are absent from npm 0.1.0.
 
 ## Reference
 
@@ -142,4 +146,4 @@ maintenance changes are in source and are not in the npm 0.1.0/GitHub v0.1.4 rel
 
 ### Offline verification review
 
-Build the source checkout, then run `skillsync verify --path ./skills --format html > verification.html`. Open the report locally to review severity groups, causes, and next steps. Summary counts cover all findings; details are capped at 256 deduplicated issues. JSON retains complete evidence. No scripts, network assets, Skill execution, or automatic fixes are added. Inspired by [MLflow's reviewable tracking UI](https://mlflow.org/docs/latest/ml/tracking/). This option is source functionality until a new package is published.
+Install GitHub v0.1.7 or build the source checkout, then run `skillsync verify --path ./skills --format html > verification.html`. Open the report locally to review severity groups, causes, and next steps. Summary counts cover all findings; details are capped at 256 deduplicated issues. JSON retains complete evidence. No scripts, network assets, Skill execution, or automatic fixes are added. Inspired by [MLflow's reviewable tracking UI](https://mlflow.org/docs/latest/ml/tracking/). This option is included in the GitHub v0.1.7 package; npm 0.1.0 does not include it.

@@ -235,3 +235,16 @@ Docker integration test skipped. Type-check, lint, build, and package dry-run
 passed. Matching evidence and reports without optional attachments remain
 supported; errors contain no local paths or input digests. No npm publication
 or real runtime capability activation was performed.
+
+## GitHub 0.1.7 delivery — 2026-10-16
+
+Release run `38862793975` published the package from verified main commit
+`7d302f3f69f007c94abfaf427e960c35b9e8b1fc`. All archive/SBOM/manifest checksums
+matched the downloaded files. GitHub attestation verification passed. An isolated
+consumer install reported 0.1.7 and generated the offline Verify HTML report;
+its synthetic missing-reference findings matched the JSON status and exit code.
+The report included causes and next steps, with no scripts or local paths.
+
+npm remains at 0.1.0. The local npm identity check returned unauthorized;
+publication awaits maintainer login. The public GitHub tarball is usable now.
+No live Skill runtime, Provider, Docker, or customer workflow was executed.

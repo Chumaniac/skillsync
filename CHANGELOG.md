@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.7 - 2026-10-16
+
+- Publish the verified GitHub CLI package with offline `verify --format html`,
+  artifact HTML review, correction comparison and composite-key reconciliation.
+- Preserve bounded inventory and artifact reads, stable-file checks, local-path
+  redaction and the default no-execution boundary.
+- Release run `38862793975` passed; all three downloaded payload checksums and
+  GitHub provenance matched. An isolated install reported 0.1.7 and produced
+  the new HTML review. npm remains 0.1.0 pending maintainer authentication.
+- Earlier source-candidate entries below record the state at their original dates.
+
 ## Source quality — 2026-10-15
 
 - Bound inventory, control inputs, profile discovery and sandbox staging; reject
