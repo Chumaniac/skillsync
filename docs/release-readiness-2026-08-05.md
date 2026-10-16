@@ -245,6 +245,6 @@ consumer install reported 0.1.7 and generated the offline Verify HTML report;
 its synthetic missing-reference findings matched the JSON status and exit code.
 The report included causes and next steps, with no scripts or local paths.
 
-npm remains at 0.1.0. The local npm identity check returned unauthorized;
-publication awaits maintainer login. The public GitHub tarball is usable now.
+The maintainer selected GitHub-only distribution for this release on 2026-10-16.
+The verified public tarball is directly installable; npm remains at 0.1.0.
 No live Skill runtime, Provider, Docker, or customer workflow was executed.
