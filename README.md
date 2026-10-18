@@ -71,6 +71,12 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 ## What you get
 
+- Current source can bind a citation to its exact declared source metadata with
+  `reference_exists.matches`. An existing ID with a different digest or revision
+  fails offline inspection without exposing record values. See the
+  [synthetic citation example](fixtures/product/citation-metadata/README.md).
+  This feature requires a source build and is not in GitHub v0.1.7 or npm 0.1.0.
+
 - v0.1.7 produces an offline acceptance report with `artifacts --format html`.
   Reviewers see file binding, failed or incomplete identity checks, affected
   metadata and concrete review actions in a browser. The report includes no raw

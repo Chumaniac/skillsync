@@ -21,6 +21,8 @@ function columns(value: string | string[]): string {
 }
 
 function action(code: string): string {
+  if (code.startsWith("artifact.reference-value-")) return "Review the cited source record and declared metadata columns, such as digest or revision. Keep the original copy; do not accept an existing ID as proof that its metadata matches.";
+  if (code === "artifact.reference-missing") return "Review the source ID column and its declared target table. The cited record was not found; no source is fetched or authenticated.";
   if (code === "artifact.reconciliation-keys" || code === "artifact.reconciliation-sum") return "Compare expected and delivered records using the declared key columns. Preserve the original delivery while reviewing a corrected copy.";
   if (code.startsWith("artifact.reconciliation-")) return "No partial result is accepted. Review the declared types, integer range and selected-cell capacity before checking again.";
   if (code === "artifact.contract-invalid") return "Review the contract declaration and directory selection before inspecting files. No file acceptance is established.";

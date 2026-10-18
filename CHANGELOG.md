@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased source - 2026-10-18
+
+- Extend `reference_exists` with optional exact metadata bindings, such as a
+  citation's digest and revision, while preserving existing normalized contracts.
+- Share reference-index capacity across IDs and metadata: 100,000 indexed cells
+  and 64 MiB of hashed values. Release partial indexes on exhaustion and retain
+  only metadata hashes and row positions, without raw reference values.
+- Add offline report review actions and an original synthetic citation example.
+  Public release artifacts and runtime capabilities are unchanged.
+
 ## 0.1.7 - 2026-10-16
 
 - Publish the verified GitHub CLI package with offline `verify --format html`,

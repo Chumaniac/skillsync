@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { parseArtifactContract } from "../../domain/artifact-contract.js";
 import { parseStrictJson } from "../../domain/strict-json.js";
-import { inspectArtifactContent, type ArtifactFacts, type ArtifactFinding } from "../../domain/artifact-content.js";
+import { inspectArtifactContent, type ArtifactFacts, type ArtifactFinding, type ArtifactRowObserver } from "../../domain/artifact-content.js";
 import { createArtifactReferenceIndex } from "../../domain/artifact-references.js";
 import { createArtifactReconciliationIndex, type ReconciliationSummary } from "../../domain/artifact-reconciliation.js";
 import { artifactSetHash, compareArtifactReports, parseArtifactReport, type ArtifactComparison } from "../../domain/artifact-report-comparison.js";
@@ -117,7 +117,11 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
         const rule = rules.get(path)!;
         const sha256 = observation.digest.slice("sha256:".length);
         if (rule.sha256 && rule.sha256 !== sha256) { issue("artifact.digest-mismatch", path); reconciliation.invalidate(path); }
-        const inspected = inspectArtifactContent(rule, content, references.observer(path), reconciliation.observer(path));
+        const referenceRows = references.rowObserver(path), reconciliationRows = reconciliation.observer(path);
+        const observeRow: ArtifactRowObserver | undefined = referenceRows || reconciliationRows ? (values, row) => {
+          referenceRows?.(values, row); reconciliationRows?.(values, row);
+        } : undefined;
+        const inspected = inspectArtifactContent(rule, content, references.observer(path), observeRow);
         if (inspected.findings.length) reconciliation.invalidate(path);
         facts.set(path, inspected.facts);
         for (const finding of inspected.findings) if (report.findings.length < 256) report.findings.push(finding);

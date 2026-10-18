@@ -292,3 +292,49 @@ runs a local summarizer, preserves a SkillTape bundle, passes this checker and
 rejects corruption and an internally inconsistent summary in copies. None of
 those checks establishes customer-data truth, model/Agent acceptance or a live
 production/business integration.
+
+## Bind citations to exact source metadata
+
+Status: current source, not included in the published GitHub v0.1.7 package.
+
+A valid source ID alone does not establish that a citation uses the reviewed
+revision or digest. Add an optional `matches` array to `reference_exists`:
+
+```json
+{
+  "type": "reference_exists",
+  "source": { "path": "citations.csv", "field": "source" },
+  "target": { "path": "sources.csv", "field": "id" },
+  "matches": [
+    { "source": "digest", "target": "sha256" },
+    { "source": "version", "target": "revision" }
+  ]
+}
+```
+
+Declare each mapped column as a required nonempty string in its CSV rule. The
+existing target ID must still be a unique nonempty string. One to eight distinct
+column pairs are accepted. Matching preserves exact strings and pair order;
+there is no trimming, case folding or separator-based tuple concatenation.
+Existing contracts without `matches` keep their normalized digest and behavior.
+
+After all physical files are inspected, a matching ID with different metadata
+produces `artifact.reference-value-mismatch`; missing valid metadata produces
+`artifact.reference-value-unavailable`. Missing IDs retain the existing
+`artifact.reference-missing` finding. Reports identify only declared paths,
+column names and CSV data-record positions. Raw IDs, digest cell values and
+version cell values do not enter JSON, text or HTML findings.
+
+ID and metadata indexes share a 100,000-cell budget and a 64 MiB aggregate
+hash-input budget. Tuple values are streamed with byte-length framing rather
+than joined into a large copied string. Exhaustion clears retained indexes and
+fails the check without accepting partial reference evidence. Existing physical
+file, row, UTF-8, formula, path and snapshot limits continue to apply. These are
+input/work bounds; CPU and process RSS were not measured.
+
+Try the [original synthetic example](../fixtures/product/citation-metadata/README.md).
+The interface is informed by source-linked citation review in
+[WeKnora](https://github.com/Tencent/WeKnora), inspected on 2026-10-18. No upstream
+code or dependencies were copied. This local check proves consistency between
+observed metadata only. It does not fetch the cited source, authenticate a
+publisher, or establish that the underlying source bytes or claims are true.

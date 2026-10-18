@@ -40,6 +40,7 @@ const comparison = z.object({ type: z.literal("csv_summary"), csv: safePath, jso
 const referenceField = z.object({ path: safePath, field: z.string().min(1).max(128) }).strict();
 const reference = z.object({ type: z.literal("reference_exists"), source: referenceField, target: referenceField,
   require_all_targets: z.boolean().optional(),
+  matches: z.array(z.object({ source: z.string().min(1).max(128), target: z.string().min(1).max(128) }).strict()).min(1).max(8).optional(),
 }).strict();
 const keyColumn = z.string().min(1).max(128);
 const keyedSide = z.object({ path: safePath, key: z.union([keyColumn, z.array(keyColumn).min(2).max(4)]), value: z.string().min(1).max(128) }).strict();
@@ -109,6 +110,14 @@ export const artifactContractSchema = z.object({ schema: z.literal("skillsync.ar
       if (sourceColumn?.type !== "string" || targetColumn?.type !== "string" ||
         sourceColumn.allow_empty || targetColumn.allow_empty ||
         target.unique_by.length !== 1 || target.unique_by[0] !== check.target.field) fail();
+      if (check.matches) {
+        if (new Set(check.matches.map(pair => JSON.stringify(pair))).size !== check.matches.length) fail();
+        for (const pair of check.matches) {
+          const left = source.columns.find(column => column.name === pair.source);
+          const right = target.columns.find(column => column.name === pair.target);
+          if (left?.type !== "string" || right?.type !== "string" || left.allow_empty || right.allow_empty) fail();
+        }
+      }
       continue;
     }
     const csv = files.get(check.csv), json = files.get(check.json);
