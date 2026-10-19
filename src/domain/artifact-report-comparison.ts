@@ -47,8 +47,11 @@ const reportSchema = z.object({ schema: z.literal("skillsync.artifacts-report/v1
   files: z.array(z.object({ path, bytes: z.number().int().min(0).max(16 * 1024 * 1024),
     sha256: sha, rows: count.optional() }).strict()).max(10_000),
   findings: z.array(z.object({ code: z.string().min(1).max(128).regex(/^[a-z][a-z0-9.-]*$/),
-    path: path.optional(), field: z.union([field, z.array(field).min(1).max(4)]).optional(),
+    path: path.optional(), field: z.union([field, z.array(field).min(1).max(8)]).optional(),
     row: count.min(1).optional(), message: z.string().max(4096).optional(),
+    reference: z.object({ path, field, row: count.min(1),
+      matches: z.array(z.object({ source: field, target: field }).strict()).min(1).max(8),
+    }).strict().optional(),
   }).strict()).max(256), reconciliations: z.array(summary).max(128).optional(),
   comparison: artifactComparisonSchema.optional(),
 }).strict().superRefine((report, context) => {

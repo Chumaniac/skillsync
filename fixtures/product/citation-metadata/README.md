@@ -18,3 +18,5 @@ the declared metadata columns. It does not copy the ID or cell values into
 JSON, text or HTML. Preserve the original example when trying a correction.
 
 See the [contract guide](../../../docs/artifact-delivery.md#bind-citations-to-exact-source-metadata).
+
+GitHub0.2.1 adds the referenced filename, matched data-record position and compared column mapping to the offline review. Use the review link to jump to the finding. IDs and metadata values remain omitted; preserve originals while checking a copied correction.

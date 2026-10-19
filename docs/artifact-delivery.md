@@ -338,3 +338,10 @@ The interface is informed by source-linked citation review in
 code or dependencies were copied. This local check proves consistency between
 observed metadata only. It does not fetch the cited source, authenticate a
 publisher, or establish that the underlying source bytes or claims are true.
+
+
+### Locate a mismatched reference in GitHub 0.2.1
+
+Metadata mismatch and unavailable findings include an optional `reference` object: the declared target path, lookup column, matched data-record position, and compared source/target column names. It contains no record ID or cell value. JSON and text retain these coordinates; the offline HTML displays the first32 reference locations with up to8 mappings each and links directly to the review section. Counts still cover all reported findings. Data-record positions exclude the CSV header, including for quoted multiline records.
+
+The baseline reader continues accepting older reports without this context. Reference context uses the same relative-path, row and eight-column bounds as the current contract. It locates evidence for review; it does not fetch sources, authenticate authors or approve corrections.

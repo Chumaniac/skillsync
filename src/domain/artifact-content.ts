@@ -1,7 +1,8 @@
 import type { ArtifactFileRule, ArtifactScalarRule } from "./artifact-contract.js";
 import { parseStrictJson } from "./strict-json.js";
 
-export type ArtifactFinding = { code: string; path?: string; field?: string | string[]; row?: number; message?: string };
+export type ArtifactFinding = { code: string; path?: string; field?: string | string[]; row?: number; message?: string;
+  reference?: { path: string; field: string; row: number; matches: Array<{ source: string; target: string }> } };
 export type ArtifactFacts = { rows?: number; integers: Map<string, number> };
 export type ArtifactCellObserver = (field: string, value: string, row: number) => void;
 export type ArtifactRowObserver = (values: ReadonlyMap<string, string | number>, dataRecord?: number) => void;
