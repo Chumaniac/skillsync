@@ -2,17 +2,14 @@
 
 **Verify Agent Skills before you trust them.** SkillSync checks a local Skill's provenance, compatibility, and changes without executing it.
 
-> **Alpha · GitHub release v0.1.7 · Node.js 20+**
+> **Alpha · GitHub release v0.2.0 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
-GitHub v0.1.7 adds an offline human acceptance report on top of bounded composite-key reconciliation.
-Use `artifacts --compare <previous-artifacts.json>` to review whether a corrected
-delivery resolves finding categories or improves individual reconciliation counts.
-Changed contracts and incomplete history remain unavailable, without copying old
-messages or record values. See the [correction review guide](docs/artifact-delivery.md#review-a-correction-against-its-previous-report).
-The published GitHub package is v0.1.7 and includes these capabilities.
-The public npm registry remains at 0.1.0; use the verified GitHub archive below
-for the new features. This release is distributed through GitHub.
+GitHub v0.2.0 binds citations to exact source metadata, including digest and
+revision, and retains the offline human acceptance report, correction review
+and bounded composite-key reconciliation. Mismatched metadata produces an
+explicit finding without copying record values into the report. The npm
+registry remains at 0.1.0; use the verified GitHub archive for current features.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
@@ -22,24 +19,21 @@ for the new features. This release is distributed through GitHub.
 
 Tagged builds now publish a CLI tarball, checksums, a validated CycloneDX SBOM
 and a source manifest on [GitHub Releases](https://github.com/Chumaniac/skillsync/releases).
-[GitHub v0.1.7](https://github.com/Chumaniac/skillsync/releases/tag/v0.1.7)
-is published from main commit `7d302f3f69f007c94abfaf427e960c35b9e8b1fc`.
-[Release run 38862793975](https://github.com/Chumaniac/skillsync/actions/runs/38862793975)
-passed source/main binding, tests, package allowlist, SBOM and provenance checks.
-The downloaded archive, SBOM and source manifest matched all three checksums;
-GitHub attestation verification and an isolated install passed. The installed
-0.1.7 CLI generated the offline HTML review with the same findings and exit code
-as JSON, without exposing local paths or executing a Skill.
+[GitHub v0.2.0](https://github.com/Chumaniac/skillsync/releases/tag/v0.2.0)
+is distributed as a versioned CLI tarball with checksums, SBOM, source manifest
+and GitHub provenance. Its release workflow requires the exact immutable tag
+and an already successful main check before packaging. Earlier v0.1.7 assets
+and their dated verification evidence remain in the changelog and GitHub Releases.
 Installation uses Node.js 20+ and fetches the package's public dependencies;
 it needs no npm login.
 
 ```bash
-release_base="https://github.com/Chumaniac/skillsync/releases/download/v0.1.7"
-for asset in chumanic-skillsync-0.1.7.tgz checksums.txt sbom.cyclonedx.json release-manifest.json; do
+release_base="https://github.com/Chumaniac/skillsync/releases/download/v0.2.0"
+for asset in chumanic-skillsync-0.2.0.tgz checksums.txt sbom.cyclonedx.json release-manifest.json; do
   curl --fail --location --output "$asset" "$release_base/$asset"
 done
 shasum -a 256 -c checksums.txt
-npm install --prefix ./skillsync-tools ./chumanic-skillsync-0.1.7.tgz
+npm install --prefix ./skillsync-tools ./chumanic-skillsync-0.2.0.tgz
 ./skillsync-tools/node_modules/.bin/skillsync --version
 ```
 
@@ -57,7 +51,7 @@ npm install -g @chumanic/skillsync@0.1.0
 skillsync verify --path . --target codex
 ```
 
-**From source (0.1.7):**
+**From source (0.2.0):**
 
 ```bash
 git clone https://github.com/Chumaniac/skillsync.git
@@ -71,11 +65,11 @@ The command above verifies the included sample Skill. Replace the fixture path w
 
 ## What you get
 
-- Current source can bind a citation to its exact declared source metadata with
+- v0.2.0 can bind a citation to its exact declared source metadata with
   `reference_exists.matches`. An existing ID with a different digest or revision
   fails offline inspection without exposing record values. See the
   [synthetic citation example](fixtures/product/citation-metadata/README.md).
-  This feature requires a source build and is not in GitHub v0.1.7 or npm 0.1.0.
+  Install GitHub v0.2.0 or build the source; GitHub v0.1.7 and npm 0.1.0 lack this feature.
 
 - v0.1.7 produces an offline acceptance report with `artifacts --format html`.
   Reviewers see file binding, failed or incomplete identity checks, affected
