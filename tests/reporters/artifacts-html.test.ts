@@ -81,4 +81,27 @@ describe("offline artifact acceptance HTML", () => {
     expect(html.includes("x".repeat(161))).toBe(false);
     expect(Buffer.byteLength(html)).toBeLessThan(2 * 1024 * 1024);
   });
+  it("escapes and bounds reference locations and column mappings", () => {
+    const value = report(); value.status = "failed"; value.exitCode = 1;
+    value.findings = [{ code: "artifact.reference-value-mismatch", path: "citations.csv", row: 1,
+      reference: { path: "/private/tmp/PRIVATE_REFERENCE_PATH", field: "<script>key</script>", row: 2,
+        matches: Array.from({ length: 20 }, () => ({ source: '<img src="x">', target: '<svg onload="x">' })) } }];
+    const html = renderArtifacts(value, "html");
+    expect(html).not.toContain("PRIVATE_REFERENCE_PATH");
+    expect(html).not.toMatch(/<script\b|<img\b|<svg\b/iu);
+    expect(html).toContain("&lt;local-path&gt;");
+    expect(html).toContain("&lt;script&gt;key&lt;/script&gt;");
+    expect(html.match(/data-source-column=/gu)).toHaveLength(8);
+  });
+  it("limits expanded reference context while retaining every reported finding", () => {
+    const value = report(); value.status = "failed"; value.exitCode = 1;
+    value.findings = Array.from({ length: 256 }, () => ({ code: "artifact.reference-value-mismatch", path: "citations.csv", row: 1,
+      reference: { path: "sources.csv", field: "id", row: 2,
+        matches: Array.from({ length: 8 }, () => ({ source: "&".repeat(128), target: "&".repeat(128) })) } }));
+    const html = renderArtifacts(value, "html");
+    expect(html).toContain("first 32 of 256 reported findings shown");
+    expect(html.match(/data-reference-path=/gu)).toHaveLength(32);
+    expect(html.match(/artifact[.]reference-value-mismatch/gu)).toHaveLength(256);
+    expect(Buffer.byteLength(html)).toBeLessThan(2 * 1024 * 1024);
+  });
 });

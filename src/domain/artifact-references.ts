@@ -85,16 +85,19 @@ export function createArtifactReferenceIndex(contract: ArtifactContract) {
       for (const [position, check] of checks.entries()) {
         const targets = index(check.target.path, check.target.field).targets!;
         for (const source of index(check.source.path, check.source.field).sources!) {
-          if (!targets.has(source.digest)) {
+          const targetRow = targets.get(source.digest);
+          if (targetRow === undefined) {
             findings.push({ code: "artifact.reference-missing", path: check.source.path, field: check.source.field, row: source.row });
             if (findings.length >= 256) return findings;
           } else if (check.matches) {
             const sourceValue = metadata[position].source.get(source.row);
-            const targetValue = metadata[position].target.get(targets.get(source.digest)!);
+            const targetValue = metadata[position].target.get(targetRow);
             const unavailable = sourceValue === undefined || targetValue === undefined;
             if (unavailable || sourceValue !== targetValue) {
               findings.push({ code: unavailable ? "artifact.reference-value-unavailable" : "artifact.reference-value-mismatch",
-                path: check.source.path, field: check.matches.map(pair => pair.source), row: source.row });
+                path: check.source.path, field: check.matches.map(pair => pair.source), row: source.row,
+                reference: { path: check.target.path, field: check.target.field, row: targetRow,
+                  matches: check.matches.map(pair => ({ source: pair.source, target: pair.target })) } });
               if (findings.length >= 256) return findings;
             }
           }

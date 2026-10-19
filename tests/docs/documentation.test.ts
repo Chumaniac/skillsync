@@ -39,10 +39,10 @@ describe("release documentation", () => {
     };
 
     expect(readme).toContain("Verify Agent Skills before you trust them.");
-    expect(readme).toContain("Alpha · GitHub release v0.2.0 · Node.js 20+");
+    expect(readme).toContain("Alpha · GitHub release v0.2.1 · Node.js 20+");
     expect(readme).toContain("GitHub Releases");
-    expect(readme).toContain("download/v0.2.0");
-    expect(readme).toContain("chumanic-skillsync-0.2.0.tgz");
+    expect(readme).toContain("download/v0.2.1");
+    expect(readme).toContain("chumanic-skillsync-0.2.1.tgz");
     expect(readme).toContain("## Install");
     expect(readme).toContain("npx --yes @chumanic/skillsync@0.1.0 verify");
     expect(readme).toContain([

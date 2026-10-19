@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 - 2026-10-19
+
+- Locate citation metadata failures in both the delivered table and referenced table, including data-record positions and declared column mappings. Raw IDs and cell values remain omitted.
+- Add a direct offline review link and replace unrelated zero-value statistic cards with inspected-file and reported-finding counts.
+- Retain legacy baseline reports, accept all eight declared metadata mappings, and bound expanded HTML reference details to32 findings. Checks remain local and read-only.
+
 ## 0.2.0 - 2026-10-19
 
 - Distribute exact citation digest/revision checks in the installable GitHub CLI

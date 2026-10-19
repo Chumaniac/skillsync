@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { renderArtifacts, runArtifacts } from "../../src/cli/commands/artifacts";
 import { parseArtifactContract } from "../../src/domain/artifact-contract";
 import { createArtifactReferenceIndex } from "../../src/domain/artifact-references";
+import { parseArtifactReport } from "../../src/domain/artifact-report-comparison";
 
 const dirs: string[] = [];
 afterEach(async () => { await Promise.all(dirs.splice(0).map(path => rm(path, { recursive: true, force: true }))); });
@@ -35,7 +36,9 @@ describe("reference metadata binding", () => {
     for (const row of ["PRIVATE_ID,PRIVATE_DIGEST,v1", "PRIVATE_ID,known,PRIVATE_VERSION"]) {
       const report = await runArtifacts(await fixture(`source,digest,version\n${row}\n`));
       expect(report.exitCode).toBe(1);
-      expect(report.findings).toEqual([{ code: "artifact.reference-value-mismatch", path: "citations.csv", field: ["digest", "version"], row: 1 }]);
+      expect(report.findings).toEqual([{ code: "artifact.reference-value-mismatch", path: "citations.csv", field: ["digest", "version"], row: 1,
+        reference: { path: "sources.csv", field: "id", row: 1,
+          matches: [{ source: "digest", target: "sha256" }, { source: "version", target: "revision" }] } }]);
       const rendered = ["json", "text", "html"].map(format => renderArtifacts(report, format)).join("");
       for (const value of ["PRIVATE_ID", "PRIVATE_DIGEST", "PRIVATE_VERSION"]) expect(rendered).not.toContain(value);
     }
@@ -44,9 +47,51 @@ describe("reference metadata binding", () => {
     const report = await runArtifacts(await fixture("source,digest,version\nPRIVATE_ID,a|b,c\n", "id,sha256,revision\nPRIVATE_ID,a,b|c\n"));
     expect(report.findings[0].code).toBe("artifact.reference-value-mismatch");
   });
+  it("locates the referenced table and data record without exposing identities or metadata values", async () => {
+    const report = await runArtifacts(await fixture("source,digest,version\nPRIVATE_ID,PRIVATE_DIGEST,v1\n",
+      "id,sha256,revision\nOTHER_ID,other,v1\nPRIVATE_ID,known,v1\n"));
+    expect(report.findings[0]).toMatchObject({ path: "citations.csv", row: 1,
+      reference: { path: "sources.csv", field: "id", row: 2,
+        matches: [{ source: "digest", target: "sha256" }, { source: "version", target: "revision" }] } });
+    const reparsed = parseArtifactReport(report);
+    expect(reparsed.findings).toEqual(report.findings);
+    const html = renderArtifacts(report, "html");
+    expect(html).toContain("<h1>Reference metadata needs review</h1>");
+    expect(html).toContain('data-reference-path="sources.csv"');
+    expect(html).toContain('data-reference-row="2"');
+    expect(html).toContain('data-source-column="digest"');
+    expect(html).toContain('data-target-column="sha256"');
+    expect(html).toContain('href="#issue-title"');
+    for (const value of ["PRIVATE_ID", "PRIVATE_DIGEST", "OTHER_ID"]) {
+      for (const format of ["json", "text", "html"]) expect(renderArtifacts(report, format)).not.toContain(value);
+    }
+  });
   it("keeps missing IDs separate from metadata mismatches", async () => {
     const report = await runArtifacts(await fixture("source,digest,version\nMISSING,known,v1\n"));
     expect(report.findings).toEqual([{ code: "artifact.reference-missing", path: "citations.csv", field: "source", row: 1 }]);
+  });
+  it("accepts all eight declared mappings in new and legacy baselines and rejects unsafe extra context", async () => {
+    const contract = declaration();
+    const sourceColumns = Array.from({ length: 8 }, (_, i) => `meta${i}`);
+    const targetColumns = Array.from({ length: 8 }, (_, i) => `reference${i}`);
+    contract.files[0].columns = ["source", ...sourceColumns].map(name => ({ name, type: "string" }));
+    contract.files[1].columns = ["id", ...targetColumns].map(name => ({ name, type: "string" }));
+    contract.checks[0].matches = sourceColumns.map((source, i) => ({ source, target: targetColumns[i] }));
+    const options = await fixture(["source", ...sourceColumns].join(",") + "\nPRIVATE_ID," + Array(8).fill("a").join(",") + "\n",
+      ["id", ...targetColumns].join(",") + "\nPRIVATE_ID," + Array(8).fill("b").join(",") + "\n", contract);
+    const report = await runArtifacts(options);
+    expect(parseArtifactReport(report).findings[0].reference?.matches).toHaveLength(8);
+    const legacy = structuredClone(report);
+    delete legacy.findings[0].reference;
+    expect(parseArtifactReport(legacy).findings).toEqual(legacy.findings);
+    for (const change of ["overflow", "escape", "raw-value", "invalid-row"] as const) {
+      const invalid = structuredClone(report); const reference = invalid.findings[0].reference!;
+      if (change === "overflow") reference.matches.push(reference.matches[0]);
+      if (change === "escape") reference.path = "../private.csv";
+      if (change === "invalid-row") reference.row = 0;
+      if (change === "raw-value") Object.assign(reference, { value: "PRIVATE_CELL_VALUE" });
+      expect(() => parseArtifactReport(invalid)).toThrow();
+    }
   });
   it("never accepts missing metadata or duplicate target identities", async () => {
     const missing = await runArtifacts(await fixture("source,digest,version\nPRIVATE_ID,,v1\n"));
