@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-import { parseArtifactContract } from "../../domain/artifact-contract.js";
+import { parseArtifactContract, type ArtifactDeclarations } from "../../domain/artifact-contract.js";
 import { parseStrictJson } from "../../domain/strict-json.js";
 import { inspectArtifactContent, type ArtifactFacts, type ArtifactFinding, type ArtifactRowObserver } from "../../domain/artifact-content.js";
 import { createArtifactReferenceIndex } from "../../domain/artifact-references.js";
@@ -30,6 +30,7 @@ export type ArtifactReport = {
   files: Array<{ path: string; bytes: number; sha256: string; rows?: number }>;
   findings: ArtifactFinding[];
   reconciliations?: ReconciliationSummary[];
+  declarations?: ArtifactDeclarations;
   comparison?: ArtifactComparison;
 };
 
@@ -70,6 +71,8 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
     const bytes = await readWorkspaceFile(options.contract, 64 * 1024);
     contract = parseArtifactContract(parseYaml(new TextDecoder("utf-8", { fatal: true }).decode(bytes), { maxAliasCount: 100, prettyErrors: false, logLevel: "silent" }));
     report.contract_sha256 = hash(JSON.stringify(contract));
+    // Only validated cross-file metadata is included; scalar expected values and raw cells are omitted.
+    report.declarations = { limits: { ...contract.limits }, checks: contract.checks.map((check, index) => ({ ordinal: index + 1, check })) };
   } catch { issue("artifact.contract-invalid"); report.exitCode = 2; return report; }
   let root = options.path ?? join(options.delivery!, "artifacts");
   try {
@@ -175,6 +178,7 @@ export function renderArtifacts(report: ArtifactReport, format = "text"): string
     ...(safe.comparison ? [`Baseline comparison: ${safe.comparison.status}${safe.comparison.reason ? `; ${safe.comparison.reason}` : ""}`,
       ...(safe.comparison.findings ? [`Finding categories: ${safe.comparison.findings.added} new; ${safe.comparison.findings.ongoing} ongoing; ${safe.comparison.findings.resolved} resolved`] : [])] : []),
     ...(safe.comparison?.checks ? [`Record check changes: ${safe.comparison.checks.filter(check => check.change === "improved").length} improved; ${safe.comparison.checks.filter(check => check.change === "regressed").length} regressed; ${safe.comparison.checks.filter(check => check.change === "changed").length} mixed changes; ${safe.comparison.checks.filter(check => check.change === "unchanged").length} unchanged`] : []),
+    ...(safe.declarations ? [`Declared cross-file checks: ${safe.declarations.checks.length}`, `Inspection limits: ${JSON.stringify(safe.declarations.limits)}`, ...safe.declarations.checks.map(item => `Declaration ${item.ordinal}: ${JSON.stringify(item.check)}`)] : ["Declaration metadata: unavailable in this snapshot"]),
     `Files: ${safe.files.length}`, ...(safe.reconciliations ?? []).map(item => `Record reconciliation: ${item.status}${item.status !== "unknown" ? `; source keys=${item.sourceKeys}; target keys=${item.targetKeys}; missing=${item.missingKeys}; unexpected=${item.unexpectedKeys}; mismatched values=${item.valueMismatches}` : ""}`),
     ...safe.findings.map(finding => `${finding.code}${finding.path ? ` file=${JSON.stringify(finding.path)}` : ""}${finding.field ? ` field=${JSON.stringify(finding.field)}` : ""}${finding.row !== undefined ? ` row=${finding.row}` : ""}${finding.reference ? ` reference=${JSON.stringify(finding.reference)}` : ""}${finding.message ? ` ${finding.message}` : ""}`)].join("\n") + "\n";
 }

@@ -87,6 +87,29 @@ function comparisonSection(report: ArtifactReport): string {
     <details><summary>Baseline report identity</summary><code>${text(value.baseline_report_sha256)}</code><p>SHA-256 binds the supplied JSON bytes; it does not establish their author or truth.</p></details></section>`;
 }
 
+function declarationSection(report: ArtifactReport): string {
+  const value = report.declarations;
+  if (!value) return '<section id="declarations"><h2>Declared cross-file checks</h2><p>Declaration metadata is unavailable in this snapshot. Consult its original contract; no expectations are inferred.</p></section>';
+  return `<section id="declarations" aria-labelledby="declarations-title"><h2 id="declarations-title">Declared cross-file checks</h2>
+    <p>These are declarations, not proof of a completed check. Per-file type, digest and scalar-value rules remain in the original contract; expected values and raw cells are omitted here.</p>
+    <p>Limits: ${text(value.limits.max_files)} files · ${text(value.limits.max_file_bytes)} bytes per file · ${text(value.limits.max_total_bytes)} total bytes.</p>
+    <p>Showing ${Math.min(128, value.checks.length)} of ${value.checks.length} declarations. Up to 8 mappings per declaration are shown; JSON retains the complete declared mappings.</p>
+    ${value.checks.slice(0, 128).map(({ ordinal, check }) => {
+      let source: string, target: string, fields: string;
+      if (check.type === "csv_summary") {
+        source = check.csv; target = check.json;
+        fields = `Row count → <code>${text(check.row_count_field)}</code><ul>${check.sums.slice(0, 8).map(pair => `<li><code>${text(pair.column)}</code> → <code>${text(pair.field)}</code></li>`).join("")}</ul><small>${Math.min(8, check.sums.length)} of ${check.sums.length} sum mappings shown.</small>`;
+      } else if (check.type === "reference_exists") {
+        source = check.source.path; target = check.target.path;
+        fields = `Lookup: <code>${text(check.source.field)}</code> → <code>${text(check.target.field)}</code><p>Require all targets: ${check.require_all_targets === true ? "yes" : "no"}</p><ul>${(check.matches ?? []).slice(0, 8).map(pair => `<li><code>${text(pair.source)}</code> → <code>${text(pair.target)}</code></li>`).join("")}</ul>`;
+      } else {
+        source = check.source.path; target = check.target.path;
+        fields = `Identity: <code>${columns(check.source.key)}</code> → <code>${columns(check.target.key)}</code><p>Integer value: <code>${text(check.source.value)}</code> → <code>${text(check.target.value)}</code></p>`;
+      }
+      return `<article class="check" id="declared-check-${text(ordinal)}"><h3>Declaration ${text(ordinal)} · <code>${text(check.type)}</code></h3><p>Source: <code>${text(source)}</code> → Target: <code>${text(target)}</code></p>${fields}</article>`;
+    }).join("") || '<p>No cross-file check was declared. Consult the original contract for file-level requirements.</p>'}</section>`;
+}
+
 /** Use the same path policy as text/JSON, including when called directly. */
 export function renderArtifactsHtml(rawReport: ArtifactReport): string {
   const report = redactLocalPaths(rawReport);
@@ -113,13 +136,14 @@ export function renderArtifactsHtml(rawReport: ArtifactReport): string {
 
 .review-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px;padding-top:18px;margin-top:18px;border-top:1px solid #d6e0e5}.review-summary p{margin:0;font-variant-numeric:tabular-nums}.review-link{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;background:#075f70;color:white;border-radius:6px;text-decoration:none;font-weight:650}.review-link:hover{background:#064956}.reference-location{border-top:1px solid #d6e0e5;margin-top:14px;padding-top:12px;font-size:14px}.reference-location strong,.reference-location span,.reference-location small{display:block}.reference-location ul{list-style:none;padding:0;margin:8px 0}.reference-location li{margin:5px 0}.reference-location code{overflow-wrap:anywhere}h2[tabindex="-1"]{scroll-margin-top:24px}h2[tabindex="-1"]:focus{outline:3px solid #207d94;outline-offset:5px}
 </style></head><body><a class="skip" href="#review">Skip to delivery review</a>
-<header><div><div class="brand">SkillSync</div><div class="kicker">Offline delivery review</div></div><nav aria-label="Report sections"><a href="#checks">Record checks</a><a href="#issues">Review actions</a><a href="#files">Files</a></nav></header>
+<header><div><div class="brand">SkillSync</div><div class="kicker">Offline delivery review</div></div><nav aria-label="Report sections"><a href="#declarations">Declared checks</a><a href="#checks">Record checks</a><a href="#issues">Review actions</a><a href="#files">Files</a></nav></header>
 <main id="review"><div class="hero${passed ? "" : " fail"}"><span class="badge ${passed ? "pass" : "fail"}">${passed ? "Passed" : "Not accepted"}</span><h1>${title}</h1>
 <p>${passed ? "The inspected files match this contract. Review the expectations and responsible approval before using the result." : "Start with the reported file and field locations below. Keep the original delivery while reviewing corrections."}</p>
 <div class="review-summary"><p><strong>${report.files.length}</strong> inspected ${report.files.length === 1 ? "file" : "files"} · <strong>${report.findings.length}</strong> reported ${report.findings.length === 1 ? "finding" : "findings"}${checks.length ? ` · ${failedChecks} failed and ${incomplete} incomplete allocation checks` : ""}</p>
 <a class="review-link" href="${report.findings.length ? "#issue-title" : "#file-title"}">${report.findings.length ? `Review ${report.findings.length} reported ${report.findings.length === 1 ? "finding" : "findings"}` : "Review inspected files"}</a></div>
 <div class="binding"><strong>Receipt / file binding</strong><span class="badge">${text(report.receipt_binding)}</span><small>Hash consistency with supplied local evidence; author identity is not authenticated.</small></div></div>
 ${comparisonSection(report)}
+${declarationSection(report)}
 <section id="checks" aria-labelledby="check-title"><h2 id="check-title">Allocation and identity checks</h2><p>Showing ${Math.min(CHECK_DETAILS, checks.length)} of ${checks.length} reconciliation checks. Failed and incomplete checks appear first.</p>
 ${ordered.slice(0, CHECK_DETAILS).map(check => reconciliationCard(check, rowBudget)).join("") || "<p>No record reconciliation was declared. Other declared file checks are reflected in the result.</p>"}</section>
 <section id="issues" aria-labelledby="issue-title"><h2 id="issue-title" tabindex="-1">Review actions</h2>${referenceCount > REFERENCE_DETAILS ? `<p>Reference locations: first ${REFERENCE_DETAILS} of ${referenceCount} reported findings shown. The JSON report retains all location metadata.</p>` : ""}${report.findings.length ? `<div class="table-wrap" tabindex="0" aria-label="Review findings table"><table><thead><tr><th>Finding</th><th>Affected metadata</th><th>Next review step</th></tr></thead><tbody>${report.findings.slice(0, 256).map(finding => findingRow(finding, referenceBudget)).join("")}</tbody></table></div>` : "<p>No finding was reported for the declared scope. This does not authenticate source truth or establish business approval.</p>"}</section>

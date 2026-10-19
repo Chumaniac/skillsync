@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2026-10-20
+
+- Review all validated cross-file declarations and inspection limits in offline HTML, text and JSON reports, including CSV summaries, reference metadata and keyed integer allocations.
+- Keep declarations visible when inputs are missing, retain legacy baselines without declaration metadata, and omit expected scalar values, raw identities and cell contents.
+- Bound the checklist to 128 declarations and eight visible mappings per declaration; preserve complete mappings in the validated JSON report.
+
+
 ## 0.2.1 - 2026-10-19
 
 - Locate citation metadata failures in both the delivered table and referenced table, including data-record positions and declared column mappings. Raw IDs and cell values remain omitted.

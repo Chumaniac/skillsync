@@ -46,14 +46,25 @@ const keyColumn = z.string().min(1).max(128);
 const keyedSide = z.object({ path: safePath, key: z.union([keyColumn, z.array(keyColumn).min(2).max(4)]), value: z.string().min(1).max(128) }).strict();
 const reconciliation = z.object({ type: z.literal("keyed_integer_sum_equals"), source: keyedSide, target: keyedSide }).strict();
 
-export const artifactContractSchema = z.object({ schema: z.literal("skillsync.artifacts/v1"),
-  limits: z.object({
+const checkSchema = z.discriminatedUnion("type", [comparison, reference, reconciliation]);
+const limitsSchema = z.object({
     max_files: z.number().int().positive().max(WORKSPACE_TREE_LIMITS.maxFiles),
     max_file_bytes: z.number().int().positive().max(WORKSPACE_TREE_LIMITS.maxFileBytes),
     max_total_bytes: z.number().int().positive().max(WORKSPACE_TREE_LIMITS.maxTotalBytes),
-  }).strict(),
+  }).strict();
+
+export const artifactDeclarationsSchema = z.object({
+  limits: limitsSchema,
+  checks: z.array(z.object({ ordinal: z.number().int().min(1).max(128), check: checkSchema }).strict()).max(128),
+}).strict().superRefine((value, context) => {
+  if (value.checks.some((item, index) => item.ordinal !== index + 1)) context.addIssue({ code: z.ZodIssueCode.custom, message: "declaration ordinals must be consecutive" });
+});
+export type ArtifactDeclarations = z.infer<typeof artifactDeclarationsSchema>;
+
+export const artifactContractSchema = z.object({ schema: z.literal("skillsync.artifacts/v1"),
+  limits: limitsSchema,
   files: z.array(z.discriminatedUnion("format", [bytes, csv, json])).max(WORKSPACE_TREE_LIMITS.maxFiles),
-  checks: z.array(z.discriminatedUnion("type", [comparison, reference, reconciliation])).max(128).default([]),
+  checks: z.array(checkSchema).max(128).default([]),
 }).strict().superRefine((contract, context) => {
   const fail = () => context.addIssue({ code: z.ZodIssueCode.custom, message: "inconsistent artifact declarations" });
   const files = new Map(contract.files.map(file => [file.path, file]));
