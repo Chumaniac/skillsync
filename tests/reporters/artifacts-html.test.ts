@@ -13,6 +13,17 @@ function report(): ArtifactReport {
 }
 
 describe("offline artifact acceptance HTML", () => {
+  it("escapes and bounds declaration metadata with no scripts or external destinations", () => {
+    const value = report();
+    value.declarations = { limits: { max_files: 3, max_file_bytes: 4096, max_total_bytes: 8192 }, checks: Array.from({ length: 128 }, (_, index) => ({ ordinal: index + 1, check: { type: "csv_summary" as const, csv: "<script>SOURCE</script>", json: "/private/tmp/PRIVATE_DECLARATION", row_count_field: "rows", sums: Array.from({ length: 128 }, () => ({ column: "&".repeat(128), field: "&".repeat(128) })) } })) };
+    const html = renderArtifacts(value, "html");
+    expect(html).not.toMatch(/<script\b|<img\b|https?:\/\//iu);
+    expect(html).not.toContain("PRIVATE_DECLARATION");
+    expect(html).toContain('href="#declarations"');
+    expect(html.match(/id="declared-check-/gu)).toHaveLength(128);
+    expect(html).toContain("8 of 128 sum mappings shown");
+    expect(Buffer.byteLength(html)).toBeLessThan(2 * 1024 * 1024);
+  });
   it("turns physical evidence into a human decision surface without stronger claims", () => {
     const html = renderArtifacts(report(), "html");
     expect(html).toMatch(/^<!doctype html>/iu);
