@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 - 2026-10-19
+
+- Distribute exact citation digest/revision checks in the installable GitHub CLI
+  archive, retaining bounded read-only checks and privacy-safe HTML review.
+- Align package metadata, CLI version and current installation examples. The
+  public npm registry remains 0.1.0; previous GitHub releases are preserved.
+
 ## Unreleased source - 2026-10-18
 
 - Extend `reference_exists` with optional exact metadata bindings, such as a

@@ -295,7 +295,7 @@ production/business integration.
 
 ## Bind citations to exact source metadata
 
-Status: current source, not included in the published GitHub v0.1.7 package.
+Status: included in GitHub v0.2.0; absent from GitHub v0.1.7 and npm 0.1.0.
 
 A valid source ID alone does not establish that a citation uses the reviewed
 revision or digest. Add an optional `matches` array to `reference_exists`:
