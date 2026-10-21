@@ -2,6 +2,11 @@
 
 ## Unreleased source - 2026-10-21
 
+- Add a loopback graphical workbench for real Skill and contract directories,
+  with native macOS selection, read-only cancellation and offline report review.
+- Review safe fixes, explicitly apply with backup, and recheck separately. Bind
+  plans to the selected input snapshot; limit child output and saved evidence.
+
 - Open offline verification reports at the first priority needing review and
   jump directly to other severity groups, including without JavaScript.
 - Keep complete counts and the existing detail budget; omit empty groups and

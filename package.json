@@ -52,7 +52,8 @@
     "build": "tsc",
     "lint": "eslint .",
     "check": "npm test && npm run type-check && npm run lint && npm run build",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "pretest": "npm run build"
   },
   "dependencies": {
     "commander": "^13.1.0",
