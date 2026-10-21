@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased source - 2026-10-21
+
+- Open offline verification reports at the first priority needing review and
+  jump directly to other severity groups, including without JavaScript.
+- Keep complete counts and the existing detail budget; omit empty groups and
+  use readable status labels. Redaction and verification outcomes are unchanged.
+
 ## 0.3.0 - 2026-10-20
 
 - Review all validated cross-file declarations and inspection limits in offline HTML, text and JSON reports, including CSV summaries, reference metadata and keyed integer allocations.
