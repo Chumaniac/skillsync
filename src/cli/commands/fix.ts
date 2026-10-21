@@ -146,7 +146,7 @@ export function renderFixPlan(plan: ActionPlan, format: string | undefined = "te
       }
     }
   }
-  lines.push("No Skill workspace files written by the plan operation.");
+  lines.push("Plan only; no patches applied.");
   return `${lines.join("\n")}\n`;
 }
 
