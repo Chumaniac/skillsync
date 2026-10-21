@@ -244,6 +244,20 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .description("Provenance, compatibility, and behavior verification for Agent Skills.")
     .version(VERSION);
 
+  program.command("gui")
+    .description("Open the loopback-only graphical verification workbench.")
+    .requiredOption("--state-dir <path>", "Private directory for plans and reports (outside Skill roots)")
+    .option("--port <port>", "Loopback port", "14986")
+    .action(async (options: {stateDir: string; port: string}) => {
+      const port = Number(options.port);
+      if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Invalid port.");
+      const { startWorkbench } = await import("../workbench/server.js");
+      const workbench = await startWorkbench({port, stateDir: options.stateDir});
+      io.writeOut(`SkillSync: ${workbench.url}\n`);
+      const close = () => { void workbench.close(); };
+      process.once("SIGINT", close); process.once("SIGTERM", close);
+    });
+
   program
     .command("scan")
     .description("Inspect skill files without executing their instructions.")

@@ -9,6 +9,21 @@ GitHub v0.3.0 adds a declared cross-file checklist to HTML, text and JSON report
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
+## Local graphical workbench
+
+Run `skillsync gui --state-dir /absolute/private/report-directory`, then open
+`http://127.0.0.1:14986`. Select a Skill directory, or select a contract and its
+artifact directory. The macOS folder/file picker also accepts an explicit path.
+No Skill instructions run. Reports, plans and receipts stay in the private state
+directory, outside the selected input.
+
+For a single Skill, review the plan, explicitly confirm safe changes with backup,
+then run **Recheck**. Applying a plan does not establish a passing verification.
+Changed inputs invalidate the plan. The server accepts loopback clients only,
+runs one bounded CLI process, and stops at 64 MiB of saved evidence rather than
+deleting prior results. Use a new state directory when full. Cancelling a
+read-only operation reaps its child; applying changes must finish before recheck.
+
 ## Install
 
 **From GitHub releases (no npm account required):**
