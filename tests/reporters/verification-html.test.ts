@@ -30,6 +30,7 @@ it("links directly to severity groups and opens the first group needing review",
   }
   expect(html).toContain("Unverified");
   expect(html).not.toContain("CRITICAL ·");
+  expect(html).not.toContain("1 issues");
 });
 
 it("does not fill an empty report with four empty severity panels", () => {

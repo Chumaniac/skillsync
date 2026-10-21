@@ -27,7 +27,7 @@ export function renderVerificationHtml(input: VerificationReport): string {
   const groups = priorities.map(({ severity, label, help, issues: all }, groupIndex) => {
     const shown = all.slice(0, remaining);
     remaining -= shown.length;
-    return `<details class="issue-group" id="issues-${severity}"${groupIndex === 0 ? " open" : ""}><summary>${label} · ${all.length} issues</summary><p id="issues-${severity}-start" tabindex="-1">${help}</p>${shown.map((issue, index) => {
+    return `<details class="issue-group" id="issues-${severity}"${groupIndex === 0 ? " open" : ""}><summary>${label} · ${all.length} ${all.length === 1 ? "issue" : "issues"}</summary><p id="issues-${severity}-start" tabindex="-1">${help}</p>${shown.map((issue, index) => {
       const f = issue.finding;
       const resolution = issue.resolutions[0];
       const steps = resolution?.kind === "manual" ? resolution.steps.slice(0, 8) : [];
@@ -45,5 +45,5 @@ export function renderVerificationHtml(input: VerificationReport): string {
 <body><header><strong>SkillSync · Offline verification review</strong><nav aria-label="Report sections"><a href="#overview">Overview</a><a href="#issues">Issues and next steps</a><a href="#scope">Scope</a></nav></header><main>
 <section class="hero" id="overview"><h1>${title}</h1><p>These checks read declared metadata. They do not establish runtime safety, authenticated provenance, or approval.</p><div class="metrics">${([{ key: "pass", label: "Passed" }, { key: "fail", label: "Failed" }, { key: "warn", label: "Warnings" }, { key: "unknown", label: "Unverified" }] as const).map(({ key, label }) => `<div><strong>${text(counts[key])}</strong>${label}</div>`).join("")}</div><p>${text(counts.total)} findings · ${text(issues.length)} deduplicated issues · exit code ${report.exitCode}</p>${links}</section>
 <section id="issues"><h2>Issues and next steps</h2>${priorities.length ? `<p>The first group is open. Choose a priority above to open another group. At most ${DETAIL_LIMIT} issue details are included; use JSON for the full report.</p>${groups}` : "<p>No issues were reported. Review the scope and selected targets below.</p>"}</section>
-<section id="scope"><h2>Scope and evidence</h2><p>${report.targets.length} selected targets. ${text(report.generated_at)}</p><p>Local paths and raw evidence contents are excluded. No Skill was executed and no fix was applied by this report.</p></section></main><footer>Generated from local verification metadata. No scripts, external assets, or network requests. Keep the JSON report for complete machine-readable evidence.</footer></body></html>\n`;
+<section id="scope"><h2>Scope and evidence</h2><p>${report.targets.length} selected ${report.targets.length === 1 ? "target" : "targets"}. ${text(report.generated_at)}</p><p>Local paths and raw evidence contents are excluded. No Skill was executed and no fix was applied by this report.</p></section></main><footer>Generated from local verification metadata. No scripts, external assets, or network requests. Keep the JSON report for complete machine-readable evidence.</footer></body></html>\n`;
 }
