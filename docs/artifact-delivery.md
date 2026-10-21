@@ -345,3 +345,13 @@ publisher, or establish that the underlying source bytes or claims are true.
 Metadata mismatch and unavailable findings include an optional `reference` object: the declared target path, lookup column, matched data-record position, and compared source/target column names. It contains no record ID or cell value. JSON and text retain these coordinates; the offline HTML displays the first32 reference locations with up to8 mappings each and links directly to the review section. Counts still cover all reported findings. Data-record positions exclude the CSV header, including for quoted multiline records.
 
 The baseline reader continues accepting older reports without this context. Reference context uses the same relative-path, row and eight-column bounds as the current contract. It locates evidence for review; it does not fetch sources, authenticate authors or approve corrections.
+
+## SARIF for artifact review
+
+Use `skillsync artifacts --contract reviewed-contract.json --path reviewed-artifacts --format sarif` to export a SARIF 2.1.0 document to standard output. The existing exit codes remain: 0 for a passing inspection, 1 for failed artifact checks, and 2 for invalid setup. No code-scanning upload or remote request is made.
+
+The separate `skillsync-artifacts` driver exports stable rule IDs, encoded relative file URIs and metadata-based fingerprints. Findings without a safe relative file path keep an empty location; they are not assigned to a fabricated file. Logical CSV record positions appear as `properties.dataRecord`, because quoted multiline CSV records do not correspond to physical source lines. Raw cells, field names, reference records and free-form error messages are omitted. Use the local JSON or HTML report when reviewing the original contract.
+
+SARIF currently describes the current inspection. `--compare` with SARIF is rejected before opening files; use JSON or HTML for baseline transitions. GitHub ingestion and alert placement additionally depend on repository features, committed matching files and the upload workflow; a local export does not establish a successful upload or business acceptance.
+
+Method reference from the 2026-10-21 Trending review: [Cloudflare's structured, verified finding records](https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/README.md) (MIT). No audit plugin is installed or run. Format reference: [GitHub SARIF support](https://docs.github.com/en/code-security/reference/code-scanning/sarif-files/sarif-support).

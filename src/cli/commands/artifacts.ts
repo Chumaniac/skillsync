@@ -12,6 +12,7 @@ import { createArtifactReconciliationIndex, type ReconciliationSummary } from ".
 import { artifactSetHash, compareArtifactReports, parseArtifactReport, type ArtifactComparison } from "../../domain/artifact-report-comparison.js";
 import { redactLocalPaths } from "../../reporters/local-paths.js";
 import { renderArtifactsHtml } from "../../reporters/artifacts-html.js";
+import { renderArtifactsSarif } from "../../reporters/artifacts-sarif.js";
 import { readDirectoryEntries, readWorkspaceFile, scanStagedWorkspace, WorkspaceTreeError } from "../../sandbox/workspace-tree.js";
 
 const hash = (bytes: Uint8Array | string) => createHash("sha256").update(bytes).digest("hex");
@@ -172,6 +173,7 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
 
 export function renderArtifacts(report: ArtifactReport, format = "text"): string {
   if (format === "html") return renderArtifactsHtml(report);
+  if (format === "sarif") return renderArtifactsSarif(report);
   const safe = redactLocalPaths(report);
   if (format === "json") return JSON.stringify(safe, null, 2) + "\n";
   return [`Artifact validation: ${safe.status}`, `Evidence: physical files; execution: not-run; receipt binding: ${safe.receipt_binding}`,
