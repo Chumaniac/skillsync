@@ -40,7 +40,7 @@ describe("skillsync fix", () => {
     expect(allIssues.stdout).toContain("Patches:");
     expect(allIssues.stdout).toContain("scripts/check.sh (safe mode 777 -> 755)");
     expect(allIssues.stdout).toContain("Manual steps:");
-    expect(allIssues.stdout).toContain("No Skill workspace files written by the plan operation.");
+    expect(allIssues.stdout).toContain("Plan only; no patches applied.");
 
     const selected = await runCli([
       "fix",
@@ -70,7 +70,9 @@ describe("skillsync fix", () => {
   });
 
   it("writes an explicit plan once and refuses to overwrite it", async () => {
-    const { root } = await createSkillRoot();
+    const { root, scriptPath } = await createSkillRoot();
+    const originalContent = await readFile(scriptPath, "utf8");
+    const originalMode = (await stat(scriptPath)).mode & 0o777;
     const issueId = await issueIdFor(root, "structure.invalid-script-mode");
     const outputPath = join(root, "fix-plan.json");
     const first = await runCli([
@@ -84,9 +86,12 @@ describe("skillsync fix", () => {
       outputPath,
     ]);
     expect(first.exitCode).toBe(0);
-    expect(first.stdout).toContain("No Skill workspace files written by the plan operation.");
+    expect(first.stdout).toContain("Plan only; no patches applied.");
+    expect(first.stdout).not.toContain("No Skill workspace files written");
     expect(first.stdout).toContain(`Plan file written: ${outputPath}`);
     expect(JSON.parse(await readFile(outputPath, "utf8")).issueIds).toEqual([issueId]);
+    expect(await readFile(scriptPath, "utf8")).toBe(originalContent);
+    expect((await stat(scriptPath)).mode & 0o777).toBe(originalMode);
 
     const second = await runCli([
       "fix",
