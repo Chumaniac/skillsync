@@ -24,6 +24,11 @@ runs one bounded CLI process, and stops at 64 MiB of saved evidence rather than
 deleting prior results. Use a new state directory when full. Cancelling a
 read-only operation reaps its child; applying changes must finish before recheck.
 
+Open **History** to inspect saved results after a restart, choose a verification
+as the baseline and explicitly verify the current directory. Historical plans
+are read-only. New, ongoing and no-longer-observed issues appear after recheck;
+the downloadable summary omits private paths. See [history and capacity limits](docs/workbench-history.md).
+
 ## Install
 
 **From GitHub releases (no npm account required):**
