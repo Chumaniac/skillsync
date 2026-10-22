@@ -1,7 +1,7 @@
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { chmod, lstat, mkdir, readdir, realpath, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,12 +13,15 @@ import { renderVerificationHtml } from "../reporters/verification-html.js";
 import { renderArtifactsHtml } from "../reporters/artifacts-html.js";
 import { scanStagedWorkspace } from "../sandbox/workspace-tree.js";
 import { workbenchPage, workbenchScript, workbenchStyle } from "./page.js";
+import { exportHistorySummary, MAX_OUTPUT, WorkbenchHistory, WorkbenchStateError, type HistoryComparison, type Selection } from "./history.js";
+import { parseStrictJson } from "../domain/strict-json.js";
+import { compareIssues } from "../domain/baseline.js";
+import { compareArtifactReports, parseArtifactReport } from "../domain/artifact-report-comparison.js";
 
-const MAX_OUTPUT = 8 * 1024 * 1024;
-const MAX_STATE = 64 * 1024 * 1024;
-type Selection = { path: string; identity: string; kind: "skill" | "artifacts"; contract?: string; delivery: boolean };
 const identity = (s: {dev: number; ino: number}) => `${s.dev}:${s.ino}`;
 const inside = (root: string, target: string) => { const r = relative(root, target); return !r || (!r.startsWith("..") && !isAbsolute(r)); };
+const describePlan = (value:ActionPlan) => [...value.changes.map(c => `${c.path} · ${c.safety} · ${c.modeBefore?.toString(8) ?? "内容"} → ${c.modeAfter?.toString(8) ?? "内容"}`), ...value.manualSteps.map(s => `人工处理：${s.title}\n${s.steps.join("\n")}`)].join("\n\n") || "没有可自动应用的变更。";
+const preview = (text:string) => `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><pre>${text.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]!))}</pre>`;
 
 /** One loopback client, one bounded CLI process. No shell or Skill execution API. */
 export async function startWorkbench(options: { port?: number; stateDir: string; cliPath?: string; timeoutMs?: number }) {
@@ -26,27 +29,17 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
   await mkdir(stateDir, { recursive: true, mode: 0o700 });
   if ((await lstat(stateDir)).isSymbolicLink() || await realpath(stateDir) !== stateDir) throw new Error("State directory must be a real directory.");
   await chmod(stateDir, 0o700);
+  const history = new WorkbenchHistory(stateDir, identity(await lstat(stateDir)));
   const nonce = randomBytes(32).toString("hex");
   const cliPath = options.cliPath ?? fileURLToPath(new URL("../cli/index.js", import.meta.url));
   let active: ChildProcess | undefined, busy = false, applying = false, cancelled = false;
   let selection: Selection | undefined;
   let actionable: string[] = [];
-  let plan: { id: string; path: string; value: ActionPlan; snapshot: string } | undefined;
+  let plan: { id: string; path: string; value: ActionPlan; snapshot: string; historyId:string } | undefined;
+  let baseline: {id:string; report:VerificationReport|ArtifactReport; digest:string} | undefined;
+  let latestId:string|undefined;
   let origin = "";
 
-  async function capacity() {
-    const entries = await readdir(stateDir);
-    if (entries.length >= 120) throw new Error("状态目录已满，请选择新的状态目录；原结果已保留。");
-    let bytes = 0;
-    for (const name of entries) { const s = await lstat(join(stateDir, name)); if (!s.isFile()) throw new Error("状态目录包含非普通文件。"); bytes += s.size; }
-    // Reserve a complete bounded output before a command, including mutating apply.
-    if (bytes + MAX_OUTPUT > MAX_STATE) throw new Error("状态目录达到 64 MiB 上限，请选择新的状态目录。");
-  }
-  async function save(name: string, value: string) {
-    if (Buffer.byteLength(value) > MAX_OUTPUT) throw new Error("报告超过大小上限。");
-    const path = join(stateDir, `${randomUUID()}-${name}`);
-    await writeFile(path, value, { flag: "wx", mode: 0o600 }); return path;
-  }
   async function checkSelection() {
     if (!selection) throw new Error("请先选择目录。");
     const s = await lstat(selection.path);
@@ -54,7 +47,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
     return selection;
   }
   async function command(args: string[]): Promise<string> {
-    await capacity(); if (cancelled) throw new Error("Cancelled");
+    await history.capacity(); if (cancelled) throw new Error("Cancelled");
     return new Promise((accept, reject) => {
       const child = spawn(process.execPath, [cliPath, ...args], { shell: false, stdio: ["ignore", "pipe", "pipe"], env: { PATH: dirname(process.execPath), LANG: "en_US.UTF-8" } });
       active = child; const chunks: Buffer[] = []; let size = 0, failure = "";
@@ -105,6 +98,18 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           const {stdout} = await promisify(execFile)("/usr/bin/osascript", ["-e", script], {timeout: 60_000, maxBuffer: 8192});
           return send(res, 200, {path: stdout.trim()});
         }
+        if (req.url === "/api/history") return send(res,200,await history.list(input.offset===undefined?0:Number(input.offset)));
+        if (req.url === "/api/history/open" || req.url === "/api/history/export") {
+          const {record,output}=await history.read(input.id);
+          if(req.url.endsWith("export"))return send(res,200,{html:exportHistorySummary(record)});
+          // Viewing old evidence grants no selection or mutation capability.
+          selection=undefined;plan=undefined;baseline=undefined;latestId=undefined;actionable=[];
+          let html:string;
+          if(record.kind==="verify")html=record.selection.kind==="skill"?renderVerificationHtml(parseStrictJson(output!) as VerificationReport):renderArtifactsHtml(parseArtifactReport(parseStrictJson(output!)));
+          else if(record.kind==="plan")html=preview("历史计划，仅供查看。重新核验后才能生成新计划。\n\n"+describePlan(parseStrictJson(output!) as ActionPlan));
+          else html=preview(record.kind==="apply-intent"?"应用请求已记录。请查看关联回执；若结果未确认，先核验当前目录。":"应用回执已保留；仍需另行核验当前目录。");
+          return send(res,200,{readOnly:true,id:record.id,kind:record.kind,selection:record.selection,baselineId:record.kind==="verify"?record.id:record.baselineId,comparison:record.comparison,html});
+        }
         if (req.url === "/api/select") {
           if (typeof input.path !== "string" || !isAbsolute(input.path) || input.path.length > 4096) throw new Error("请输入完整目录路径。");
           const path = resolve(input.path), s = await lstat(path);
@@ -116,17 +121,48 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
             contract = resolve(input.contract); const file = await lstat(contract);
             if (!file.isFile() || file.isSymbolicLink() || file.size > 65536 || await realpath(contract) !== contract) throw new Error("合同必须是小于 64 KiB 的普通文件。");
           }
-          selection = {path, identity: identity(s), kind: input.kind, contract, delivery: input.delivery === true}; plan = undefined; actionable = [];
+          const next:Selection={path, identity: identity(s), kind: input.kind, contract, delivery: input.delivery === true};
+          let chosen:typeof baseline;
+          if(input.baselineId!==undefined) {
+            const {record,output}=await history.read(input.baselineId);
+            if(record.kind!=="verify"||JSON.stringify(record.selection)!==JSON.stringify(next))throw new Error("基线不属于当前目录与核验方式。");
+            chosen={id:record.id,digest:record.dataSha256!,report:next.kind==="skill"?parseStrictJson(output!) as VerificationReport:parseArtifactReport(parseStrictJson(output!))};
+          }
+          selection = next; baseline=chosen;latestId=undefined;plan = undefined; actionable = [];
           return send(res, 200, {selected: true});
         }
         const selected = await checkSelection();
         if (req.url === "/api/verify") {
+          plan=undefined;actionable=[];
+          const snapshot=selected.kind==="skill"?(await scanStagedWorkspace(selected.path)).digest:undefined;
           const output = await command(selected.kind === "skill" ? ["verify", "--path", selected.path, "--target", "codex", "--format", "json"] : ["artifacts", "--contract", selected.contract!, selected.delivery ? "--delivery" : "--path", selected.path, "--format", "json"]);
-          const report = JSON.parse(output) as VerificationReport & ArtifactReport;
+          const report = parseStrictJson(output) as VerificationReport & ArtifactReport;
+          await checkSelection();
+          if(snapshot && snapshot!==(await scanStagedWorkspace(selected.path)).digest)throw new Error("Directory changed");
           if (selected.kind === "skill") actionable = report.issues.filter(i => i.finding.status === "fail" || i.finding.status === "warn").map(i => i.id);
           const html = selected.kind === "skill" ? renderVerificationHtml(report) : renderArtifactsHtml(report);
-          await save("report.json", output);
-          return send(res, 200, {html, status: report.exitCode === 0 ? "已声明检查通过" : "存在待处理项", exitCode: report.exitCode});
+          let comparison:HistoryComparison|undefined;
+          if(baseline) {
+            if(selected.kind==="artifacts") {
+              const compared=compareArtifactReports(baseline.report as ArtifactReport,parseArtifactReport(report),baseline.digest);
+              comparison=compared.status==="compared"?{status:"compared",added:compared.findings!.added,ongoing:compared.findings!.ongoing,resolved:compared.findings!.resolved}:{status:"unavailable",reason:compared.reason};
+            } else if([baseline.report.exitCode,report.exitCode].some(c=>c===2||c===4)||[(baseline.report as VerificationReport).issues,report.issues].some(v=>v.length>=256))comparison={status:"unavailable",reason:"incomplete-evidence"};
+            else {
+              const pending=(value:VerificationReport)=>value.issues.filter(issue=>issue.finding.status==="fail"||issue.finding.status==="warn");
+              const before=pending(baseline.report as VerificationReport),after=pending(report),c=compareIssues(before,after);
+              // A warning may bind the entire Skill digest. Pair changed evidence
+              // within the same code/location, rather than claiming it was fixed.
+              const group=(issue:VerificationReport["issues"][number])=>JSON.stringify([issue.finding.code,issue.finding.skill,issue.finding.target,issue.location]);
+              const removed=new Map<string,number>();
+              for(const issue of before.filter(i=>c.resolvedIds.includes(i.id)))removed.set(group(issue),(removed.get(group(issue))??0)+1);
+              let changed=0;
+              for(const issue of after.filter(i=>c.newIds.includes(i.id))) {const key=group(issue),count=removed.get(key)??0;if(count){changed++;removed.set(key,count-1);}}
+              comparison={status:"compared",added:c.newIds.length-changed,ongoing:c.ongoingIds.length,resolved:c.resolvedIds.length-changed,changed};
+            }
+          }
+          const saved=await history.append({kind:"verify",selection:selected,snapshot,baselineId:baseline?.id,parentId:latestId,exitCode:report.exitCode,comparison},output);
+          latestId=saved.id;baseline??={id:saved.id,report,digest:saved.dataSha256!};
+          return send(res, 200, {html, historyId:saved.id, baselineId:baseline.id, comparison, status: report.exitCode === 0 ? "已声明检查通过" : "存在待处理项", exitCode: report.exitCode});
         }
         if (selected.kind !== "skill") throw new Error("交付核验不提供自动修复。");
         if (req.url === "/api/plan") {
@@ -138,8 +174,9 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           const value = JSON.parse(output) as ActionPlan;
           if (value.rootPath !== selected.path || !Array.isArray(value.changes) || !value.planDigest) throw new Error("未能生成有效计划，请先核验单个 Skill 目录。");
           if (snapshot !== (await scanStagedWorkspace(selected.path)).digest) throw new Error("Directory changed");
-          plan = {snapshot, id: randomUUID(), path: await save("plan.json", output), value};
-          const description = [...value.changes.map(c => `${c.path} · ${c.safety} · ${c.modeBefore?.toString(8) ?? "内容"} → ${c.modeAfter?.toString(8) ?? "内容"}`), ...value.manualSteps.map(s => `人工处理：${s.title}\n${s.steps.join("\n")}`)].join("\n\n");
+          const saved=await history.append({kind:"plan",selection:selected,snapshot,baselineId:baseline?.id,parentId:latestId},output);
+          plan = {snapshot, id: randomUUID(), path: join(stateDir,saved.dataFile!), value, historyId:saved.id};
+          const description = describePlan(value);
           return send(res, 200, {id: plan.id, description: description || "没有可自动应用的变更。"});
         }
         if (req.url === "/api/apply") {
@@ -147,16 +184,19 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           const current = plan; plan = undefined;
           if (!current.value.changes.length || current.value.changes.length > 256 || current.value.changes.some(c => c.safety !== "safe")) throw new Error("此计划包含需人工审阅的变更，请使用 CLI 逐项处理。");
           if (current.snapshot !== (await scanStagedWorkspace(selected.path)).digest) throw new Error("Plan is stale");
+          await history.read(current.historyId);
+          await history.capacity(3,2*MAX_OUTPUT);
+          const intent=await history.append({kind:"apply-intent",selection:selected,snapshot:current.snapshot,baselineId:baseline?.id,parentId:current.historyId});
           applying = true;
           const output = await command(["fix", "--apply", "--plan", current.path, "--yes", "--backup", "--format", "json"]);
-          await save("receipt.json", output);
+          await history.append({kind:"apply",selection:selected,snapshot:current.snapshot,baselineId:baseline?.id,parentId:intent.id},output);
           const receipt = JSON.parse(output) as {status?: string; backupPath?: string};
           if (receipt.status !== "applied") throw new Error("修复未完成；已保存可用回执，请重新核验。");
           return send(res, 200, {message: `已应用并备份。尚未重新核验。备份：${receipt.backupPath ?? "见私有回执"}`});
         }
         return send(res, 404, {error: "未知操作。"});
       } finally { busy = false; applying = false; }
-    } catch { send(res, 400, {error: cancelled ? "核验已取消，未产生完成结果。" : "操作未完成：请检查目录、合同、计划是否失效或状态目录容量，再重新核验。"}); }
+    } catch (error) { send(res, 400, {error: cancelled ? "核验已取消，未产生完成结果。" : error instanceof WorkbenchStateError ? error.message : "操作未完成：请检查目录、合同、计划是否失效或状态目录容量，再重新核验。"}); }
   });
   server.requestTimeout = 130_000; server.headersTimeout = 10_000; server.maxConnections = 8;
   await new Promise<void>((accept, reject) => { server.once("error", reject); server.listen(options.port ?? 14986, "127.0.0.1", accept); });
