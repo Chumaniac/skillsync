@@ -41,9 +41,9 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
   let origin = "";
 
   async function checkSelection() {
-    if (!selection) throw new Error("请先选择目录。");
+    if (!selection) throw new WorkbenchStateError("请先选择目录。");
     const s = await lstat(selection.path);
-    if (!s.isDirectory() || s.isSymbolicLink() || identity(s) !== selection.identity || await realpath(selection.path) !== selection.path) throw new Error("目录已被替换，请重新选择。");
+    if (!s.isDirectory() || s.isSymbolicLink() || identity(s) !== selection.identity || await realpath(selection.path) !== selection.path) throw new WorkbenchStateError("目录已被替换，请重新选择。");
     return selection;
   }
   async function command(args: string[]): Promise<string> {
@@ -59,7 +59,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
       child.stderr!.on("data", (chunk: Buffer) => { size += chunk.length; if (size > MAX_OUTPUT) stop("核验器输出超过上限。"); });
       child.on("error", () => { failure = "无法启动本机核验器。"; });
       child.on("close", code => { clearTimeout(timer); clearTimeout(killer); active = undefined;
-        if (cancelled || failure) reject(new Error(cancelled ? "核验已取消，未产生完成结果。" : failure));
+        if (cancelled || failure) reject(new WorkbenchStateError(cancelled ? "核验已取消，未产生完成结果。" : failure));
         else if (!Buffer.concat(chunks).toString("utf8").trim()) reject(new Error(`核验器未返回报告（${code}）。`)); else accept(Buffer.concat(chunks).toString("utf8"));
       });
     });
@@ -95,8 +95,13 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         if (req.url === "/api/choose") {
           if (process.platform !== "darwin") throw new Error("请在路径框中输入目录或合同的完整路径。");
           const script = input.file === true ? 'POSIX path of (choose file with prompt "选择核验合同")' : 'POSIX path of (choose folder with prompt "选择核验目录")';
-          const {stdout} = await promisify(execFile)("/usr/bin/osascript", ["-e", script], {timeout: 60_000, maxBuffer: 8192});
-          return send(res, 200, {path: stdout.trim()});
+          try {
+            const {stdout} = await promisify(execFile)("/usr/bin/osascript", ["-e", script], {timeout: 60_000, maxBuffer: 8192});
+            return send(res, 200, {path: stdout.trim()});
+          } catch (error) {
+            const cancelled = error instanceof Error && "stderr" in error && String(error.stderr).includes("(-128)");
+            throw new WorkbenchStateError(cancelled ? "已取消选择，原路径保留。" : "系统选择器未完成，请重试或在路径框输入完整路径。");
+          }
         }
         if (req.url === "/api/history") return send(res,200,await history.list(input.offset===undefined?0:Number(input.offset)));
         if (req.url === "/api/history/open" || req.url === "/api/history/export") {
@@ -111,21 +116,21 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           return send(res,200,{readOnly:true,id:record.id,kind:record.kind,selection:record.selection,baselineId:record.kind==="verify"?record.id:record.baselineId,comparison:record.comparison,html});
         }
         if (req.url === "/api/select") {
-          if (typeof input.path !== "string" || !isAbsolute(input.path) || input.path.length > 4096) throw new Error("请输入完整目录路径。");
+          if (typeof input.path !== "string" || !isAbsolute(input.path) || input.path.length > 4096) throw new WorkbenchStateError("请输入完整目录路径。");
           const path = resolve(input.path), s = await lstat(path);
-          if (!s.isDirectory() || s.isSymbolicLink() || await realpath(path) !== path || path === "/" || path === homedir() || inside(path, stateDir) || inside(stateDir, path)) throw new Error("请选择独立的真实 Skill 或交付目录。");
-          if (input.kind !== "skill" && input.kind !== "artifacts") throw new Error("请选择核验内容。");
+          if (!s.isDirectory() || s.isSymbolicLink() || await realpath(path) !== path || path === "/" || path === homedir() || inside(path, stateDir) || inside(stateDir, path)) throw new WorkbenchStateError("请选择独立的真实 Skill 或交付目录。");
+          if (input.kind !== "skill" && input.kind !== "artifacts") throw new WorkbenchStateError("请选择核验内容。");
           let contract: string | undefined;
           if (input.kind === "artifacts") {
-            if (typeof input.contract !== "string" || !isAbsolute(input.contract)) throw new Error("请选择合同文件。");
+            if (typeof input.contract !== "string" || !isAbsolute(input.contract)) throw new WorkbenchStateError("请选择合同文件。");
             contract = resolve(input.contract); const file = await lstat(contract);
-            if (!file.isFile() || file.isSymbolicLink() || file.size > 65536 || await realpath(contract) !== contract) throw new Error("合同必须是小于 64 KiB 的普通文件。");
+            if (!file.isFile() || file.isSymbolicLink() || file.size > 65536 || await realpath(contract) !== contract) throw new WorkbenchStateError("合同必须是小于 64 KiB 的普通文件。");
           }
           const next:Selection={path, identity: identity(s), kind: input.kind, contract, delivery: input.delivery === true};
           let chosen:typeof baseline;
           if(input.baselineId!==undefined) {
             const {record,output}=await history.read(input.baselineId);
-            if(record.kind!=="verify"||JSON.stringify(record.selection)!==JSON.stringify(next))throw new Error("基线不属于当前目录与核验方式。");
+            if(record.kind!=="verify"||JSON.stringify(record.selection)!==JSON.stringify(next))throw new WorkbenchStateError("基线不属于当前目录与核验方式。");
             chosen={id:record.id,digest:record.dataSha256!,report:next.kind==="skill"?parseStrictJson(output!) as VerificationReport:parseArtifactReport(parseStrictJson(output!))};
           }
           selection = next; baseline=chosen;latestId=undefined;plan = undefined; actionable = [];
@@ -138,7 +143,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           const output = await command(selected.kind === "skill" ? ["verify", "--path", selected.path, "--target", "codex", "--format", "json"] : ["artifacts", "--contract", selected.contract!, selected.delivery ? "--delivery" : "--path", selected.path, "--format", "json"]);
           const report = parseStrictJson(output) as VerificationReport & ArtifactReport;
           await checkSelection();
-          if(snapshot && snapshot!==(await scanStagedWorkspace(selected.path)).digest)throw new Error("Directory changed");
+          if(snapshot && snapshot!==(await scanStagedWorkspace(selected.path)).digest)throw new WorkbenchStateError("核验期间目录已变化，请重新核验。");
           if (selected.kind === "skill") actionable = report.issues.filter(i => i.finding.status === "fail" || i.finding.status === "warn").map(i => i.id);
           const html = selected.kind === "skill" ? renderVerificationHtml(report) : renderArtifactsHtml(report);
           let comparison:HistoryComparison|undefined;
@@ -164,26 +169,26 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           latestId=saved.id;baseline??={id:saved.id,report,digest:saved.dataSha256!};
           return send(res, 200, {html, historyId:saved.id, baselineId:baseline.id, comparison, status: report.exitCode === 0 ? "已声明检查通过" : "存在待处理项", exitCode: report.exitCode});
         }
-        if (selected.kind !== "skill") throw new Error("交付核验不提供自动修复。");
+        if (selected.kind !== "skill") throw new WorkbenchStateError("交付核验不提供自动修复。");
         if (req.url === "/api/plan") {
           plan = undefined;
-          if (!actionable.length) throw new Error("No actionable findings");
+          if (!actionable.length) throw new WorkbenchStateError("没有可自动处理的问题，请查看报告中的人工建议。");
           const snapshot = (await scanStagedWorkspace(selected.path)).digest;
           if (cancelled) throw new Error("Cancelled");
           const output = await command(["fix", "--plan", "--path", selected.path, "--target", "codex", "--issue", ...actionable, "--format", "json"]);
           const value = JSON.parse(output) as ActionPlan;
           if (value.rootPath !== selected.path || !Array.isArray(value.changes) || !value.planDigest) throw new Error("未能生成有效计划，请先核验单个 Skill 目录。");
-          if (snapshot !== (await scanStagedWorkspace(selected.path)).digest) throw new Error("Directory changed");
+          if (snapshot !== (await scanStagedWorkspace(selected.path)).digest) throw new WorkbenchStateError("核验期间目录已变化，请重新核验。");
           const saved=await history.append({kind:"plan",selection:selected,snapshot,baselineId:baseline?.id,parentId:latestId},output);
           plan = {snapshot, id: randomUUID(), path: join(stateDir,saved.dataFile!), value, historyId:saved.id};
           const description = describePlan(value);
           return send(res, 200, {id: plan.id, description: description || "没有可自动应用的变更。"});
         }
         if (req.url === "/api/apply") {
-          if (!plan || input.id !== plan.id || input.confirm !== true) throw new Error("请审阅当前计划并明确确认。");
+          if (!plan || input.id !== plan.id || input.confirm !== true) throw new WorkbenchStateError("请审阅当前计划并明确确认。");
           const current = plan; plan = undefined;
-          if (!current.value.changes.length || current.value.changes.length > 256 || current.value.changes.some(c => c.safety !== "safe")) throw new Error("此计划包含需人工审阅的变更，请使用 CLI 逐项处理。");
-          if (current.snapshot !== (await scanStagedWorkspace(selected.path)).digest) throw new Error("Plan is stale");
+          if (!current.value.changes.length || current.value.changes.length > 256 || current.value.changes.some(c => c.safety !== "safe")) throw new WorkbenchStateError("此计划包含需人工审阅的变更，请使用 CLI 逐项处理。");
+          if (current.snapshot !== (await scanStagedWorkspace(selected.path)).digest) throw new WorkbenchStateError("文件已变化，当前计划不能应用。请重新核验。");
           await history.read(current.historyId);
           await history.capacity(3,2*MAX_OUTPUT);
           const intent=await history.append({kind:"apply-intent",selection:selected,snapshot:current.snapshot,baselineId:baseline?.id,parentId:current.historyId});
@@ -196,7 +201,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         }
         return send(res, 404, {error: "未知操作。"});
       } finally { busy = false; applying = false; }
-    } catch (error) { send(res, 400, {error: cancelled ? "核验已取消，未产生完成结果。" : error instanceof WorkbenchStateError ? error.message : "操作未完成：请检查目录、合同、计划是否失效或状态目录容量，再重新核验。"}); }
+    } catch (error) { send(res, 400, {error: cancelled ? "核验已取消，未产生完成结果。" : error instanceof WorkbenchStateError ? error.message : error instanceof Error && "code" in error && error.code === "ENOENT" ? "目录或文件不存在，请重新选择或检查历史材料。" : "操作失败，请检查所选目录和验收清单后重新核验。"}); }
   });
   server.requestTimeout = 130_000; server.headersTimeout = 10_000; server.maxConnections = 8;
   await new Promise<void>((accept, reject) => { server.once("error", reject); server.listen(options.port ?? 14986, "127.0.0.1", accept); });

@@ -27,3 +27,9 @@ backup paths. Checksums detect changed materials, not authenticated authorship.
 Tests cover real CLI verification, explicit backup/apply, recheck, process
 restart, immutable old records, stale plans, replaced roots, missing and symbolic
 link evidence, cross-origin requests, cancellation and a full state directory.
+
+Refresh and newly saved results return to the first history page. Unchanged
+refreshes reuse the displayed rows. Section links in an embedded report stay
+inside that report. If the local service restarts, reopen the workbench page
+to renew its session; saved history remains available. You can enter full
+paths directly when the system file picker is unavailable.
