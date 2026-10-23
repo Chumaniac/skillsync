@@ -21,6 +21,15 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it("explains invalid selections without exposing local paths", async () => {
+    const {api, base} = await setup();
+    const missing = join(base, "missing-private-directory");
+    const result = await api("select", {path: missing, kind: "skill"});
+    expect(result.status).toBe(400);
+    expect(result.data.error).toContain("不存在");
+    expect(result.data.error).not.toContain(base);
+    expect((await api("verify")).data.error).toBe("请先选择目录。");
+  });
   it("reopens immutable history after restart, rechecks a baseline and never revives an old plan", async () => {
     const {root, script, api, base, app} = await setup();
     await api("select", {path: root, kind: "skill"});
