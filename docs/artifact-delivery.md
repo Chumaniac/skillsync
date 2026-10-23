@@ -355,3 +355,12 @@ The separate `skillsync-artifacts` driver exports stable rule IDs, encoded relat
 SARIF currently describes the current inspection. `--compare` with SARIF is rejected before opening files; use JSON or HTML for baseline transitions. GitHub ingestion and alert placement additionally depend on repository features, committed matching files and the upload workflow; a local export does not establish a successful upload or business acceptance.
 
 Method reference from the 2026-10-21 Trending review: [Cloudflare's structured, verified finding records](https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/README.md) (MIT). No audit plugin is installed or run. Format reference: [GitHub SARIF support](https://docs.github.com/en/code-security/reference/code-scanning/sarif-files/sarif-support).
+
+## Source ownership
+
+`domain/artifact-report.ts` owns the report types, bounded validation and file-set digest.
+`domain/artifact-report-comparison.ts` compares validated reports. CLI commands produce
+reports, while HTML/SARIF reporters and workbench history consume the shared domain
+contract. Domain modules do not depend on CLI implementation types. The prior CLI
+and comparison type export paths remain compatible. This reorganization changes
+neither the report schema nor the meaning of a physical-file check.

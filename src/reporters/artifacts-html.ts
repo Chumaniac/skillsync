@@ -1,4 +1,4 @@
-import type { ArtifactReport } from "../cli/commands/artifacts.js";
+import type { ArtifactReport } from "../domain/artifact-report.js";
 import type { ArtifactFinding } from "../domain/artifact-content.js";
 import type { ReconciliationSummary } from "../domain/artifact-reconciliation.js";
 import { VERSION } from "../version.js";
