@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { ActionPlan } from "../domain/action-plan.js";
 import type { VerificationReport } from "../cli/commands/verify.js";
-import type { ArtifactReport } from "../cli/commands/artifacts.js";
+import type { ArtifactReport } from "../domain/artifact-report.js";
 import { renderVerificationHtml } from "../reporters/verification-html.js";
 import { renderArtifactsHtml } from "../reporters/artifacts-html.js";
 import { scanStagedWorkspace } from "../sandbox/workspace-tree.js";

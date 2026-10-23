@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { ArtifactReport } from "../cli/commands/artifacts.js";
+import type { ArtifactReport } from "../domain/artifact-report.js";
 import { VERSION } from "../version.js";
 import { isAbsoluteLocalPath, isRedactedLocalPath } from "./local-paths.js";
 

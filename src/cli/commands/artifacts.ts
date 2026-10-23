@@ -4,12 +4,13 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-import { parseArtifactContract, type ArtifactDeclarations } from "../../domain/artifact-contract.js";
+import { parseArtifactContract } from "../../domain/artifact-contract.js";
 import { parseStrictJson } from "../../domain/strict-json.js";
-import { inspectArtifactContent, type ArtifactFacts, type ArtifactFinding, type ArtifactRowObserver } from "../../domain/artifact-content.js";
+import { inspectArtifactContent, type ArtifactFacts, type ArtifactRowObserver } from "../../domain/artifact-content.js";
 import { createArtifactReferenceIndex } from "../../domain/artifact-references.js";
-import { createArtifactReconciliationIndex, type ReconciliationSummary } from "../../domain/artifact-reconciliation.js";
-import { artifactSetHash, compareArtifactReports, parseArtifactReport, type ArtifactComparison } from "../../domain/artifact-report-comparison.js";
+import { createArtifactReconciliationIndex } from "../../domain/artifact-reconciliation.js";
+import { artifactSetHash, parseArtifactReport, type ArtifactReport } from "../../domain/artifact-report.js";
+import { compareArtifactReports } from "../../domain/artifact-report-comparison.js";
 import { redactLocalPaths } from "../../reporters/local-paths.js";
 import { renderArtifactsHtml } from "../../reporters/artifacts-html.js";
 import { renderArtifactsSarif } from "../../reporters/artifacts-sarif.js";
@@ -23,17 +24,7 @@ const manifestSchema = z.object({ schema: z.literal("skilltape.dev/delivery/v1")
 }).strict();
 
 export type ArtifactsOptions = { contract: string; delivery?: string; path?: string; includeRowEvidence?: boolean; compare?: string };
-export type ArtifactReport = {
-  schema: "skillsync.artifacts-report/v1"; status: "passed" | "failed"; exitCode: number;
-  evidence: "physical-files"; execution: "not-run"; provenance: "not-authenticated";
-  receipt_binding: "verified" | "not-provided" | "failed";
-  contract_sha256?: string; artifact_set_sha256?: string;
-  files: Array<{ path: string; bytes: number; sha256: string; rows?: number }>;
-  findings: ArtifactFinding[];
-  reconciliations?: ReconciliationSummary[];
-  declarations?: ArtifactDeclarations;
-  comparison?: ArtifactComparison;
-};
+export type { ArtifactReport } from "../../domain/artifact-report.js";
 
 function readJson(bytes: Uint8Array): unknown {
   return parseStrictJson(new TextDecoder("utf-8", { fatal: true }).decode(bytes));

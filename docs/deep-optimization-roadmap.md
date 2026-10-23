@@ -1,6 +1,8 @@
 # SkillSync expansion and deep optimization roadmap
 
-Date: 2026-10-09. Status: active source implementation plan. Baseline:
+Date: 2026-10-09. Status: historical plan; the described source work is implemented.
+For the current source, GitHub and npm capability matrix, use [README](../README.md).
+The release statements below are the dated planning baseline, not current distribution status. Baseline:
 `a8d2b951d9affbd32f52354f67273fd43dbbbd24`.
 
 ## Product position and evidence
@@ -11,12 +13,12 @@ compatibility, content changes, file integrity and explicit data relationships.
 It must preserve the distinction between a physical check and authenticated or
 executed evidence. SkillTape is a producer; SkillSync does not run that producer.
 
-Public npm remains 0.1.0. GitHub v0.1.4 contains the existing artifact, source,
+At this plan's date, public npm was 0.1.0. GitHub v0.1.4 contained the existing artifact, source,
 reference and coverage checks. New rules in this plan are source candidates
 until a new public package is separately verified. Live providers, credentials,
 remote workers and network egress remain inactive.
 
-## Current distribution and gaps
+## Distribution and gaps at the planning baseline
 
 | Area | Existing owner | Improvement |
 | --- | --- | --- |
