@@ -89,6 +89,8 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
     try {
       const input = await body(req);
       if (req.url === "/api/cancel") { if (applying) throw new Error("修复写入中，请等待回执后重新核验。"); cancelled = true; active?.kill("SIGTERM"); const child = active; const timer = setTimeout(() => child?.kill("SIGKILL"), 2000); timer.unref(); return send(res, 200, {cancelled: true}); }
+      // Listing is bounded and read-only; it must not acquire or reset the CLI operation lock.
+      if (req.url === "/api/history") return send(res,200,await history.list(input.offset===undefined?0:Number(input.offset)));
       if (busy) return send(res, 409, {error: "已有操作进行中。"});
       busy = true; cancelled = false;
       try {
@@ -103,7 +105,6 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
             throw new WorkbenchStateError(cancelled ? "已取消选择，原路径保留。" : "系统选择器未完成，请重试或在路径框输入完整路径。");
           }
         }
-        if (req.url === "/api/history") return send(res,200,await history.list(input.offset===undefined?0:Number(input.offset)));
         if (req.url === "/api/history/open" || req.url === "/api/history/export") {
           const {record,output}=await history.read(input.id);
           if(req.url.endsWith("export"))return send(res,200,{html:exportHistorySummary(record)});

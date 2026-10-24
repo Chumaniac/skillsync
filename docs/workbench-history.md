@@ -33,3 +33,9 @@ refreshes reuse the displayed rows. Section links in an embedded report stay
 inside that report. If the local service restarts, reopen the workbench page
 to renew its session; saved history remains available. You can enter full
 paths directly when the system file picker is unavailable.
+
+## 2026-10-24 历史读取与核验并发
+
+启动或刷新历史时可以直接核验目录。历史列表保持只读，不占用核验、计划和应用的操作锁；如果新结果产生时旧列表仍在读取，完成后补读最新首屏。取消核验及修复写入的互斥保护继续有效。
+
+本机合成并发回归修复前失败、修复后通过；679项检查通过，1项可选Docker跳过，类型、lint和构建通过。安装包与浏览器回验在本轮交付记录核对。
