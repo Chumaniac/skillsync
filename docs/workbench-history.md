@@ -33,3 +33,9 @@ refreshes reuse the displayed rows. Section links in an embedded report stay
 inside that report. If the local service restarts, reopen the workbench page
 to renew its session; saved history remains available. You can enter full
 paths directly when the system file picker is unavailable.
+
+## History reads during verification
+
+Start verification while the initial history list or a refresh is loading. Read-only listing does not acquire the operation lock used by verification, planning and apply. If a new result arrives before the old list, the workbench reloads the first page after that read finishes. Cancellation and write exclusion remain in place.
+
+The concurrent service and delayed-list regressions fail before the fix and pass afterward. The local suite passes 679 checks, with one optional Docker check skipped; type checking, lint and build pass. Package and browser acceptance are recorded separately in the delivery receipt.

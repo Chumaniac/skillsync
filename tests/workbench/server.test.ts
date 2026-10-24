@@ -1,8 +1,9 @@
 import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rename, stat, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { startWorkbench } from "../../src/workbench/server.js";
+import { WorkbenchHistory } from "../../src/workbench/history.js";
 
 const running: Array<Awaited<ReturnType<typeof startWorkbench>>> = [];
 afterEach(async () => { for (const app of running.splice(0)) await app.close(); });
@@ -21,6 +22,23 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it("does not let initial history loading block selecting a directory", async () => {
+    const {api, root} = await setup();
+    let started!: () => void, release!: () => void;
+    const listing = new Promise<void>(resolve => { started = resolve; });
+    const pending = new Promise<void>(resolve => { release = resolve; });
+    const list = WorkbenchHistory.prototype.list;
+    const spy = vi.spyOn(WorkbenchHistory.prototype, "list").mockImplementation(async function(this: WorkbenchHistory, offset) {
+      started(); await pending; return list.call(this, offset);
+    });
+    const history = api("history");
+    try {
+      await listing;
+      expect((await api("select", {path:root,kind:"skill"})).status).toBe(200);
+    } finally {
+      release(); await history; spy.mockRestore();
+    }
+  });
   it("explains invalid selections without exposing local paths", async () => {
     const {api, base} = await setup();
     const missing = join(base, "missing-private-directory");
@@ -112,6 +130,7 @@ describe("real CLI graphical workbench", () => {
     const {api, root} = await setup(slow); await api("select", {path:root,kind:"skill"});
     const verification = api("verify");
     await new Promise(resolve => setTimeout(resolve, 100));
+    expect((await api("history")).status).toBe(200);
     expect((await api("plan")).status).toBe(409);
     expect((await api("cancel")).status).toBe(200);
     expect((await verification).data.error).toContain("已取消");

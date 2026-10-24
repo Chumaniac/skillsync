@@ -13,7 +13,7 @@ export const workbenchStyle = `:root{font:16px/1.6 system-ui;color:#19343c;backg
 export const workbenchScript = `"use strict";
 const $ = id => document.getElementById(id);
 const nonce = document.querySelector('meta[name="client"]').content;
-let busy = false, planId = null, selected = null, baselineId = null, historyId = null, historyOffset = 0, historyTotal = 0, historyLoading = false, renderedHistory = null;
+let busy = false, planId = null, selected = null, baselineId = null, historyId = null, historyOffset = 0, historyTotal = 0, historyLoading = false, historyRefreshQueued = false, renderedHistory = null;
 async function api(action, body = {}) {
  let response; try { response = await fetch('/api/' + action, {method:'POST',headers:{'Content-Type':'application/json','X-SkillSync-Client':nonce},body:JSON.stringify(body)}); }
  catch { throw new Error('无法连接本机服务，请确认核验台已启动后重试。'); }
@@ -38,7 +38,7 @@ $('confirm').onchange=()=>{$('apply').disabled=busy||!$('confirm').checked||!pla
 $('apply').onclick=async()=>{lock(true,true);try{const data=await api('apply',{id:planId,confirm:$('confirm').checked}); planId=null; $('confirm').checked=false; $('receipt').textContent=data.message; status('已备份并应用，请重新核验'); await loadHistory(true);}catch(e){planId=null;$('confirm').checked=false;status(e.message+'；请重新核验当前目录');}finally{lock(false);}};
 function showComparison(value){ $('comparison').textContent=!value?'此次结果可作为后续复查基线。':value.status==='compared'?'与基线相比：新增 '+value.added+' · 仍然存在 '+value.ongoing+' · 证据变化 '+(value.changed||0)+' · 本次不再出现 '+value.resolved:'基线无法比较：范围已变化或证据不完整。'; }
 async function loadHistory(newest=false){
- if(historyLoading)return;historyLoading=true; $('history-prev').disabled=true;$('history-next').disabled=true;$('history-refresh').disabled=true;
+ if(historyLoading){if(newest)historyRefreshQueued=true;return;}historyLoading=true; $('history-prev').disabled=true;$('history-next').disabled=true;$('history-refresh').disabled=true;
  if(newest)historyOffset=0;
  try{ const data=await api('history',{offset:historyOffset}); historyTotal=data.total;
  // At most 12 metadata rows; unchanged refreshes keep existing elements and listeners.
@@ -50,7 +50,7 @@ async function loadHistory(newest=false){
  renderedHistory=signature; }
  $('history-info').textContent=data.total+' 条记录 · 保存文件 '+data.capacity.files+'/'+data.capacity.maxFiles+(data.unavailable?' · '+data.unavailable+' 条索引无法读取':'');
  $('history-prev').disabled=busy||historyOffset===0;$('history-next').disabled=busy||historyOffset+12>=historyTotal;
- }catch(e){$('history-info').textContent='历史暂不可用，原文件保留。';}finally{historyLoading=false;lock(busy);}
+ }catch(e){$('history-info').textContent='历史暂不可用，原文件保留。';}finally{historyLoading=false;lock(busy);if(historyRefreshQueued){historyRefreshQueued=false;await loadHistory(true);}}
 }
 $('history-refresh').onclick=()=>loadHistory(true);
 $('history-prev').onclick=()=>{if(historyLoading)return;historyOffset=Math.max(0,historyOffset-12);loadHistory();};
