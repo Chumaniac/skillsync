@@ -18,11 +18,13 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
   const get = (id: string) => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id)!; };
   get("kind").value = "skill"; get("root").value = "/synthetic/review";
   const offsets: number[] = [];
+  const rejected = new Map<string, string>();
   let releaseHistory!: () => void, historyCalls = 0;
   const initialHistory = new Promise<void>(resolve => { releaseHistory = resolve; });
   const entries = Array.from({length: 14}, (_, i) => ({id: String(i), kind: "verify", label: `record ${i}`, createdAt: "2026-01-01T00:00:00Z"}));
   const fetch = async (url: string, options: {body: string}) => {
     const action = url.slice("/api/".length), input = JSON.parse(options.body);
+    if (rejected.has(action)) return {ok: false, status: 400, json: async () => ({error: rejected.get(action)})};
     const firstHistory = action === "history" && historyCalls++ === 0;
     const savedHistory = {total: entries.length, items: entries.slice(input.offset, input.offset + 12), capacity: {files: entries.length * 2, maxFiles: 120}};
     if (action === "select" && failure === "network") throw new TypeError("Failed to fetch");
@@ -37,15 +39,24 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
         entries.unshift({id: "new", kind: "verify", label: "new record", createdAt: "2026-01-02T00:00:00Z"});
         return {historyId: "new", baselineId: "new", html: '<a href="#scope">Scope</a><p id="scope">Report</p>', status: "检查完成"};
       }
+      if (action === "plan") return {id: "synthetic-plan", description: "Review this synthetic change"};
       return {};
     }};
   };
   runInNewContext(workbenchScript, {document: {getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()}, fetch, URL, Blob, setTimeout});
   await new Promise(resolve => setImmediate(resolve));
-  return {get, offsets, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
+  return {get, offsets, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
 }
 
 describe("workbench interactions", () => {
+  it.each([["reverify", "verify", "Synthetic verification failed"], ["reverify", "verify", "核验已取消"], ["plan", "plan", "Synthetic plan failed"]])("revokes the old plan when %s does not complete: %s", async (button, action, message) => {
+    const ui = await page(); await ui.click("verify"); await ui.click("plan");
+    ui.get("confirm").checked = true; ui.get("confirm").onchange?.();
+    expect(ui.get("apply").disabled).toBe(false);
+    ui.fail(action, message); await ui.click(button);
+    expect(ui.get("fix").hidden).toBe(true); expect(ui.get("confirm").checked).toBe(false);
+    expect(ui.get("apply").disabled).toBe(true);
+  });
   it("refreshes the latest result even when the initial history read arrives later", async () => {
     const ui = await page(undefined, true);
     await ui.click("verify"); await ui.finishInitialHistory();
