@@ -39,3 +39,7 @@ paths directly when the system file picker is unavailable.
 Start verification while the initial history list or a refresh is loading. Read-only listing does not acquire the operation lock used by verification, planning and apply. If a new result arrives before the old list, the workbench reloads the first page after that read finishes. Cancellation and write exclusion remain in place.
 
 The concurrent service and delayed-list regressions fail before the fix and pass afterward. The local suite passes 679 checks, with one optional Docker check skipped; type checking, lint and build pass. Package and browser acceptance are recorded separately in the delivery receipt.
+
+## Review a fresh plan after an interrupted check
+
+Starting a new verification or plan request revokes the previous plan and its confirmation. If the request fails or is cancelled, the apply control stays unavailable. Complete verification and review a fresh plan before applying changes; retained reports and receipts remain readable.
