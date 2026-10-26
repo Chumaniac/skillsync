@@ -39,6 +39,8 @@ import {
 } from "./commands/fix.js";
 import { ActionPlanApplyError } from "../domain/patch-application.js";
 import { runArtifacts, renderArtifacts, type ArtifactsOptions } from "./commands/artifacts.js";
+import {runAcceptanceBatch,inspectAcceptancePackage,previewAcceptancePlan,batchSummary,type BatchRunOptions} from "./commands/batch.js";
+import {renderBatchHtml} from "../reporters/batch-html.js";
 import {
   listBehaviorFixtures,
   renderBehaviorTest,
@@ -582,6 +584,27 @@ export function createCli(io: CliIO = defaultCliIO): Command {
       if (reportExitCode !== 0) {
         io.setExitCode?.(reportExitCode);
       }
+    });
+
+  const batch=program.command('batch').description('Run multi-delivery acceptance and verify portable offline evidence.');
+  batch.command('preview').requiredOption('--plan <path>','Explicit acceptance plan').action(async(options:{plan:string})=>{
+    io.writeOut(JSON.stringify(await previewAcceptancePlan(options.plan),null,2)+'\n');
+  });
+  batch.command('run').requiredOption('--plan <path>','Explicit acceptance plan').requiredOption('--output <file>','New private review-package JSON file')
+    .option('--previous <file>','Prior immutable review package').option('--retry-failed','Reuse only unchanged passed batches; inspect failed/incomplete batches again')
+    .option('--expect-plan-sha256 <sha256>','Bind an explicitly previewed plan file').option('--format <format>','Summary format: text or json','text')
+    .action(async(options:BatchRunOptions&{format?:string})=>{
+      if(!['text','json'].includes(options.format??'text'))throw new Error('Batch summary format must be text or json.');
+      const result=await runAcceptanceBatch(options),summary={...batchSummary(result.packet.payload),package_sha256:result.package_sha256};
+      io.writeOut(options.format==='json'?JSON.stringify(summary,null,2)+'\n':`Batch acceptance: ${summary.status}; passed=${summary.counts.passed}, failed=${summary.counts.failed}, incomplete=${summary.counts.incomplete}\nReview package SHA-256: ${summary.package_sha256}\n`);
+      if(summary.exitCode)io.setExitCode?.(summary.exitCode);
+    });
+  batch.command('inspect').requiredOption('--package <file>','Review-package JSON file').option('--expect-sha256 <sha256>','Expected package digest from a separately trusted source')
+    .option('--contract <file>','Optionally verify the original contract binding').option('--plan <file>','Optionally verify the exact original plan bytes without reading its sources').option('--format <format>','Output format: text, json or offline html','text')
+    .action(async(options:{package:string;expectSha256?:string;contract?:string;plan?:string;format?:string})=>{
+      if(!['text','json','html'].includes(options.format??'text'))throw new Error('Batch inspection format must be text, json or html.');
+      const result=await inspectAcceptancePackage(options.package,options);
+      io.writeOut(options.format==='html'?renderBatchHtml(result.packet.payload):options.format==='json'?JSON.stringify({integrity:'verified',original_data:'not-rechecked',package_sha256:result.package_sha256,...batchSummary(result.packet.payload)},null,2)+'\n':`Review-package integrity: verified\nRecorded batch outcome: ${result.packet.payload.status}\nOriginal data not rechecked; authors not authenticated.\n`);
     });
 
   program.command("artifacts")

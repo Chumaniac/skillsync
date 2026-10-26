@@ -29,6 +29,8 @@ as the baseline and explicitly verify the current directory. Historical plans
 are read-only. New, ongoing and no-longer-observed issues appear after recheck;
 the downloadable summary omits private paths. See [history and capacity limits](docs/workbench-history.md).
 
+Current source also supports [multi-delivery acceptance plans and portable review packages](docs/batch-acceptance.md): preflight several deliveries, retain passed evidence while rechecking failures, and reopen a digest-bound package offline from the CLI or workbench. Build from source for these additions; existing release downloads remain versioned independently.
+
 ## Install
 
 **From GitHub releases (no npm account required):**
