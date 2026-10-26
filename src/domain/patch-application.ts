@@ -146,10 +146,11 @@ async function restoreBackup(backup: Backup): Promise<void> {
   await chmod(backup.targetPath, backup.mode);
 }
 
-async function restoreChangedTargets(changed: Backup[]): Promise<RollbackFailure[]> {
+async function restoreChangedTargets(changed: Backup[], checkRoot: () => Promise<void>): Promise<RollbackFailure[]> {
   const failures: RollbackFailure[] = [];
   for (const backup of [...changed].reverse()) {
     try {
+      await checkRoot();
       await restoreBackup(backup);
     } catch (error) {
       failures.push({
@@ -179,6 +180,7 @@ export async function applyActionPlan(
     issueIds: plan.issueIds,
     changes: plan.changes,
     manualSteps: plan.manualSteps,
+    ...(plan.rootIdentity === undefined ? {} : { rootIdentity: plan.rootIdentity }),
   });
   if (plan.planDigest !== expectedDigest) {
     throw new Error("ActionPlan digest does not match its contents");
@@ -190,6 +192,20 @@ export async function applyActionPlan(
   if (!(await stat(rootPath)).isDirectory()) {
     throw new Error("ActionPlan rootPath must resolve to an existing directory");
   }
+  if (plan.rootIdentity !== undefined && (typeof plan.rootIdentity !== "string" || !/^\d+:\d+$/.test(plan.rootIdentity))) {
+    throw new Error("ActionPlan root identity is invalid");
+  }
+  async function checkRoot(): Promise<void> {
+    // Older CLI plans remain readable; newly generated plans bind the reviewed
+    // directory independently of its content digest, including in the child CLI.
+    if (plan.rootIdentity === undefined) return;
+    const metadata = await lstat(rootPath);
+    if (!metadata.isDirectory() || metadata.isSymbolicLink() ||
+        `${metadata.dev}:${metadata.ino}` !== plan.rootIdentity || await realpath(plan.rootPath) !== rootPath) {
+      throw new Error("Skill directory was replaced; verify it and create a new plan.");
+    }
+  }
+  await checkRoot();
 
   const prepared: PreparedChange[] = [];
   const paths = new Set<string>();
@@ -261,11 +277,13 @@ export async function applyActionPlan(
   const changed: Backup[] = [];
   try {
     for (const backup of backups) {
+      await checkRoot();
       if (hasContentPatch(backup.change)) {
         await replaceFileContents(backup.targetPath, backup.change.after, backup.change.modeAfter ?? backup.mode);
         changed.push(backup);
       }
       if (backup.change.modeAfter !== undefined) {
+        await checkRoot();
         await chmod(backup.targetPath, backup.change.modeAfter);
         if (!changed.includes(backup)) {
           changed.push(backup);
@@ -273,7 +291,7 @@ export async function applyActionPlan(
       }
     }
   } catch (error) {
-    const rollbackFailures = await restoreChangedTargets(changed);
+    const rollbackFailures = await restoreChangedTargets(changed, checkRoot);
     const detail = error instanceof Error ? error.message : "unknown write failure";
     if (rollbackFailures.length > 0) {
       const rollbackError = new ActionPlanRollbackError(rollbackFailures);

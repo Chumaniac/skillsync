@@ -78,6 +78,7 @@ export async function runFixPlan(options: FixPlanOptions): Promise<ActionPlan> {
     throw new Error("fix --plan requires exactly one explicit --path.");
   }
   const rootPath = await requireDirectSkillRoot(options.paths[0]);
+  const rootBefore = await stat(rootPath);
 
   const report = await runVerification({
     paths: options.paths,
@@ -85,7 +86,11 @@ export async function runFixPlan(options: FixPlanOptions): Promise<ActionPlan> {
     policyPath: options.policyPath,
   });
   const issues = selectIssues(report.issues, options.issueIds);
-  return createActionPlan({ rootPath, issues });
+  const rootAfter = await stat(rootPath);
+  if (!rootAfter.isDirectory() || rootAfter.dev !== rootBefore.dev || rootAfter.ino !== rootBefore.ino) {
+    throw new Error("Skill directory was replaced during planning; verify it again.");
+  }
+  return createActionPlan({ rootPath, rootIdentity: `${rootBefore.dev}:${rootBefore.ino}`, issues });
 }
 
 export async function writeFixPlan(plan: ActionPlan, outputPath: string): Promise<void> {
