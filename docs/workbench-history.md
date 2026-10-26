@@ -11,6 +11,16 @@ plan after verifying the current directory, then review and explicitly confirm
 the backup and apply action. A recorded apply request without a completed receipt
 has an unconfirmed outcome: inspect the directory before taking further action.
 
+Current source builds bind new fix plans to the selected directory's device and
+file identity as well as its content. Replacing a directory with an identical
+copy invalidates the plan: select the directory again, verify it, then review a
+fresh plan. The workbench checks this after planning, and the applying CLI checks
+the binding before modifying files. Detected replacement also blocks rollback
+into the replacement directory; retained backups remain available for review.
+Older saved plans can still be viewed, but cannot regain a workbench apply button.
+This detects replacements at the checked boundaries; it is not an operating-system
+lock against a process concurrently changing the filesystem.
+
 The list reads only small metadata records and shows twelve entries per page.
 Only opening a record reads its bounded, digest-bound body. The original limit
 is **120 state files and 64 MiB**, not 120 tasks. A report normally uses two

@@ -8,6 +8,7 @@ import type { Issue } from "./issue.js";
 export type ActionPlan = {
   schema_version: 1;
   rootPath: string;
+  rootIdentity?: string;
   generatedAt: string;
   issueIds: string[];
   changes: PatchChange[];
@@ -54,6 +55,7 @@ export function planDigest(plan: Omit<ActionPlan, "planDigest" | "generatedAt">)
 
 export function createActionPlan(input: {
   rootPath: string;
+  rootIdentity?: string;
   issues: Issue[];
   generatedAt?: string;
 }): ActionPlan {
@@ -83,6 +85,7 @@ export function createActionPlan(input: {
   const digestInput = {
     schema_version: 1 as const,
     rootPath: input.rootPath,
+    ...(input.rootIdentity === undefined ? {} : { rootIdentity: input.rootIdentity }),
     issueIds,
     changes: sortedChanges,
     manualSteps,

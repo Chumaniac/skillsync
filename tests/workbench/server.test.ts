@@ -22,6 +22,47 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it.each(["plan", "apply"])("rejects an identical replacement directory during %s", async phase => {
+    const launcher = join(await realpath(await mkdtemp(join(tmpdir(), "sync-root-swap-"))), "swap.cjs");
+    const realCli = resolve("dist/cli/index.js");
+    await writeFile(launcher, `
+      const fs = require('node:fs');
+      const {spawnSync} = require('node:child_process');
+      const args = process.argv.slice(2);
+      const phase = ${JSON.stringify(phase)};
+      const apply = args.includes('--apply');
+      function replace(root) {
+        fs.renameSync(root, root + '-retained');
+        fs.cpSync(root + '-retained', root, {recursive:true});
+        fs.chmodSync(root + '/scripts/check.sh', 0o777);
+      }
+      if (phase === 'apply' && apply) {
+        const plan = JSON.parse(fs.readFileSync(args[args.indexOf('--plan') + 1], 'utf8'));
+        replace(plan.rootPath);
+      }
+      const result = spawnSync(process.execPath, [${JSON.stringify(realCli)}, ...args], {encoding:'utf8'});
+      if (phase === 'plan' && args.includes('--plan') && !apply) {
+        replace(JSON.parse(result.stdout).rootPath);
+      }
+      process.stdout.write(result.stdout || '');
+      process.stderr.write(result.stderr || '');
+      process.exitCode = result.status ?? 1;
+    `);
+    const {api, root, script} = await setup(launcher);
+    const before = await readFile(script);
+    await api("select", {path:root,kind:"skill"});
+    expect((await api("verify")).status).toBe(200);
+    const planned = await api("plan");
+    const outcome = phase === "plan" ? planned : await api("apply", {id:planned.data.id, confirm:true});
+    expect(outcome.status).toBe(400);
+    expect(outcome.data.error).not.toContain(root);
+    for (const path of [script, join(root + "-retained", "scripts/check.sh")]) {
+      expect(await readFile(path)).toEqual(before);
+      expect((await stat(path)).mode & 0o777).toBe(0o777);
+    }
+    expect((await api("apply", {id:planned.data.id,confirm:true})).status).toBe(400);
+  });
+
   it("locates affected CSV records in an artifact report and its immutable history", async () => {
     const {api, base} = await setup();
     const fixture = join(base, "allocation-review");
