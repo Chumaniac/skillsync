@@ -43,3 +43,9 @@ The concurrent service and delayed-list regressions fail before the fix and pass
 ## Review a fresh plan after an interrupted check
 
 Starting a new verification or plan request revokes the previous plan and its confirmation. If the request fails or is cancelled, the apply control stays unavailable. Complete verification and review a fresh plan before applying changes; retained reports and receipts remain readable.
+
+## Locate affected CSV records
+
+Artifact checks in the workbench retain the same bounded record-position evidence as offline HTML reports. Expand **Locate affected CSV records** to inspect the expected and delivered CSV record positions, then reopen the saved report later without rerunning the check. Positions start at 1, exclude the header and count quoted multiline records as one record; they are not physical text-line numbers.
+
+Only positions and declared column metadata are retained. Record identities and cell values are omitted, and the report names incomplete or truncated evidence. Machine JSON stays unchanged by default; use `--include-row-evidence` when a separate human review needs these bounded positions.

@@ -16,6 +16,16 @@ const command = (root: string) => ["artifacts", "--contract", join(root, "contra
   "--path", join(root, "artifacts"), "--format", "html"];
 
 describe("human acceptance report CLI", () => {
+  it("keeps JSON row evidence opt-in while allowing a human workbench to retain positions", async () => fixture(async root => {
+    await cp(join(root,"faults/shifted-allocations.csv"), join(root,"artifacts/allocations.csv"));
+    const args = ["artifacts","--contract",join(root,"contract.json"),"--path",join(root,"artifacts"),"--format","json"];
+    const ordinary = JSON.parse((await runCli(args)).stdout);
+    expect(ordinary.reconciliations[0].recordEvidence).toBeUndefined();
+    const human = JSON.parse((await runCli([...args,"--include-row-evidence"])).stdout);
+    expect(human.reconciliations[0].recordEvidence.items[0].sourceRows).toEqual([1]);
+    expect(human.reconciliations[0].recordEvidence.items[0].targetRows).toEqual([1,3]);
+    expect(JSON.stringify(human.reconciliations[0].recordEvidence)).not.toContain("ORG_A");
+  }));
   it("renders actual correct files without exposing their organization/order data", async () => fixture(async root => {
     const result = await runCli(command(root));
     expect(result.exitCode).toBe(0);
