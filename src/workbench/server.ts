@@ -17,6 +17,9 @@ import { exportHistorySummary, MAX_OUTPUT, WorkbenchHistory, WorkbenchStateError
 import { parseStrictJson } from "../domain/strict-json.js";
 import { compareIssues } from "../domain/baseline.js";
 import { compareArtifactReports, parseArtifactReport } from "../domain/artifact-report-comparison.js";
+import {previewAcceptancePlan,inspectAcceptancePackage,batchSummary} from "../cli/commands/batch.js";
+import {renderBatchHtml} from "../reporters/batch-html.js";
+import {BatchAcceptanceError} from "../domain/batch-report.js";
 
 const identity = (s: {dev: number; ino: number}) => `${s.dev}:${s.ino}`;
 const inside = (root: string, target: string) => { const r = relative(root, target); return !r || (!r.startsWith("..") && !isAbsolute(r)); };
@@ -38,6 +41,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
   let plan: { id: string; path: string; value: ActionPlan; snapshot: string; historyId:string } | undefined;
   let baseline: {id:string; report:VerificationReport|ArtifactReport; digest:string} | undefined;
   let latestId:string|undefined;
+  let batchPreview:{path:string;sha:string}|undefined;
   let origin = "";
 
   async function checkSelection() {
@@ -46,8 +50,8 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
     if (!s.isDirectory() || s.isSymbolicLink() || identity(s) !== selection.identity || await realpath(selection.path) !== selection.path) throw new WorkbenchStateError("目录已被替换，请重新选择。");
     return selection;
   }
-  async function command(args: string[]): Promise<string> {
-    await history.capacity(); if (cancelled) throw new Error("Cancelled");
+  async function command(args: string[], commandOptions:{reserveHistory?:boolean}={}): Promise<string> {
+    if(commandOptions.reserveHistory!==false)await history.capacity(); if (cancelled) throw new Error("Cancelled");
     return new Promise((accept, reject) => {
       const child = spawn(process.execPath, [cliPath, ...args], { shell: false, stdio: ["ignore", "pipe", "pipe"], env: { PATH: dirname(process.execPath), LANG: "en_US.UTF-8" } });
       active = child; const chunks: Buffer[] = []; let size = 0, failure = "";
@@ -70,6 +74,12 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
     const value: unknown = JSON.parse(text || "{}");
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("请求无效。");
     return value as Record<string, unknown>;
+  }
+  function batchPath(value:unknown):string {
+    if(typeof value!=="string"||!isAbsolute(value)||value.length>4096||/[\p{Cc}]/u.test(value))throw new WorkbenchStateError("请输入独立计划或复核包的完整文件路径。");
+    const path=resolve(value),parent=dirname(path);
+    if(parent==="/"||parent===homedir()||inside(stateDir,path))throw new WorkbenchStateError("请选择独立项目目录中的文件，避免根目录、主目录和私有历史目录。");
+    return path;
   }
   function send(res: ServerResponse, code: number, value: unknown, type = "application/json") {
     res.writeHead(code, { "Content-Type": `${type}; charset=utf-8`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self' about:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" });
@@ -96,7 +106,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
       try {
         if (req.url === "/api/choose") {
           if (process.platform !== "darwin") throw new Error("请在路径框中输入目录或合同的完整路径。");
-          const script = input.file === true ? 'POSIX path of (choose file with prompt "选择核验合同")' : 'POSIX path of (choose folder with prompt "选择核验目录")';
+          const script = input.file === true ? 'POSIX path of (choose file with prompt "选择核验清单、计划或复核包")' : 'POSIX path of (choose folder with prompt "选择核验目录")';
           try {
             const {stdout} = await promisify(execFile)("/usr/bin/osascript", ["-e", script], {timeout: 60_000, maxBuffer: 8192});
             return send(res, 200, {path: stdout.trim()});
@@ -105,11 +115,32 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
             throw new WorkbenchStateError(cancelled ? "已取消选择，原路径保留。" : "系统选择器未完成，请重试或在路径框输入完整路径。");
           }
         }
+        if(req.url==="/api/batch/preview"||req.url==="/api/batch/run"||req.url==="/api/batch/open"){
+          // Batch inspection never leaves a single-Skill mutation capability alive.
+          selection=undefined;plan=undefined;baseline=undefined;latestId=undefined;actionable=[];
+          if(req.url.endsWith("preview")){
+            batchPreview=undefined;const path=batchPath(input.path),data=await previewAcceptancePlan(path);
+            batchPreview={path,sha:data.plan_sha256};return send(res,200,data);
+          }
+          if(req.url.endsWith("open")){
+            batchPreview=undefined;const path=batchPath(input.path);
+            const checked=await inspectAcceptancePackage(path,{expectSha256:typeof input.expectSha256==="string"&&input.expectSha256?input.expectSha256:undefined});
+            return send(res,200,{integrity:"verified",summary:batchSummary(checked.packet.payload),package_sha256:checked.package_sha256,html:renderBatchHtml(checked.packet.payload)});
+          }
+          const path=batchPath(input.path),chosen=batchPreview;batchPreview=undefined;
+          if(!chosen||chosen.path!==path)throw new WorkbenchStateError("请先预检当前验收计划，再执行多批次核验。");
+          const output=batchPath(input.output),args=["batch","run","--plan",path,"--output",output,"--expect-plan-sha256",chosen.sha,"--format","json"];
+          if(typeof input.previous==="string"&&input.previous){args.push("--previous",batchPath(input.previous));if(input.retryFailed===true)args.push("--retry-failed");}
+          const raw=await command(args,{reserveHistory:false}),result=parseStrictJson(raw) as {schema?:string;package_sha256?:string};
+          if(result.schema!=="skillsync.batch-report/v1"||typeof result.package_sha256!=="string"||!/^[a-f0-9]{64}$/.test(result.package_sha256))throw new WorkbenchStateError("多批次结果未确认，请先检查输出文件后再重试。");
+          const checked=await inspectAcceptancePackage(output,{expectSha256:result.package_sha256});
+          return send(res,200,{integrity:"verified",summary:batchSummary(checked.packet.payload),package_sha256:checked.package_sha256,packagePath:output,html:renderBatchHtml(checked.packet.payload)});
+        }
         if (req.url === "/api/history/open" || req.url === "/api/history/export") {
           const {record,output}=await history.read(input.id);
           if(req.url.endsWith("export"))return send(res,200,{html:exportHistorySummary(record)});
           // Viewing old evidence grants no selection or mutation capability.
-          selection=undefined;plan=undefined;baseline=undefined;latestId=undefined;actionable=[];
+          selection=undefined;plan=undefined;baseline=undefined;latestId=undefined;actionable=[];batchPreview=undefined;
           let html:string;
           if(record.kind==="verify")html=record.selection.kind==="skill"?renderVerificationHtml(parseStrictJson(output!) as VerificationReport):renderArtifactsHtml(parseArtifactReport(parseStrictJson(output!)));
           else if(record.kind==="plan")html=preview("历史计划，仅供查看。重新核验后才能生成新计划。\n\n"+describePlan(parseStrictJson(output!) as ActionPlan));
@@ -117,6 +148,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           return send(res,200,{readOnly:true,id:record.id,kind:record.kind,selection:record.selection,baselineId:record.kind==="verify"?record.id:record.baselineId,comparison:record.comparison,html});
         }
         if (req.url === "/api/select") {
+          batchPreview=undefined;
           if (typeof input.path !== "string" || !isAbsolute(input.path) || input.path.length > 4096) throw new WorkbenchStateError("请输入完整目录路径。");
           const path = resolve(input.path), s = await lstat(path);
           if (!s.isDirectory() || s.isSymbolicLink() || await realpath(path) !== path || path === "/" || path === homedir() || inside(path, stateDir) || inside(stateDir, path)) throw new WorkbenchStateError("请选择独立的真实 Skill 或交付目录。");
@@ -205,7 +237,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         }
         return send(res, 404, {error: "未知操作。"});
       } finally { busy = false; applying = false; }
-    } catch (error) { send(res, 400, {error: cancelled ? "核验已取消，未产生完成结果。" : error instanceof WorkbenchStateError ? error.message : error instanceof Error && "code" in error && error.code === "ENOENT" ? "目录或文件不存在，请重新选择或检查历史材料。" : "操作失败，请检查所选目录和验收清单后重新核验。"}); }
+    } catch (error) { send(res, 400, {error: cancelled ? "核验已取消，先检查可能保留的输出，再决定后续操作。" : error instanceof WorkbenchStateError ? error.message : error instanceof BatchAcceptanceError ? error.message : error instanceof Error && "code" in error && error.code === "ENOENT" ? "目录或文件不存在，请重新选择或检查历史材料。" : "操作失败，请检查所选目录和验收清单后重新核验。"}); }
   });
   server.requestTimeout = 130_000; server.headersTimeout = 10_000; server.maxConnections = 8;
   await new Promise<void>((accept, reject) => { server.once("error", reject); server.listen(options.port ?? 14986, "127.0.0.1", accept); });
