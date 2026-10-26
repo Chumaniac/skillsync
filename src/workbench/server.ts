@@ -141,7 +141,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         if (req.url === "/api/verify") {
           plan=undefined;actionable=[];
           const snapshot=selected.kind==="skill"?(await scanStagedWorkspace(selected.path)).digest:undefined;
-          const output = await command(selected.kind === "skill" ? ["verify", "--path", selected.path, "--target", "codex", "--format", "json"] : ["artifacts", "--contract", selected.contract!, selected.delivery ? "--delivery" : "--path", selected.path, "--format", "json"]);
+          const output = await command(selected.kind === "skill" ? ["verify", "--path", selected.path, "--target", "codex", "--format", "json"] : ["artifacts", "--contract", selected.contract!, selected.delivery ? "--delivery" : "--path", selected.path, "--format", "json", "--include-row-evidence"]);
           const report = parseStrictJson(output) as VerificationReport & ArtifactReport;
           await checkSelection();
           if(snapshot && snapshot!==(await scanStagedWorkspace(selected.path)).digest)throw new WorkbenchStateError("核验期间目录已变化，请重新核验。");

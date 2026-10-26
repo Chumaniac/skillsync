@@ -1,4 +1,4 @@
-import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rename, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readFile, readdir, realpath, rename, stat, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -22,6 +22,20 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it("locates affected CSV records in an artifact report and its immutable history", async () => {
+    const {api, base} = await setup();
+    const fixture = join(base, "allocation-review");
+    await cp(resolve("fixtures/product/tenant-reconciliation"), fixture, {recursive:true});
+    await cp(join(fixture,"faults/shifted-allocations.csv"), join(fixture,"artifacts/allocations.csv"));
+    expect((await api("select",{path:join(fixture,"artifacts"),kind:"artifacts",contract:join(fixture,"contract.json")})).status).toBe(200);
+    const checked = await api("verify"); expect(checked.status).toBe(200);
+    for (const html of [checked.data.html, (await api("history/open",{id:checked.data.historyId})).data.html]) {
+      expect(html).toContain('data-source-records="1"');
+      expect(html).toContain('data-target-records="1,3"');
+      expect(html).toContain("exclude the header");
+      for (const privateValue of [base,"ORG_A","ORG_B","ORDER_1"]) expect(html).not.toContain(privateValue);
+    }
+  });
   it("does not let initial history loading block selecting a directory", async () => {
     const {api, root} = await setup();
     let started!: () => void, release!: () => void;

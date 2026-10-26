@@ -590,11 +590,12 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .option("--delivery <path>", "SkillTape delivery bundle directory")
     .option("--path <path>", "Standalone artifact directory; choose this or --delivery")
     .option("--compare <path>", "Compare with a bounded prior artifacts JSON report from the same contract")
+    .option("--include-row-evidence", "Include bounded CSV record positions without record identities or values")
     .option("--format <format>", "Output format: text, json, offline html or sarif", "text")
     .action(async (options: ArtifactsOptions & { format?: string }) => {
       if (!["text", "json", "html", "sarif"].includes(options.format ?? "text")) throw new Error("artifacts format must be text, json, html or sarif");
       if (options.format === "sarif" && options.compare) throw new Error("artifacts SARIF does not support --compare; use json or html");
-      const report = await runArtifacts({ ...options, includeRowEvidence: options.format === "html" });
+      const report = await runArtifacts({ ...options, includeRowEvidence: options.format === "html" || options.includeRowEvidence === true });
       io.writeOut(renderArtifacts(report, options.format));
       if (report.exitCode) io.setExitCode?.(report.exitCode);
     });
