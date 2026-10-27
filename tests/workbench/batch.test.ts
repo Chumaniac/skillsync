@@ -17,6 +17,10 @@ it('previews then creates and reopens a batch package without enabling Skill rep
  const post=async(action:string,body={})=>{const response=await fetch(app.url+'/api/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-SkillSync-Client':nonce},body:JSON.stringify(body)});return {status:response.status,data:await response.json()};};
  const preview=await post('batch/preview',{path});expect(preview.status).toBe(200);expect(preview.data.batches).toHaveLength(2);
  const output=join(base,'first.json');const result=await post('batch/run',{path,output});expect(result.status).toBe(200);expect(result.data.summary.status).toBe('failed');expect(result.data.html).toContain('Batch acceptance');
+ expect(result.data.html).not.toMatch(/<iframe\b|srcdoc=/i);
+ expect((result.data.html.match(/<style>/g)||[]).length).toBe(1);
+ expect(result.data.html).toContain('id="batch-north-issues"');
+ expect(result.data.html).toContain('id="batch-south-issues"');
  const saved=await readFile(output);
  expect((await post('apply',{id:'old',confirm:true})).status).toBe(400);
  const reopened=await post('batch/open',{path:output,expectSha256:result.data.package_sha256});expect(reopened.status).toBe(200);expect(reopened.data.integrity).toBe('verified');

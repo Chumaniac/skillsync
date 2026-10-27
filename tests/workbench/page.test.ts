@@ -8,7 +8,12 @@ class Element {
   children: Element[] = [];
   onclick?: () => Promise<void> | void;
   onchange?: () => void;
+  attributes = new Map<string,string>();
+  focused = false;
+  setAttribute(name: string, value: string) { this.attributes.set(name,value); }
+  focus() { this.focused = true; }
   addEventListener() {}
+  replaceWith(element: Element) { Object.assign(this, element); }
   replaceChildren() { this.children = []; }
   append(...elements: Element[]) { this.children.push(...elements); }
 }
@@ -49,6 +54,18 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
 }
 
 describe("workbench interactions", () => {
+  it("switches task surfaces without submitting or losing entered paths and approved-plan state", async () => {
+    const ui = await page(); await ui.click("verify"); await ui.click("plan");
+    ui.get("root").value="/synthetic/kept"; ui.get("batch-plan").value="/synthetic/plan.json";
+    ui.get("confirm").checked=true;ui.get("confirm").onchange?.();
+    await ui.click("nav-batch");
+    expect(ui.get("task-single").hidden).toBe(true);expect(ui.get("task-batch").hidden).toBe(false);
+    expect(ui.get("fix").hidden).toBe(true);expect(ui.get("result").hidden).toBe(true);
+    await ui.click("nav-single");
+    expect(ui.get("root").value).toBe("/synthetic/kept");expect(ui.get("batch-plan").value).toBe("/synthetic/plan.json");
+    expect(ui.get("confirm").checked).toBe(true);expect(ui.get("fix").hidden).toBe(false);
+    expect(ui.get("selection").focused).toBe(true);expect(ui.get("nav-single").attributes.get("aria-pressed")).toBe("true");
+  });
   it.each([["reverify", "verify", "Synthetic verification failed"], ["reverify", "verify", "核验已取消"], ["plan", "plan", "Synthetic plan failed"]])("revokes the old plan when %s does not complete: %s", async (button, action, message) => {
     const ui = await page(); await ui.click("verify"); await ui.click("plan");
     ui.get("confirm").checked = true; ui.get("confirm").onchange?.();
@@ -56,6 +73,13 @@ describe("workbench interactions", () => {
     ui.fail(action, message); await ui.click(button);
     expect(ui.get("fix").hidden).toBe(true); expect(ui.get("confirm").checked).toBe(false);
     expect(ui.get("apply").disabled).toBe(true);
+  });
+  it("hides stale evidence when a later verification fails", async () => {
+    const ui=await page();await ui.click("verify");
+    expect(ui.get("result").hidden).toBe(false);
+    ui.fail("verify","Synthetic verification failed");await ui.click("verify");
+    expect(ui.get("result").hidden).toBe(true);expect(ui.get("report").srcdoc).toBe("");
+    expect(ui.get("verify").disabled).toBe(false);
   });
   it("refreshes the latest result even when the initial history read arrives later", async () => {
     const ui = await page(undefined, true);
