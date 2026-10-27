@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderArtifacts, type ArtifactReport } from "../../src/cli/commands/artifacts.js";
+import { renderArtifactsFragment } from "../../src/reporters/artifacts-html.js";
 import { VERSION } from "../../src/version.js";
 
 function report(): ArtifactReport {
@@ -13,6 +14,13 @@ function report(): ArtifactReport {
 }
 
 describe("offline artifact acceptance HTML", () => {
+  it("isolates batch anchor namespaces and rejects attribute injection in a prefix", () => {
+    const html=renderArtifactsFragment(report(),"batch-north-");
+    expect(html).toContain('id="batch-north-issue-title"');
+    expect(html).toContain('href="#batch-north-file-title"');
+    expect(html).not.toMatch(/<!doctype|<style|<iframe|<script/i);
+    expect(()=>renderArtifactsFragment(report(),'bad" onclick="x')).toThrow("Invalid report section prefix");
+  });
   it("escapes and bounds declaration metadata with no scripts or external destinations", () => {
     const value = report();
     value.declarations = { limits: { max_files: 3, max_file_bytes: 4096, max_total_bytes: 8192 }, checks: Array.from({ length: 128 }, (_, index) => ({ ordinal: index + 1, check: { type: "csv_summary" as const, csv: "<script>SOURCE</script>", json: "/private/tmp/PRIVATE_DECLARATION", row_count_field: "rows", sums: Array.from({ length: 128 }, () => ({ column: "&".repeat(128), field: "&".repeat(128) })) } })) };

@@ -25,7 +25,7 @@ skillsync batch inspect --package /project/corrected-review.json --contract /pro
 
 The run exits 0 for all passed, 1 for failed, or 2 for incomplete/invalid evidence. Inspection exits 0 when the package is internally valid even if its acceptance result failed; use the embedded status/exitCode when making an acceptance decision. Output files must be new; existing packages and source files are never overwritten. A retry verifies passed input hashes before reusing evidence. Changed contract bytes, case identities or passed input content require a fresh run, without reusing the previous package. Current and prior reports remain available for comparison; unknown or truncated evidence cannot claim resolved findings.
 
-In **gui**, expand the multi-batch acceptance and offline review section, choose a plan and preflight it, then explicitly run into a new file. After a correction, select the prior package and the failed-only option, preflight again and run into another new file. Open an existing package read-only with an optional expected SHA-256 obtained independently. Opening evidence clears any single-Skill repair capability. Cancellation may retain an already published package: inspect the chosen output before retrying.
+In **gui**, choose the multi-batch acceptance task, select a plan and preflight it, then explicitly run into a new file. After a correction, select the prior package and the failed-only option, preflight again and run into another new file. Open an existing package read-only with an optional expected SHA-256 obtained independently. Opening evidence clears any single-Skill repair capability. Cancellation may retain an already published package: inspect the chosen output before retrying.
 
 The single JSON package includes the exact original plan SHA-256, the public declaration, per-batch file inventory, file/report hashes, complete bounded reports and comparisons. It omits source bodies, raw record values, contract expected scalar values and absolute source paths. Relative file names, case names and column metadata may still be sensitive. The scriptless HTML view can be reconstructed offline; oversized detail views are omitted with a visible notice, while the bounded JSON evidence remains.
 
@@ -34,3 +34,19 @@ Shared admission limits: 16 batches, 10,000 files, 20,000 input entries, 16 MiB/
 Package verification checks internal structure, counts, file/report digest bindings and comparison consistency. An expected package SHA-256 binds exact bytes; supplying the original contract also verifies its exact bytes and declaration scope. Optional `--plan` checks exact plan bytes without reading source data; a source-path mapping change also invalidates prior-plan reuse. These checks do not authenticate authorship, fetch cited sources, rerun original business data, or establish production acceptance. A self-consistent replacement package can be written by anyone; keep the digest through an independent trusted channel.
 
 The design independently applies declared validation batches and retained validation results described by [Great Expectations Checkpoints](https://docs.greatexpectations.io/docs/reference/api/checkpoint_class/) and [Frictionless validation](https://framework.frictionlessdata.io/docs/guides/validating-data). No upstream code or runtime dependency is copied. This source change does not republish existing v0.3.0 downloads or npm releases.
+
+
+The workbench separates single-directory verification, batch acceptance and saved
+history. Switching tasks keeps the same form nodes and entered paths, without
+submitting a request or changing a repair approval. Reports remain associated
+with the task that produced them. Cancellation stays available across tasks;
+new verification hides the previous result until a fresh response arrives.
+
+Offline batch reports share the standalone artifact renderer and one style
+sheet. Each batch has its own section IDs and links; its check details are plain
+HTML under a disclosure, rather than another full document in a nested frame.
+The display still bounds each report and the combined HTML independently of
+JSON evidence. Scripts, source bodies and expected scalar values remain absent.
+The workbench retains its outer sandboxed report frame. These changes adapt
+Impeccable/Interface Design's task hierarchy and code-humanizer's reuse of proven
+rendering logic; no upstream runtime or global configuration is installed.
