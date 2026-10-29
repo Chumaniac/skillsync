@@ -192,3 +192,35 @@ describe("real CLI graphical workbench", () => {
     expect((await api("select", {path:root,kind:"skill"})).status).toBe(200);
   });
 });
+
+
+  it.each(["replace", "same-size", "delete", "link"])("does not save current history when the contract changes after CLI verification: %s", async mutation => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "sync-contract-gui-")));
+    const fixture = join(root, "fixture"); await cp(resolve("fixtures/product/order-summary"), fixture, {recursive:true});
+    const contract = join(fixture, "contract.json"), marker = join(root, "mutate"), launcher = join(root, "changed.cjs");
+    await writeFile(launcher, `
+      const fs=require('node:fs'),{spawnSync}=require('node:child_process');
+      const args=process.argv.slice(2),path=${JSON.stringify(contract)},marker=${JSON.stringify(marker)},mode=${JSON.stringify(mutation)};
+      const result=spawnSync(process.execPath,[${JSON.stringify(resolve("dist/cli/index.js"))},...args],{encoding:'utf8'});
+      if(args[0]==='artifacts'&&fs.existsSync(marker)){
+        const bytes=fs.readFileSync(path);
+        if(mode==='delete')fs.unlinkSync(path);
+        else if(mode==='same-size'){const index=bytes.indexOf(Buffer.from('"equals": 1'));if(index<0)throw Error('Synthetic marker missing');bytes[index+10]=50;fs.writeFileSync(path,bytes);}
+        else{fs.renameSync(path,path+'.retained');if(mode==='link')fs.symlinkSync(path+'.retained',path);else fs.writeFileSync(path,bytes);}
+      }
+      process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');process.exitCode=result.status??1;
+    `);
+    const {api} = await setup(launcher);
+    expect((await api("select",{path:join(fixture,"artifacts"),kind:"artifacts",contract})).status).toBe(200);
+    const first=await api("verify");expect(first.status).toBe(200);
+    await writeFile(marker,"1");const changed=await api("verify");expect(changed.status).toBe(400);expect(changed.data.error).toContain("合同");expect(changed.data.error).not.toContain(root);
+    expect((await api("history")).data.total).toBe(1);expect((await api("history/open",{id:first.data.historyId})).status).toBe(200);
+  });
+
+
+it("reads the current contract at verification start rather than pinning a prior file-picker choice", async () => {
+  const {api, base} = await setup();const fixture=join(base,"contract-before-start");await cp(resolve("fixtures/product/order-summary"),fixture,{recursive:true});const contract=join(fixture,"contract.json");
+  expect((await api("select",{path:join(fixture,"artifacts"),kind:"artifacts",contract})).status).toBe(200);
+  const contents=await readFile(contract,"utf8");await writeFile(contract,contents+"\n");
+  const outcome=await api("verify");expect(outcome.status).toBe(200);expect(outcome.data.html).toContain("Declared checks passed");expect((await api("history")).data.total).toBe(1);
+});

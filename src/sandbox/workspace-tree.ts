@@ -63,7 +63,8 @@ export async function readWorkspaceFile(path: string, maxBytes: number, expected
     const metadata = expected ?? await lstat(path);
     if (!metadata.isFile() || metadata.isSymbolicLink()) throw new WorkspaceTreeError("only regular files are readable");
     if (!Number.isSafeInteger(metadata.size) || metadata.size > maxBytes) throw new WorkspaceTreeLimitError("file exceeds the read limit");
-    const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    // A FIFO substituted after lstat must not wait for a writer before fstat can reject it.
+    const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
     try {
       const before = await handle.stat();
       if (!before.isFile() || !unchanged(metadata, before)) throw new WorkspaceTreeError("workspace changed during inspection");
