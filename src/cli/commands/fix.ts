@@ -178,12 +178,25 @@ export function renderFixApply(receipt: ApplyReceipt, format: string | undefined
   return `${lines.join("\n")}\n`;
 }
 
-export function renderFixApplyError(error: ActionPlanApplyError): string {
+export function renderFixApplyError(error: ActionPlanApplyError, format = "json"): string {
+  if (format === "text") {
+    if (error.receipt) return renderFixApply(error.receipt, "text");
+    if (error.recovery) return [
+      `ActionPlan status: ${error.recovery.status}`,
+      `Backup: ${error.recovery.backupPath}`,
+      `Changed paths: ${error.recovery.changedPaths.join(", ") || "none"}`,
+      `Rollback failed paths: ${error.recovery.failedPaths.join(", ") || "none"}`,
+      "No automatic retry. Inspect the original directory and retained backups before further changes.",
+      "",
+    ].join("\n");
+    return "ActionPlan application failed; no recovery receipt is available.\n";
+  }
   return `${JSON.stringify({
     error: {
       name: error.name,
       message: error.message,
       ...(error.receipt === undefined ? {} : { receipt: error.receipt }),
+      ...(error.recovery === undefined ? {} : { recovery: error.recovery }),
       ...(error.rollbackError === undefined
         ? {}
         : { rollback: { failedPaths: error.rollbackError.failedPaths } }),

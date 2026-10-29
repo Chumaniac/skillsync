@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runCli } from "../../src/cli/index";
+import { createActionPlan, planDigest, type ActionPlan } from "../../src/domain/action-plan";
 import type { VerificationReport } from "../../src/cli/commands/verify";
 
 const VALID_DIGEST = `sha256:${"a".repeat(64)}`;
@@ -30,23 +31,25 @@ async function verificationReport(root: string): Promise<VerificationReport> {
   return JSON.parse(result.stdout) as VerificationReport;
 }
 
+function reviewedPlan(content: Omit<ActionPlan, "planDigest" | "generatedAt">): ActionPlan {
+  return {...content, generatedAt:"2026-08-05T00:00:00.000Z", planDigest:planDigest(content)};
+}
+
 function validPlanPayload(root: string, issueIds: string[]) {
-  return {
+  return reviewedPlan({
     schema_version: 1,
     rootPath: root,
-    generatedAt: "2026-08-05T00:00:00.000Z",
     issueIds,
     changes: [{ path: "SKILL.md", before: "before", after: "after", safety: "safe" }],
     manualSteps: [],
-    planDigest: VALID_DIGEST,
-  };
+  });
 }
 
-function validReceiptPayload() {
+function validReceiptPayload(digest = VALID_DIGEST) {
   return {
     schema_version: 1,
     status: "applied",
-    planDigest: VALID_DIGEST,
+    planDigest: digest,
     changedPaths: ["SKILL.md"],
     generatedAt: "2026-08-05T00:01:00.000Z",
   };
@@ -99,7 +102,8 @@ describe("skillsync report", () => {
     const receiptPath = join(root, "receipt.json");
     await writeFile(beforePath, JSON.stringify(source));
     await writeFile(afterPath, JSON.stringify({ ...source, exitCode: 0, issues: [] }));
-    await writeFile(planPath, JSON.stringify(validPlanPayload(root, source.issues.map((issue) => issue.id))));
+    const plan = validPlanPayload(root, source.issues.map((issue) => issue.id));
+    await writeFile(planPath, JSON.stringify(plan));
     const unrelatedDigest = `sha256:${"b".repeat(64)}`;
     await writeFile(receiptPath, JSON.stringify({ ...validReceiptPayload(), planDigest: unrelatedDigest }));
 
@@ -112,7 +116,7 @@ describe("skillsync report", () => {
     expect(unrelated.stderr).not.toContain(root);
     expect(unrelated.stderr).not.toContain(unrelatedDigest);
 
-    await writeFile(receiptPath, JSON.stringify(validReceiptPayload()));
+    await writeFile(receiptPath, JSON.stringify(validReceiptPayload(plan.planDigest)));
     const matching = await runCli(args);
     expect(matching.exitCode).toBe(0);
     expect(matching.stderr).toBe("");
@@ -201,25 +205,14 @@ describe("skillsync report", () => {
     const afterPath = join(root, "after-private.json");
     const planPath = join(root, "plan-private.json");
     const receiptPath = join(root, "receipt-private.json");
-    const receiptPayload = {
-      schema_version: 1,
-      status: "applied",
-      planDigest: VALID_DIGEST,
-      changedPaths: ["SKILL.md"],
-      backupPath: root,
-      generatedAt: "2026-08-05T00:01:00.000Z",
-    };
+    const plan = reviewedPlan({
+      schema_version:1, rootPath:root, issueIds:source.issues.map(issue=>issue.id),
+      changes:[{path:"SKILL.md",before:"private source",after:"private replacement",safety:"safe"}],manualSteps:[],
+    });
+    const receiptPayload = {...validReceiptPayload(plan.planDigest),backupPath:root};
     await writeFile(beforePath, JSON.stringify(source));
     await writeFile(afterPath, JSON.stringify({ ...source, exitCode: 0, issues: [] }));
-    await writeFile(planPath, JSON.stringify({
-      schema_version: 1,
-      rootPath: root,
-      generatedAt: "2026-08-05T00:00:00.000Z",
-      issueIds: source.issues.map((issue) => issue.id),
-      changes: [{ path: "SKILL.md", before: "private source", after: "private replacement", safety: "safe" }],
-      manualSteps: [],
-      planDigest: VALID_DIGEST,
-    }));
+    await writeFile(planPath, JSON.stringify(plan));
     await writeFile(receiptPath, JSON.stringify(receiptPayload));
 
     const markdown = await runCli([
@@ -456,4 +449,21 @@ describe("skillsync report", () => {
       expect(result.stderr, item.name).not.toContain(item.marker);
     }
   });
+});
+
+
+it.each(["rootPath", "rootIdentity", "changes", "issueIds", "manualSteps"])("rejects a plan whose %s changed after review without leaking its contents", async (field) => {
+  const root = await createSkillRoot(), source = await verificationReport(root);
+  const plan = createActionPlan({rootPath:root, rootIdentity:"1:2", issues:source.issues});
+  const before = join(root,"before-plan.json"), after = join(root,"after-plan.json"), file = join(root,"reviewed-plan.json");
+  await writeFile(before,JSON.stringify(source));await writeFile(after,JSON.stringify({...source,exitCode:0,issues:[]}));
+  const args=["report","--before",before,"--after",after,"--plan",file,"--format","json","--fail-on-unverified"];
+  await writeFile(file,JSON.stringify(plan));expect((await runCli(args)).exitCode).toBe(0);
+  if(field==="rootPath")plan.rootPath=join(root,"PRIVATE_TAMPER_MARKER");
+  if(field==="rootIdentity")plan.rootIdentity="3:4";
+  if(field==="changes")plan.changes.push({path:"SKILL.md",before:"PRIVATE_TAMPER_MARKER",after:"changed",safety:"safe"});
+  if(field==="issueIds")plan.issueIds.push("iss_"+"f".repeat(64));
+  if(field==="manualSteps")plan.manualSteps.push({issueId:source.issues[0]!.id,title:"PRIVATE_TAMPER_MARKER",steps:["changed"]});
+  await writeFile(file,JSON.stringify(plan));const result=await runCli(args);
+  expect(result.exitCode).not.toBe(0);expect(result.stdout).toBe("");expect(result.stderr).toContain("ActionPlan digest does not match its contents");expect(result.stderr).not.toContain(root);expect(result.stderr).not.toContain("PRIVATE_TAMPER_MARKER");
 });

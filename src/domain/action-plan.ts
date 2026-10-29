@@ -53,6 +53,25 @@ export function planDigest(plan: Omit<ActionPlan, "planDigest" | "generatedAt">)
   return `sha256:${createHash("sha256").update(canonicalJson(plan)).digest("hex")}`;
 }
 
+/** Check the same reviewed content before applying a plan or citing it as evidence. */
+export function assertActionPlanIntegrity(plan: ActionPlan): void {
+  if (plan.rootIdentity !== undefined &&
+    (typeof plan.rootIdentity !== "string" || !/^\d+:\d+$/.test(plan.rootIdentity))) {
+    throw new Error("ActionPlan root identity is invalid");
+  }
+  const expected = planDigest({
+    schema_version: plan.schema_version,
+    rootPath: plan.rootPath,
+    ...(plan.rootIdentity === undefined ? {} : { rootIdentity: plan.rootIdentity }),
+    issueIds: plan.issueIds,
+    changes: plan.changes,
+    manualSteps: plan.manualSteps,
+  });
+  if (plan.planDigest !== expected) {
+    throw new Error("ActionPlan digest does not match its contents");
+  }
+}
+
 export function createActionPlan(input: {
   rootPath: string;
   rootIdentity?: string;

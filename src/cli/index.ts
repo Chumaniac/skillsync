@@ -377,8 +377,8 @@ export function createCli(io: CliIO = defaultCliIO): Command {
           } satisfies FixApplyOptions);
           io.writeOut(renderFixApply(receipt, options.format));
         } catch (error: unknown) {
-          if (error instanceof ActionPlanApplyError && options.format === "json") {
-            io.writeOut(renderFixApplyError(error));
+          if (error instanceof ActionPlanApplyError) {
+            io.writeOut(renderFixApplyError(error, options.format));
           }
           throw error;
         }
