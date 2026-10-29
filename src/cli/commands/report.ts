@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { isAbsolute } from "node:path";
 
 import type { ActionPlan } from "../../domain/action-plan.js";
+import { assertActionPlanIntegrity } from "../../domain/action-plan.js";
 import type { Baseline } from "../../domain/baseline.js";
 import { createEvidenceReport, type EvidenceReport, type VerificationSnapshot } from "../../domain/evidence-report.js";
 import type { Issue } from "../../domain/issue.js";
@@ -209,7 +210,9 @@ async function readPlan(path: string): Promise<ActionPlan> {
       Array.isArray(step.steps) && step.steps.every((item) => typeof item === "string"))) {
     throw new Error("Invalid ActionPlan.");
   }
-  return value as unknown as ActionPlan;
+  const plan = value as unknown as ActionPlan;
+  assertActionPlanIntegrity(plan);
+  return plan;
 }
 
 async function readReceipt(path: string): Promise<ApplyReceipt> {

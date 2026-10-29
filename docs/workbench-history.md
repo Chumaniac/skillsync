@@ -21,6 +21,41 @@ Older saved plans can still be viewed, but cannot regain a workbench apply butto
 This detects replacements at the checked boundaries; it is not an operating-system
 lock against a process concurrently changing the filesystem.
 
+## Reviewed plans and failed apply recovery
+
+`skillsync report --plan` now recomputes the same canonical ActionPlan digest
+used before application. Changing the root path/identity, Issue IDs, patches or
+manual steps while retaining an old digest is rejected before any report is
+rendered, including when a matching-looking Receipt is supplied. Errors do not
+echo the plan contents or root path. Generated time remains outside the existing
+digest contract. Legacy plans without a root identity remain readable for offline
+reporting; reopening them still cannot restore a workbench apply capability.
+
+An apply failure retains its temporary original-file backups, including when
+successful-operation backups were disabled. The CLI now reports that location
+in text and JSON. A complete rollback returns the existing `restored` receipt.
+If directory replacement or another failure prevents complete rollback, JSON
+contains `error.recovery` with `status: rollback-incomplete`, the plan digest,
+backup path, changed paths and failed rollback paths. This recovery record is
+not an ApplyReceipt and cannot be cited as an applied/restored result. No
+automatic retry or restore into a replacement directory occurs. Inspect the
+original directory and retained materials before further changes; do not rerun
+the mutation just to rediscover a backup path.
+
+The workbench retains its existing unconfirmed-apply intent on a failed child
+command; these CLI diagnostics do not turn it into a completed apply or revive
+an old plan. Recheck the selected directory separately.
+
+2026-10-29 local checks used synthetic files: 718 distinct checks passed and one
+existing check was skipped. The initial restricted-context run passed 700;
+18 integration checks requiring loopback access and the built CLI passed after
+that prerequisite was supplied. TypeScript, lint and build passed. The actual
+CLI completed plan → apply → verify → evidence report (before exit 1, after exit
+0), then rejected five altered plans without changing inputs. Controlled
+filesystem fault injection covered incomplete and complete rollback with both
+backup settings, retained originals and untouched replacement files. No Skill
+script, provider, production deployment or installed version was executed.
+
 The list reads only small metadata records and shows twelve entries per page.
 Only opening a record reads its bounded, digest-bound body. The original limit
 is **120 state files and 64 MiB**, not 120 tasks. A report normally uses two

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 
-import { planDigest } from "./action-plan.js";
+import { assertActionPlanIntegrity } from "./action-plan.js";
 import type { ActionPlan } from "./action-plan.js";
 import { normalizeRelativePath } from "./digest.js";
 import type { PatchChange } from "./resolution.js";
@@ -23,6 +23,16 @@ export type RollbackFailure = {
   error: Error;
 };
 
+export type ApplyRecovery = {
+  schema_version: 1;
+  status: "rollback-incomplete";
+  planDigest: string;
+  backupPath: string;
+  changedPaths: string[];
+  failedPaths: string[];
+  generatedAt: string;
+};
+
 export class ActionPlanRollbackError extends Error {
   constructor(readonly failures: RollbackFailure[]) {
     super(`ActionPlan rollback failed for: ${failures.map(({ path }) => path).join(", ")}`);
@@ -37,8 +47,9 @@ export class ActionPlanRollbackError extends Error {
 export class ActionPlanApplyError extends Error {
   readonly receipt?: ApplyReceipt;
   readonly rollbackError?: ActionPlanRollbackError;
+  readonly recovery?: ApplyRecovery;
 
-  constructor(message: string, details: { receipt?: ApplyReceipt; rollbackError?: ActionPlanRollbackError } = {}) {
+  constructor(message: string, details: { receipt?: ApplyReceipt; rollbackError?: ActionPlanRollbackError; recovery?: ApplyRecovery } = {}) {
     super(message);
     this.name = "ActionPlanApplyError";
     if (details.receipt !== undefined) {
@@ -47,6 +58,7 @@ export class ActionPlanApplyError extends Error {
     if (details.rollbackError !== undefined) {
       this.rollbackError = details.rollbackError;
     }
+    if (details.recovery !== undefined) this.recovery = details.recovery;
   }
 }
 
@@ -174,26 +186,13 @@ export async function applyActionPlan(
     throw new Error("Applying an ActionPlan requires --yes");
   }
 
-  const expectedDigest = planDigest({
-    schema_version: plan.schema_version,
-    rootPath: plan.rootPath,
-    issueIds: plan.issueIds,
-    changes: plan.changes,
-    manualSteps: plan.manualSteps,
-    ...(plan.rootIdentity === undefined ? {} : { rootIdentity: plan.rootIdentity }),
-  });
-  if (plan.planDigest !== expectedDigest) {
-    throw new Error("ActionPlan digest does not match its contents");
-  }
+  assertActionPlanIntegrity(plan);
 
   const rootPath = await realpath(plan.rootPath).catch(() => {
     throw new Error("ActionPlan rootPath must resolve to an existing directory");
   });
   if (!(await stat(rootPath)).isDirectory()) {
     throw new Error("ActionPlan rootPath must resolve to an existing directory");
-  }
-  if (plan.rootIdentity !== undefined && (typeof plan.rootIdentity !== "string" || !/^\d+:\d+$/.test(plan.rootIdentity))) {
-    throw new Error("ActionPlan root identity is invalid");
   }
   async function checkRoot(): Promise<void> {
     // Older CLI plans remain readable; newly generated plans bind the reviewed
@@ -295,10 +294,16 @@ export async function applyActionPlan(
     const detail = error instanceof Error ? error.message : "unknown write failure";
     if (rollbackFailures.length > 0) {
       const rollbackError = new ActionPlanRollbackError(rollbackFailures);
-      throw new ActionPlanApplyError(`ActionPlan application failed and rollback was incomplete: ${detail}`, { rollbackError });
+      const recovery: ApplyRecovery = {
+        schema_version: 1, status: "rollback-incomplete", planDigest: plan.planDigest,
+        backupPath: temporaryBackupPath, changedPaths: changed.map(item => item.normalizedPath),
+        failedPaths: rollbackError.failedPaths, generatedAt: new Date().toISOString(),
+      };
+      throw new ActionPlanApplyError(`ActionPlan application failed and rollback was incomplete: ${detail}`, { rollbackError, recovery });
     }
-    const retainedBackupPath = options.backup === false ? undefined : temporaryBackupPath;
-    const receipt = receiptFor("restored", plan, changed.map((item) => item.normalizedPath), retainedBackupPath);
+    // Failure backups are retained even when success backups were disabled.
+    // Always expose their location instead of leaving undiscoverable materials.
+    const receipt = receiptFor("restored", plan, changed.map((item) => item.normalizedPath), temporaryBackupPath);
     throw new ActionPlanApplyError(`ActionPlan application failed; restored prior changes: ${detail}`, { receipt });
   }
 
