@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Stats } from "node:fs";
 import { lstat } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -58,9 +59,13 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
     if (report.findings.length < 256) report.findings.push({ code, ...(path ? { path } : {}), ...(field ? { field } : {}) });
   };
   let contract;
+  let contractStamp: Stats;
+  let contractBytesDigest: string;
   try {
     if (Boolean(options.delivery) === Boolean(options.path)) throw new Error("select one directory");
-    const bytes = await readWorkspaceFile(options.contract, 64 * 1024);
+    contractStamp = await lstat(options.contract);
+    const bytes = await readWorkspaceFile(options.contract, 64 * 1024, contractStamp);
+    contractBytesDigest = hash(bytes);
     contract = parseArtifactContract(parseYaml(new TextDecoder("utf-8", { fatal: true }).decode(bytes), { maxAliasCount: 100, prettyErrors: false, logLevel: "silent" }));
     report.contract_sha256 = hash(JSON.stringify(contract));
     // Only validated cross-file metadata is included; scalar expected values and raw cells are omitted.
@@ -158,6 +163,18 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
   const reconciled = reconciliation.finish();
   if (reconciled.summaries.length) report.reconciliations = reconciled.summaries;
   for (const finding of reconciled.findings) if (report.findings.length < 256) report.findings.push(finding);
+  // The parsed-contract digest keeps its v1 meaning. This private byte/identity
+  // binding additionally requires the selected file to stay stable during inspection.
+  try {
+    if (hash(await readWorkspaceFile(options.contract, 64 * 1024, contractStamp)) !== contractBytesDigest) throw new Error("contract changed");
+  } catch {
+    report.files = [];
+    delete report.artifact_set_sha256;
+    delete report.reconciliations;
+    report.findings = [{ code: "artifact.contract-changed-during-check" }];
+    report.status = "failed"; report.exitCode = 2;
+    return report;
+  }
   if (!report.findings.length) { report.status = "passed"; report.exitCode = 0; }
   return report;
 }

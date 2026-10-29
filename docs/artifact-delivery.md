@@ -364,3 +364,23 @@ reports, while HTML/SARIF reporters and workbench history consume the shared dom
 contract. Domain modules do not depend on CLI implementation types. The prior CLI
 and comparison type export paths remain compatible. This reorganization changes
 neither the report schema nor the meaning of a physical-file check.
+
+
+## Contract stability during verification (current source)
+
+A single artifact check now binds the selected contract's regular-file identity
+and exact bytes from its initial bounded read until inspection finishes. A
+replacement, deletion, link, recording-time edit or inaccessible contract makes
+the check incomplete (exit 2, `artifact.contract-changed-during-check`), with no
+accepted file observations. The original files are not rewritten. The existing
+v1 `contract_sha256` still hashes the normalized parsed contract; its meaning and
+the report schema have not changed.
+
+The local workbench applies the same bounded read before launching its CLI and
+checks again before saving current history. Changes during the operation return
+an error instead of a completed result or a new history entry. Earlier immutable
+history remains readable. Selecting a path does not freeze it indefinitely:
+edits made before a new verification starts are checked as its current input.
+A special file substituted after metadata inspection cannot block the reader
+waiting for a FIFO writer. This adds no Skill execution, provider calls, file
+repair or new installation/release behavior.

@@ -1,6 +1,7 @@
 import { execFile, spawn, type ChildProcess } from "node:child_process";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { Stats } from "node:fs";
 import { chmod, lstat, mkdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -11,7 +12,7 @@ import type { VerificationReport } from "../cli/commands/verify.js";
 import type { ArtifactReport } from "../domain/artifact-report.js";
 import { renderVerificationHtml } from "../reporters/verification-html.js";
 import { renderArtifactsHtml } from "../reporters/artifacts-html.js";
-import { scanStagedWorkspace } from "../sandbox/workspace-tree.js";
+import { readWorkspaceFile, scanStagedWorkspace } from "../sandbox/workspace-tree.js";
 import { workbenchPage, workbenchScript, workbenchStyle } from "./page.js";
 import { exportHistorySummary, MAX_OUTPUT, WorkbenchHistory, WorkbenchStateError, type HistoryComparison, type Selection } from "./history.js";
 import { parseStrictJson } from "../domain/strict-json.js";
@@ -173,10 +174,22 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         if (req.url === "/api/verify") {
           plan=undefined;actionable=[];
           const snapshot=selected.kind==="skill"?(await scanStagedWorkspace(selected.path)).digest:undefined;
+          let contractSnapshot: { stamp: Stats; digest: string } | undefined;
+          if (selected.kind === "artifacts") {
+            try {
+              const stamp = await lstat(selected.contract!);
+              contractSnapshot = { stamp, digest: createHash("sha256").update(await readWorkspaceFile(selected.contract!, 64 * 1024, stamp)).digest("hex") };
+            } catch { throw new WorkbenchStateError("合同无法稳定读取，请检查文件后重新核验。"); }
+          }
           const output = await command(selected.kind === "skill" ? ["verify", "--path", selected.path, "--target", "codex", "--format", "json"] : ["artifacts", "--contract", selected.contract!, selected.delivery ? "--delivery" : "--path", selected.path, "--format", "json", "--include-row-evidence"]);
           const report = parseStrictJson(output) as VerificationReport & ArtifactReport;
           await checkSelection();
           if(snapshot && snapshot!==(await scanStagedWorkspace(selected.path)).digest)throw new WorkbenchStateError("核验期间目录已变化，请重新核验。");
+          if (contractSnapshot) {
+            let unchanged = false;
+            try { unchanged = createHash("sha256").update(await readWorkspaceFile(selected.contract!, 64 * 1024, contractSnapshot.stamp)).digest("hex") === contractSnapshot.digest; } catch { /* Changed/unreadable contracts cannot become current history. */ }
+            if (!unchanged) throw new WorkbenchStateError("核验期间合同已变化，请重新核验；此次结果未保存到历史。");
+          }
           if (selected.kind === "skill") actionable = report.issues.filter(i => i.finding.status === "fail" || i.finding.status === "warn").map(i => i.id);
           const html = selected.kind === "skill" ? renderVerificationHtml(report) : renderArtifactsHtml(report);
           let comparison:HistoryComparison|undefined;
