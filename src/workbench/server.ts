@@ -13,6 +13,7 @@ import type { ArtifactReport } from "../domain/artifact-report.js";
 import { renderVerificationHtml } from "../reporters/verification-html.js";
 import { renderArtifactsHtml } from "../reporters/artifacts-html.js";
 import { readWorkspaceFile, scanStagedWorkspace } from "../sandbox/workspace-tree.js";
+import { journeySummary } from "./journey-summary.js";
 import { workbenchPage, workbenchScript, workbenchStyle } from "./page.js";
 import { exportHistorySummary, MAX_OUTPUT, WorkbenchHistory, WorkbenchStateError, type HistoryComparison, type Selection } from "./history.js";
 import { parseStrictJson } from "../domain/strict-json.js";
@@ -146,7 +147,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           if(record.kind==="verify")html=record.selection.kind==="skill"?renderVerificationHtml(parseStrictJson(output!) as VerificationReport):renderArtifactsHtml(parseArtifactReport(parseStrictJson(output!)));
           else if(record.kind==="plan")html=preview("历史计划，仅供查看。重新核验后才能生成新计划。\n\n"+describePlan(parseStrictJson(output!) as ActionPlan));
           else html=preview(record.kind==="apply-intent"?"应用请求已记录。请查看关联回执；若结果未确认，先核验当前目录。":"应用回执已保留；仍需另行核验当前目录。");
-          return send(res,200,{readOnly:true,id:record.id,kind:record.kind,selection:record.selection,baselineId:record.kind==="verify"?record.id:record.baselineId,comparison:record.comparison,html});
+          return send(res,200,{readOnly:true,id:record.id,kind:record.kind,selection:record.selection,baselineId:record.kind==="verify"?record.id:record.baselineId,comparison:record.comparison,html,summary:record.kind==="verify"?journeySummary(record.selection.kind,record.selection.kind==="skill"?parseStrictJson(output!) as VerificationReport:parseArtifactReport(parseStrictJson(output!)),true):undefined});
         }
         if (req.url === "/api/select") {
           batchPreview=undefined;
@@ -213,7 +214,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           }
           const saved=await history.append({kind:"verify",selection:selected,snapshot,baselineId:baseline?.id,parentId:latestId,exitCode:report.exitCode,comparison},output);
           latestId=saved.id;baseline??={id:saved.id,report,digest:saved.dataSha256!};
-          return send(res, 200, {html, historyId:saved.id, baselineId:baseline.id, comparison, status: report.exitCode === 0 ? "已声明检查通过" : "存在待处理项", exitCode: report.exitCode});
+          return send(res, 200, {html, historyId:saved.id, baselineId:baseline.id, comparison, summary:journeySummary(selected.kind,report), status: report.exitCode === 0 ? "已声明检查通过" : "存在待处理项", exitCode: report.exitCode});
         }
         if (selected.kind !== "skill") throw new WorkbenchStateError("交付核验不提供自动修复。");
         if (req.url === "/api/plan") {
