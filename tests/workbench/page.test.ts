@@ -12,7 +12,8 @@ class Element {
   focused = false;
   setAttribute(name: string, value: string) { this.attributes.set(name,value); }
   focus() { this.focused = true; }
-  addEventListener() {}
+  events=new Map<string,()=>void>();
+  addEventListener(name:string,handler:()=>void) {this.events.set(name,handler);}
   replaceWith(element: Element) { Object.assign(this, element); }
   replaceChildren() { this.children = []; }
   append(...elements: Element[]) { this.children.push(...elements); }
@@ -55,6 +56,21 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
 }
 
 describe("workbench interactions", () => {
+  it("invalidates prior evidence while typing, before blur can move the verification button",async()=>{
+   const ui=await page();await ui.click("verify");expect(ui.get("result").hidden).toBe(false);const requests=ui.actions.length;
+   ui.get("root").value="/synthetic/another";ui.get("root").events.get("input")?.();expect(ui.get("result").hidden).toBe(true);expect(ui.get("plan").disabled).toBe(true);expect(ui.actions.length).toBe(requests);
+  });
+
+  it.each([false,true])("requires fresh verification after an apply attempt, including failure=%s",async failure=>{
+   const ui=await page();await ui.click("verify");await ui.click("plan");ui.get("confirm").checked=true;ui.get("confirm").onchange?.();if(failure)ui.fail("apply","Files changed; result unconfirmed");await ui.click("apply");
+   expect(ui.get("plan").hidden).toBe(true);expect(ui.get("plan").disabled).toBe(true);expect(ui.get("apply").disabled).toBe(true);const count=ui.actions.length;await ui.click("plan");expect(ui.actions.length).toBe(count);
+   await ui.click("result-recheck");expect(ui.get("plan").hidden).toBe(false);expect(ui.get("plan").disabled).toBe(false);
+  });
+  it("keeps the attempted batch output for explicit read-only recovery without rerunning",async()=>{
+   const ui=await page();ui.get("batch-output").value="/synthetic/review-packet.json";ui.fail("batch/run","核验已取消，先检查可能保留的输出");await ui.click("nav-batch");await ui.click("batch-run");
+   expect(ui.get("batch-recovery").hidden).toBe(false);expect(ui.get("batch-package").value).toBe("/synthetic/review-packet.json");ui.fail("batch/open","输出尚不存在");await ui.click("batch-recover");expect(ui.get("batch-recovery-state").textContent).toContain("输出尚不存在");expect(ui.actions.filter(v=>v==="batch/run")).toHaveLength(1);
+  });
+
   it("explains missing task inputs before contacting a verifier", async () => {
     const ui=await page();ui.get("root").value="  ";await ui.click("verify");
     expect(ui.get("root-error").textContent).toContain("Skill 目录");expect(ui.get("root").focused).toBe(true);

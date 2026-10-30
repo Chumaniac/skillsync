@@ -108,3 +108,22 @@ Starting a new verification or plan request revokes the previous plan and its co
 Artifact checks in the workbench retain the same bounded record-position evidence as offline HTML reports. Expand **Locate affected CSV records** to inspect the expected and delivered CSV record positions, then reopen the saved report later without rerunning the check. Positions start at 1, exclude the header and count quoted multiline records as one record; they are not physical text-line numbers.
 
 Only positions and declared column metadata are retained. Record identities and cell values are omitted, and the report names incomplete or truncated evidence. Machine JSON stays unchanged by default; use `--include-row-evidence` when a separate human review needs these bounded positions.
+
+
+## Apply completion and uncertain batch output
+
+Every confirmed apply attempt consumes the current plan and its actionable issue
+authority, including a stale-file failure. The old report remains historical
+evidence. A fresh verification is required before another plan can be generated.
+The page labels applied-but-not-rechecked and unconfirmed outcomes separately.
+
+If a batch run fails or is cancelled, the page retains the exact attempted output
+path and offers an explicit read-only integrity check. This handles cancellation
+after the CLI has already published its immutable packet. Missing files produce
+an explicit error; the operation is not rerun and no existing packet is replaced.
+Opening a packet verifies saved evidence only; it does not recheck current inputs
+or authenticate its author.
+
+Editing a directory or contract invalidates the displayed evidence on input,
+before blur can collapse the report under a click. Consent stays disabled while
+a plan is loading, and clearing an already empty report does not remount its frame.
