@@ -235,7 +235,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         }
         if (req.url === "/api/apply") {
           if (!plan || input.id !== plan.id || input.confirm !== true) throw new WorkbenchStateError("请审阅当前计划并明确确认。");
-          const current = plan; plan = undefined;
+          const current = plan; plan = undefined; actionable = [];
           if (!current.value.changes.length || current.value.changes.length > 256 || current.value.changes.some(c => c.safety !== "safe")) throw new WorkbenchStateError("此计划包含需人工审阅的变更，请使用 CLI 逐项处理。");
           if (current.snapshot !== (await scanStagedWorkspace(selected.path)).digest) throw new WorkbenchStateError("文件已变化，当前计划不能应用。请重新核验。");
           await history.read(current.historyId);

@@ -163,6 +163,7 @@ describe("real CLI graphical workbench", () => {
     const applied = await api("apply", {id: planned.data.id, confirm: true}); expect(applied.status).toBe(200);
     expect(applied.data.message).toContain("尚未重新核验"); expect(applied.data.message).toContain("备份");
     expect((await stat(script)).mode & 0o777).toBe(0o755); expect(await readFile(script)).toEqual(original);
+    expect((await api("plan")).status).toBe(400);
     const after = await api("verify"); expect(after.status).toBe(200); expect(after.data.html).not.toContain("structure.invalid-script-mode");
     expect((await api("apply", {id: planned.data.id, confirm: true})).status).toBe(400);
     expect((await stat(join(base, "state"))).mode & 0o777).toBe(0o700);
