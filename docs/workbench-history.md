@@ -1,5 +1,19 @@
 # Workbench history and rechecks
 
+## Choose a task and continue from its result
+
+The single-directory page separates Skill inspection from artifact acceptance.
+Each choice explains its directory and contract requirements. Empty inputs are
+marked next to the field before a verification request is sent. After a run, a
+summary above the sandboxed report explains its outcome and next step. Only a
+complete current Skill result with actionable issues offers a plan; artifact
+checks direct you to repair the original inputs and verify again.
+
+A historical verification is labelled read-only. Its **Recheck current files**
+action returns to the single-directory task and performs a fresh selection and
+verification. It never applies the stored plan. Multi-batch reports retain their
+separate package summary and do not show a single-directory action summary.
+
 The local graphical workbench keeps immutable index records beside reports,
 plans and receipts in its private state directory. Open **History** to inspect a
 previous verification and use it as a baseline. Click **Verify directory** to
