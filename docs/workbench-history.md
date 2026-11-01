@@ -127,3 +127,14 @@ or authenticate its author.
 Editing a directory or contract invalidates the displayed evidence on input,
 before blur can collapse the report under a click. Consent stays disabled while
 a plan is loading, and clearing an already empty report does not remount its frame.
+
+
+## Packet paths and independent expected digests
+
+Opening a packet shows its observed SHA-256 in the result, without copying that
+value into the optional expected-digest field. That field is reserved for an
+independent trusted source. Selecting or editing another packet clears the old
+report and success summary immediately, while preserving any manually supplied
+expected digest. An incorrect expected digest still rejects the read. Packet
+contents are never changed by this UI flow. Cancelled-output recovery remains a
+read-only integrity inspection, not authorship or current-input acceptance.

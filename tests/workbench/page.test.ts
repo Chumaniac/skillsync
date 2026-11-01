@@ -24,7 +24,7 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
   const get = (id: string) => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id)!; };
   get("kind").value = "skill"; get("root").value = "/synthetic/review";
   const offsets: number[] = [], actions: string[] = [];
-  const rejected = new Map<string, string>();
+  const rejected = new Map<string, string>(),responses=new Map<string,unknown>();
   let releaseHistory!: () => void, historyCalls = 0;
   const initialHistory = new Promise<void>(resolve => { releaseHistory = resolve; });
   const entries = Array.from({length: 14}, (_, i) => ({id: String(i), kind: "verify", label: `record ${i}`, createdAt: "2026-01-01T00:00:00Z"}));
@@ -35,6 +35,7 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
     const savedHistory = {total: entries.length, items: entries.slice(input.offset, input.offset + 12), capacity: {files: entries.length * 2, maxFiles: 120}};
     if (action === "select" && failure === "network") throw new TypeError("Failed to fetch");
     return {ok: failure !== "expired-session" || action !== "select", status: failure === "expired-session" && action === "select" ? 403 : 200, json: async () => {
+      if(responses.has(action))return responses.get(action);
       if (action === "select" && failure === "invalid-json") throw new SyntaxError("Unexpected token '<'");
       if (action === "history") {
         offsets.push(input.offset);
@@ -52,10 +53,16 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
   };
   runInNewContext(workbenchScript, {document: {getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()}, fetch, URL, Blob, setTimeout});
   await new Promise(resolve => setImmediate(resolve));
-  return {get, offsets, actions, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
+  return {get, offsets, actions,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
 }
 
 describe("workbench interactions", () => {
+ it('switching packet paths drops only derived old digests and hides stale success',async()=>{
+  const ui=await page();await ui.click('nav-batch');ui.get('batch-package').value='/synthetic/a.json';ui.respond('batch/open',{summary:{counts:{passed:1,failed:0,incomplete:0}},package_sha256:'a'.repeat(64),html:'<p>A</p>'});await ui.click('batch-open');expect(ui.get('batch-digest').value).toBe('');expect(ui.get('batch-receipt').textContent).toContain('a'.repeat(64));
+  ui.get('batch-package').value='/synthetic/b.json';ui.get('batch-package').events.get('input')?.();expect(ui.get('batch-digest').value).toBe('');expect(ui.get('result').hidden).toBe(true);expect(ui.get('batch-receipt').textContent).toBe('');
+  ui.get('batch-digest').value='trusted'.repeat(8);ui.get('batch-digest').events.get('input')?.();ui.get('batch-package').value='/synthetic/c.json';ui.get('batch-package').events.get('input')?.();expect(ui.get('batch-digest').value).toBe('trusted'.repeat(8));
+ });
+
   it("invalidates prior evidence while typing, before blur can move the verification button",async()=>{
    const ui=await page();await ui.click("verify");expect(ui.get("result").hidden).toBe(false);const requests=ui.actions.length;
    ui.get("root").value="/synthetic/another";ui.get("root").events.get("input")?.();expect(ui.get("result").hidden).toBe(true);expect(ui.get("plan").disabled).toBe(true);expect(ui.actions.length).toBe(requests);
