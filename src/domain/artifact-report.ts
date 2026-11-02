@@ -74,7 +74,7 @@ const reportSchema = z.object({ schema: z.literal("skillsync.artifacts-report/v1
   if (new Set(report.files.map(file => file.path)).size !== report.files.length ||
     report.files.reduce((total, file) => total + file.bytes, 0) > 64 * 1024 * 1024 ||
     (report.artifact_set_sha256 !== undefined && report.artifact_set_sha256 !== artifactSetHash(report.files)) ||
-    (report.status === "passed" && (report.exitCode !== 0 || report.findings.length ||
+    (report.status === "passed" && (report.exitCode !== 0 || report.receipt_binding === "failed" || report.findings.length ||
       report.reconciliations?.some(item => item.status !== "passed"))) ||
     (report.status === "failed" && report.exitCode === 0)) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "inconsistent artifact report" });

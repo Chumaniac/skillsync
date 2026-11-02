@@ -21,6 +21,16 @@ async function save(root: string, value: ArtifactReport) {
 }
 
 describe("artifact correction review", () => {
+  it.each([
+    ["passed", "verified", true], ["passed", "not-provided", true], ["passed", "failed", false],
+    ["failed", "verified", true], ["failed", "not-provided", true], ["failed", "failed", true],
+  ] as const)("validates report %s with receipt %s consistently", async (status, binding, valid) => fixture(async (_root, options) => {
+    const report = await runArtifacts(options);
+    report.status = status; report.exitCode = status === "passed" ? 0 : 1; report.receipt_binding = binding;
+    if (valid) expect(parseArtifactReport(report)).toEqual(report);
+    else expect(() => parseArtifactReport(report)).toThrow();
+  }));
+
   it("compares actual corrected files, preserves originals and omits private record values", async () => fixture(async (root, options) => {
     const correct = await readFile(join(options.path, "allocations.csv"));
     await cp(join(root, "faults/shifted-allocations.csv"), join(options.path, "allocations.csv"));
@@ -86,6 +96,7 @@ describe("artifact correction review", () => {
     const good = await runArtifacts(options);
     const duplicate = { ...good, files: [...good.files, good.files[0]] };
     for (const invalid of [{ ...good, schema: "other" }, { ...good, rawRecords: ["PRIVATE_VALUE"] }, duplicate,
+      { ...good, receipt_binding: "failed" },
       { ...good, artifact_set_sha256: "a".repeat(64) }, { ...good, files: [{ ...good.files[0], path: "../escape" }] },
       { ...good, reconciliations: [{ ...good.reconciliations![0], valueMismatches: -1 }] },
       { ...good, findings: Array.from({ length: 257 }, () => ({ code: "artifact.missing" })) }]) {

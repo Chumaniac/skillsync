@@ -5,6 +5,9 @@
 - Report Git URL/commit declarations as unknown remote identity rather than
   authenticated provenance. Explicit unknown-provenance policies also block
   declared sources and missing commits; ordinary warning policies are unchanged.
+- Reject a passed artifact report whose receipt binding failed, before reading
+  the current artifact directory. Keep failed checks with valid receipts and
+  ordinary inspections without receipts compatible.
 
 ## Unreleased source - 2026-10-21
 
