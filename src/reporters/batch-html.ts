@@ -4,8 +4,8 @@ import {artifactsReviewStyle,renderArtifactsFragment} from "./artifacts-html.js"
 const escape=(value:unknown)=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
 const HTML_LIMIT=7*1024*1024;
 /** Offline display is bounded independently of the complete JSON evidence. */
-export function renderBatchHtml(input:BatchReport):string {
- const report=validateBatchReport(input);let used=0;
+export function renderBatchHtml(input:BatchReport,expectedDeclarations?:string):string {
+ const report=validateBatchReport(input,expectedDeclarations);let used=0;
  const rows=report.batches.map(item=>`<tr><td><a href="#batch-${escape(item.id)}">${escape(item.id)}</a></td><td>${escape(item.status)}</td><td>${item.mode==='reused'?'Reused unchanged passed evidence':'Inspected current inputs'}</td><td>${item.report.findings.length}</td></tr>`).join('');
  const sections=report.batches.map(item=>{
   let detail='<p>Full bounded evidence remains in the JSON review package. This report is above the offline detail display budget.</p>';

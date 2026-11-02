@@ -38,6 +38,7 @@ describe('portable multi-batch acceptance',()=>{
   const legacy=join(root,'legacy.json');await writeFile(legacy,JSON.stringify(packet));const original=await readFile(legacy);
   expect((await runCli(['batch','inspect','--package',legacy,'--format','json'])).exitCode).toBe(2);
   expect((await runCli(['batch','inspect','--package',legacy,'--contract',join(root,'contract.json'),'--format','json'])).exitCode).toBe(0);
+  expect((await runCli(['batch','inspect','--package',legacy,'--contract',join(root,'contract.json'),'--format','html'])).exitCode).toBe(0);
   await cp(join(root,'batches/north/allocations.csv'),join(root,'batches/south/allocations.csv'));
   expect((await execute(planPath,join(root,'legacy-rechecked.json'),['--previous',legacy,'--retry-failed'])).exitCode).toBe(0);
   expect(await readFile(legacy)).toEqual(original);

@@ -102,7 +102,7 @@ export async function inspectAcceptancePackage(path:string,options:{expectSha256
    const checked=supplied;
    if(checked.file!==packet.payload.declaration.contract_file_sha256||checked.engine!==packet.payload.declaration.contract_sha256||canonicalJson(checked.value.files.map(file=>file.path).sort())!==canonicalJson(packet.payload.declaration.file_paths)||packet.payload.batches.some(item=>item.report.declarations&&canonicalJson(item.report.declarations)!==canonicalJson(declared)))throw error('batch.contract-changed','The supplied contract does not bind this package.');
   }
-  return {packet,package_sha256:digest};
+  return {packet,package_sha256:digest,declarations_sha256:declared?contentHash(declared):packet.payload.declaration.declarations_sha256};
  }catch(problem){if(problem instanceof BatchAcceptanceError)throw problem;throw error('batch.package-invalid','The review package could not be verified.');}
 }
 

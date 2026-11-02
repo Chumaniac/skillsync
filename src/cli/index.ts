@@ -604,7 +604,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .action(async(options:{package:string;expectSha256?:string;contract?:string;plan?:string;format?:string})=>{
       if(!['text','json','html'].includes(options.format??'text'))throw new Error('Batch inspection format must be text, json or html.');
       const result=await inspectAcceptancePackage(options.package,options);
-      io.writeOut(options.format==='html'?renderBatchHtml(result.packet.payload):options.format==='json'?JSON.stringify({integrity:'verified',original_data:'not-rechecked',package_sha256:result.package_sha256,...batchSummary(result.packet.payload)},null,2)+'\n':`Review-package integrity: verified\nRecorded batch outcome: ${result.packet.payload.status}\nOriginal data not rechecked; authors not authenticated.\n`);
+      io.writeOut(options.format==='html'?renderBatchHtml(result.packet.payload,result.declarations_sha256):options.format==='json'?JSON.stringify({integrity:'verified',original_data:'not-rechecked',package_sha256:result.package_sha256,...batchSummary(result.packet.payload)},null,2)+'\n':`Review-package integrity: verified\nRecorded batch outcome: ${result.packet.payload.status}\nOriginal data not rechecked; authors not authenticated.\n`);
     });
 
   program.command("artifacts")

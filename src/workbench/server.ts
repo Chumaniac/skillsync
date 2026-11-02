@@ -128,7 +128,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
             batchPreview=undefined;const path=batchPath(input.path);
             const checked=await inspectAcceptancePackage(path,{expectSha256:typeof input.expectSha256==="string"&&input.expectSha256?input.expectSha256:undefined,
               contract:typeof input.contract==="string"&&input.contract?batchPath(input.contract):undefined});
-            return send(res,200,{integrity:"verified",summary:batchSummary(checked.packet.payload),package_sha256:checked.package_sha256,html:renderBatchHtml(checked.packet.payload)});
+            return send(res,200,{integrity:"verified",summary:batchSummary(checked.packet.payload),package_sha256:checked.package_sha256,html:renderBatchHtml(checked.packet.payload,checked.declarations_sha256)});
           }
           const path=batchPath(input.path),chosen=batchPreview;batchPreview=undefined;
           if(!chosen||chosen.path!==path)throw new WorkbenchStateError("请先预检当前验收计划，再执行多批次核验。");
@@ -137,7 +137,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           const raw=await command(args,{reserveHistory:false}),result=parseStrictJson(raw) as {schema?:string;package_sha256?:string};
           if(result.schema!=="skillsync.batch-report/v1"||typeof result.package_sha256!=="string"||!/^[a-f0-9]{64}$/.test(result.package_sha256))throw new WorkbenchStateError("多批次结果未确认，请先检查输出文件后再重试。");
           const checked=await inspectAcceptancePackage(output,{expectSha256:result.package_sha256});
-          return send(res,200,{integrity:"verified",summary:batchSummary(checked.packet.payload),package_sha256:checked.package_sha256,packagePath:output,html:renderBatchHtml(checked.packet.payload)});
+          return send(res,200,{integrity:"verified",summary:batchSummary(checked.packet.payload),package_sha256:checked.package_sha256,packagePath:output,html:renderBatchHtml(checked.packet.payload,checked.declarations_sha256)});
         }
         if (req.url === "/api/history/open" || req.url === "/api/history/export") {
           const {record,output}=await history.read(input.id);
