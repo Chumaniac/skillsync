@@ -3,7 +3,7 @@ import {dirname,isAbsolute,join,relative,resolve} from "node:path";
 import {randomUUID} from "node:crypto";
 import {parse as parseYaml} from "yaml";
 import {parseStrictJson} from "../../domain/strict-json.js";
-import {parseArtifactContract} from "../../domain/artifact-contract.js";
+import {describeArtifactContract,parseArtifactContract} from "../../domain/artifact-contract.js";
 import {artifactSetHash,parseArtifactReport,type ArtifactReport} from "../../domain/artifact-report.js";
 import {compareArtifactReports} from "../../domain/artifact-report-comparison.js";
 import {acceptancePlanSchema,BATCH_LIMITS,BatchAcceptanceError,canonicalJson,contentHash,sha256,parseReviewPackage,validateBatchReport,batchStatus,summarizeBatch,
@@ -63,6 +63,7 @@ async function planContext(path:string){
  const checked=await contract(contractPath);
  // Use the same normalized digest as the existing artifact engine.
  const declaration:AcceptanceDeclaration={schema:'skillsync.acceptance-declaration/v1',plan_sha256:sha256(raw),contract_sha256:checked.engine,contract_file_sha256:checked.file,
+  declarations_sha256:contentHash(describeArtifactContract(checked.value)),
   file_paths:checked.value.files.map(file=>file.path).sort(),batches:plan.batches.map(({id,kind})=>({id,kind}))};
  const sources:Source[]=[];const shared={entries:0,files:0,bytes:0};
  for(const item of plan.batches){
@@ -89,14 +90,16 @@ export async function inspectAcceptancePackage(path:string,options:{expectSha256
  try{
   const selected=alias(resolve(path));await directory(dirname(selected));const raw=await readWorkspaceFile(selected,BATCH_LIMITS.max_package_bytes),digest=sha256(raw);
   if(options.expectSha256&&options.expectSha256!==digest)throw error('batch.package-digest','The review package does not match the expected digest.');
-  const packet=parseReviewPackage(parseStrictJson(new TextDecoder('utf-8',{fatal:true}).decode(raw)));
+  const supplied=options.contract?await contract(alias(resolve(options.contract))):undefined;
+  const declared=supplied?describeArtifactContract(supplied.value):undefined;
+  const packet=parseReviewPackage(parseStrictJson(new TextDecoder('utf-8',{fatal:true}).decode(raw)),declared?contentHash(declared):undefined);
   if(options.plan){
    const planRaw=await readWorkspaceFile(alias(resolve(options.plan)),256*1024);
    const plan=acceptancePlanSchema.parse(parseStrictJson(new TextDecoder('utf-8',{fatal:true}).decode(planRaw)));
    if(sha256(planRaw)!==packet.payload.declaration.plan_sha256||canonicalJson(plan.batches.map(({id,kind})=>({id,kind})))!==canonicalJson(packet.payload.declaration.batches))throw error('batch.plan-changed','The supplied plan does not bind this package.');
   }
-  if(options.contract){
-   const checked=await contract(alias(resolve(options.contract))),declared={limits:checked.value.limits,checks:checked.value.checks.map((check,index)=>({ordinal:index+1,check}))};
+  if(supplied){
+   const checked=supplied;
    if(checked.file!==packet.payload.declaration.contract_file_sha256||checked.engine!==packet.payload.declaration.contract_sha256||canonicalJson(checked.value.files.map(file=>file.path).sort())!==canonicalJson(packet.payload.declaration.file_paths)||packet.payload.batches.some(item=>item.report.declarations&&canonicalJson(item.report.declarations)!==canonicalJson(declared)))throw error('batch.contract-changed','The supplied contract does not bind this package.');
   }
   return {packet,package_sha256:digest};
@@ -133,9 +136,9 @@ export async function runAcceptanceBatch(options:BatchRunOptions){
   const selected=alias(resolve(options.output));
   if(selected===context.path||selected===context.contractPath||context.sources.some(source=>inside(source.path,selected)))throw error('batch.output-overlap','Keep review packages outside source data and contract files.');
   try{await lstat(selected);throw error('batch.output-exists','The output already exists; choose a new file.');}catch(problem){if(!(problem instanceof Error&&'code'in problem&&problem.code==='ENOENT'))throw problem;}
-  const previous=options.previous?await inspectAcceptancePackage(options.previous):undefined;
+  const previous=options.previous?await inspectAcceptancePackage(options.previous,{contract:context.contractPath}):undefined;
   const declarationSha=contentHash(context.declaration);
-  if(previous&&previous.packet.payload.declaration_sha256!==declarationSha)throw error('batch.previous-plan-changed','The prior package belongs to a different plan or contract.');
+  if(previous&&contentHash({...previous.packet.payload.declaration,declarations_sha256:context.declaration.declarations_sha256})!==declarationSha)throw error('batch.previous-plan-changed','The prior package belongs to a different plan or contract.');
   const rows:AcceptanceBatch[]=[];let evidenceBytes=0;
   for(const[index,item]of context.plan.batches.entries()){
    const source=context.sources[index],before=previous?.packet.payload.batches.find(row=>row.id===item.id);

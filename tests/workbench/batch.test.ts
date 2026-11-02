@@ -3,6 +3,7 @@ import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {afterEach,expect,it} from 'vitest';
 import {startWorkbench} from '../../src/workbench/server.js';
+import {contentHash} from '../../src/domain/batch-report.js';
 const apps:Array<Awaited<ReturnType<typeof startWorkbench>>>=[];
 afterEach(async()=>{for(const app of apps.splice(0))await app.close();});
 
@@ -24,6 +25,12 @@ it('previews then creates and reopens a batch package without enabling Skill rep
  const saved=await readFile(output);
  expect((await post('apply',{id:'old',confirm:true})).status).toBe(400);
  const reopened=await post('batch/open',{path:output,expectSha256:result.data.package_sha256});expect(reopened.status).toBe(200);expect(reopened.data.integrity).toBe('verified');
+ const old=JSON.parse(saved.toString());delete old.payload.declaration.declarations_sha256;
+ old.payload.declaration_sha256=contentHash(old.payload.declaration);old.payload_sha256=contentHash(old.payload);
+ const legacy=join(base,'legacy.json');await writeFile(legacy,JSON.stringify(old));const legacyBytes=await readFile(legacy);
+ expect((await post('batch/open',{path:legacy})).status).toBe(400);
+ expect((await post('batch/open',{path:legacy,contract:join(data,'north/contract.json')})).status).toBe(200);
+ expect(await readFile(legacy)).toEqual(legacyBytes);
  expect(await readFile(output)).toEqual(saved);
  for(const secret of [base,'ORG_A','ORDER_1'])expect(result.data.html).not.toContain(secret);
 });

@@ -126,7 +126,8 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           }
           if(req.url.endsWith("open")){
             batchPreview=undefined;const path=batchPath(input.path);
-            const checked=await inspectAcceptancePackage(path,{expectSha256:typeof input.expectSha256==="string"&&input.expectSha256?input.expectSha256:undefined});
+            const checked=await inspectAcceptancePackage(path,{expectSha256:typeof input.expectSha256==="string"&&input.expectSha256?input.expectSha256:undefined,
+              contract:typeof input.contract==="string"&&input.contract?batchPath(input.contract):undefined});
             return send(res,200,{integrity:"verified",summary:batchSummary(checked.packet.payload),package_sha256:checked.package_sha256,html:renderBatchHtml(checked.packet.payload)});
           }
           const path=batchPath(input.path),chosen=batchPreview;batchPreview=undefined;

@@ -143,6 +143,11 @@ export type ArtifactContract = z.infer<typeof artifactContractSchema>;
 export type ArtifactFileRule = ArtifactContract["files"][number];
 export type ArtifactScalarRule = z.infer<typeof scalar>;
 
+/** Privacy-safe contract metadata; file scalar expectations are not included. */
+export function describeArtifactContract(contract: ArtifactContract): ArtifactDeclarations {
+  return { limits: { ...contract.limits }, checks: contract.checks.map((check, index) => ({ ordinal: index + 1, check })) };
+}
+
 export function parseArtifactContract(value: unknown): ArtifactContract {
   const result = artifactContractSchema.safeParse(value);
   if (!result.success) throw new Error("artifact contract is invalid");

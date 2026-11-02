@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-import { parseArtifactContract } from "../../domain/artifact-contract.js";
+import { describeArtifactContract, parseArtifactContract } from "../../domain/artifact-contract.js";
 import { parseStrictJson } from "../../domain/strict-json.js";
 import { inspectArtifactContent, type ArtifactFacts, type ArtifactRowObserver } from "../../domain/artifact-content.js";
 import { createArtifactReferenceIndex } from "../../domain/artifact-references.js";
@@ -69,7 +69,7 @@ async function inspectArtifacts(options: ArtifactsOptions): Promise<ArtifactRepo
     contract = parseArtifactContract(parseYaml(new TextDecoder("utf-8", { fatal: true }).decode(bytes), { maxAliasCount: 100, prettyErrors: false, logLevel: "silent" }));
     report.contract_sha256 = hash(JSON.stringify(contract));
     // Only validated cross-file metadata is included; scalar expected values and raw cells are omitted.
-    report.declarations = { limits: { ...contract.limits }, checks: contract.checks.map((check, index) => ({ ordinal: index + 1, check })) };
+    report.declarations = describeArtifactContract(contract);
   } catch { issue("artifact.contract-invalid"); report.exitCode = 2; return report; }
   let root = options.path ?? join(options.delivery!, "artifacts");
   try {

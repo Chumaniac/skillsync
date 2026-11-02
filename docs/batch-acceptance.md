@@ -33,6 +33,19 @@ Shared admission limits: 16 batches, 10,000 files, 20,000 input entries, 16 MiB/
 
 Package verification checks internal structure, counts, file/report digest bindings and comparison consistency. An expected package SHA-256 binds exact bytes; supplying the original contract also verifies its exact bytes and declaration scope. Optional `--plan` checks exact plan bytes without reading source data; a source-path mapping change also invalidates prior-plan reuse. These checks do not authenticate authorship, fetch cited sources, rerun original business data, or establish production acceptance. A self-consistent replacement package can be written by anyone; keep the digest through an independent trusted channel.
 
+Current source records `declarations_sha256` in the acceptance declaration. It
+binds every passed report's privacy-safe limits and cross-file checks to the
+canonical metadata captured from the contract. Rehashing an altered report and
+its package does not preserve that binding. No scalar expected values or raw
+records are added to the package.
+
+Legacy packages without this binding require the explicit original `--contract`
+for revalidation. The Workbench open API also accepts an explicit contract path.
+Inspection and failed-only retry preserve the original package bytes; a retry
+creates a new bound package. The digest is an integrity boundary, not publisher
+authentication: retain an independently trusted package digest or verify the
+actual contract when expectation identity matters.
+
 The design independently applies declared validation batches and retained validation results described by [Great Expectations Checkpoints](https://docs.greatexpectations.io/docs/reference/api/checkpoint_class/) and [Frictionless validation](https://framework.frictionlessdata.io/docs/guides/validating-data). No upstream code or runtime dependency is copied. This source change does not republish existing v0.3.0 downloads or npm releases.
 
 

@@ -8,6 +8,9 @@
 - Reject a passed artifact report whose receipt binding failed, before reading
   the current artifact directory. Keep failed checks with valid receipts and
   ordinary inspections without receipts compatible.
+- Bind passed batch declarations to canonical contract metadata. Legacy
+  packages require their explicit contract for revalidation; failed-only retry
+  preserves original packages and already-passed reports.
 
 ## Unreleased source - 2026-10-21
 

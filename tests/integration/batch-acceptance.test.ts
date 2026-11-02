@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 import { runCli } from "../../src/cli/index.js";
-import {contentHash} from "../../src/domain/batch-report.js";
+import {batchStatus,contentHash} from "../../src/domain/batch-report.js";
 
 async function fixture() {
   const root=await realpath(await mkdtemp(join(tmpdir(),"sync-batch-")));
@@ -18,6 +18,31 @@ async function fixture() {
 const execute=(plan:string,output:string,extra:string[]=[])=>runCli(['batch','run','--plan',plan,'--output',output,'--format','json',...extra]);
 
 describe('portable multi-batch acceptance',()=>{
+ it('binds report declarations even when report and package hashes are recomputed',async()=>{
+  const {root,planPath,output}=await fixture();await execute(planPath,output);
+  const packet=JSON.parse(await readFile(output,'utf8')),item=packet.payload.batches[0];
+  item.report.declarations.limits.max_files+=1;
+  item.report_sha256=contentHash(item.report);packet.payload_sha256=contentHash(packet.payload);
+  const damaged=join(root,'changed-declarations.json');await writeFile(damaged,JSON.stringify(packet));
+  expect((await runCli(['batch','inspect','--package',damaged,'--format','json'])).exitCode).toBe(2);
+  for(const kind of ['artifacts','delivery'] as const){
+   const report={...item.report,receipt_binding:kind==='delivery'?'verified':'not-provided'};
+   expect(batchStatus(report,item.source_sha256,packet.payload.declaration,kind)).not.toBe('passed');
+  }
+ });
+
+ it('revalidates legacy packages only with their explicit contract and preserves the original bytes',async()=>{
+  const {root,planPath,output}=await fixture();await execute(planPath,output);
+  const packet=JSON.parse(await readFile(output,'utf8'));delete packet.payload.declaration.declarations_sha256;
+  packet.payload.declaration_sha256=contentHash(packet.payload.declaration);packet.payload_sha256=contentHash(packet.payload);
+  const legacy=join(root,'legacy.json');await writeFile(legacy,JSON.stringify(packet));const original=await readFile(legacy);
+  expect((await runCli(['batch','inspect','--package',legacy,'--format','json'])).exitCode).toBe(2);
+  expect((await runCli(['batch','inspect','--package',legacy,'--contract',join(root,'contract.json'),'--format','json'])).exitCode).toBe(0);
+  await cp(join(root,'batches/north/allocations.csv'),join(root,'batches/south/allocations.csv'));
+  expect((await execute(planPath,join(root,'legacy-rechecked.json'),['--previous',legacy,'--retry-failed'])).exitCode).toBe(0);
+  expect(await readFile(legacy)).toEqual(original);
+ });
+
  it('records per-batch failures without copying business rows, and can verify the offline package',async()=>{
   const {root,planPath,output}=await fixture();const run=await execute(planPath,output);
   expect(run.stdout).toContain('skillsync.batch-report/v1');expect(run.exitCode).toBe(1);

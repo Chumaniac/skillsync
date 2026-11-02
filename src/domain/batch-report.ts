@@ -12,7 +12,7 @@ export const acceptancePlanSchema=z.object({schema:z.literal('skillsync.acceptan
  if(new Set(plan.batches.map(item=>item.id.toLowerCase())).size!==plan.batches.length)context.addIssue({code:z.ZodIssueCode.custom,message:'duplicate batch identity'});
 });
 export type AcceptancePlan=z.infer<typeof acceptancePlanSchema>;
-const declarationSchema=z.object({schema:z.literal('skillsync.acceptance-declaration/v1'),plan_sha256:sha,contract_sha256:sha,contract_file_sha256:sha,file_paths:z.array(path).min(1).max(10000),batches:z.array(z.object({id,kind}).strict()).min(1).max(16)}).strict();
+const declarationSchema=z.object({schema:z.literal('skillsync.acceptance-declaration/v1'),plan_sha256:sha,contract_sha256:sha,contract_file_sha256:sha,declarations_sha256:sha.optional(),file_paths:z.array(path).min(1).max(10000),batches:z.array(z.object({id,kind}).strict()).min(1).max(16)}).strict();
 export type AcceptanceDeclaration=z.infer<typeof declarationSchema>;
 const report=z.unknown().transform((value,context):ArtifactReport=>{
  try{return parseArtifactReport(value);}catch{context.addIssue({code:z.ZodIssueCode.custom,message:'invalid artifact report'});return z.NEVER;}
@@ -54,10 +54,10 @@ export function canonicalJson(value:unknown):string {
 }
 export const contentHash=(value:unknown)=>sha256(canonicalJson(value));
 
-export function batchStatus(report:ArtifactReport,source:string|undefined,declaration:AcceptanceDeclaration,batchKind:'artifacts'|'delivery'):AcceptanceBatch['status'] {
+export function batchStatus(report:ArtifactReport,source:string|undefined,declaration:AcceptanceDeclaration,batchKind:'artifacts'|'delivery',expectedDeclarations=declaration.declarations_sha256):AcceptanceBatch['status'] {
  if(!source||report.exitCode===2||!report.artifact_set_sha256||report.findings.length>=256||report.comparison?.status==='unavailable'||report.reconciliations?.some(item=>item.status==='unknown'))return 'incomplete';
  if(report.status==='failed')return 'failed';
- if(!report.declarations||report.contract_sha256!==declaration.contract_sha256||batchKind==='delivery'&&report.receipt_binding!=='verified'||
+ if(!report.declarations||!expectedDeclarations||contentHash(report.declarations)!==expectedDeclarations||report.contract_sha256!==declaration.contract_sha256||batchKind==='delivery'&&report.receipt_binding!=='verified'||
   report.files.length!==declaration.file_paths.length||report.files.some(file=>!declaration.file_paths.includes(file.path)))return 'incomplete';
  return 'passed';
 }
@@ -69,16 +69,20 @@ export function summarizeBatch(batches:AcceptanceBatch[]):Pick<BatchReport,'stat
  const counts=batchCounts(batches);return {counts,status:counts.incomplete?'incomplete':counts.failed?'failed':'passed',exitCode:counts.incomplete?2:counts.failed?1:0};
 }
 
-export function validateBatchReport(input:unknown):BatchReport {
+export function validateBatchReport(input:unknown,expectedDeclarations?:string):BatchReport {
  try{
   const payload=batchReportSchema.parse(input),expected=summarizeBatch(payload.batches);
+  if(expectedDeclarations&&!sha.safeParse(expectedDeclarations).success)throw Error();
+  if(expectedDeclarations&&payload.declaration.declarations_sha256&&expectedDeclarations!==payload.declaration.declarations_sha256)throw Error();
+  const declarations=expectedDeclarations??payload.declaration.declarations_sha256;
+  if(!declarations&&payload.batches.some(item=>item.status==='passed'))throw new BatchAcceptanceError('batch.contract-required','A legacy package requires its explicit contract to bind report declarations.');
   if(contentHash(payload.declaration)!==payload.declaration_sha256||canonicalJson(expected.counts)!==canonicalJson(payload.counts)||payload.status!==expected.status||payload.exitCode!==expected.exitCode||
    new Set(payload.declaration.file_paths).size!==payload.declaration.file_paths.length||new Set(payload.batches.map(item=>item.id.toLowerCase())).size!==payload.batches.length||payload.batches.length!==payload.declaration.batches.length)throw Error();
   let reportBytes=0,sourceBytes=0,sourceFiles=0;
   for(const[index,item]of payload.batches.entries()){
    const declared=payload.declaration.batches[index];
    if(item.id!==declared.id||item.kind!==declared.kind||contentHash(item.report)!==item.report_sha256||
-    item.report.contract_sha256!==payload.declaration.contract_sha256||item.status!==batchStatus(item.report,item.source_sha256,payload.declaration,item.kind)||
+    item.report.contract_sha256!==payload.declaration.contract_sha256||item.status!==batchStatus(item.report,item.source_sha256,payload.declaration,item.kind,declarations)||
     item.source_files<item.report.files.length||item.source_bytes<item.report.files.reduce((sum,file)=>sum+file.bytes,0)||
     item.mode==='reused'&&(item.status!=='passed'||!payload.previous_package_sha256))throw Error();
    const inventory=item.source_inventory;
@@ -101,9 +105,9 @@ export function validateBatchReport(input:unknown):BatchReport {
   return payload;
  }catch(error){if(error instanceof BatchAcceptanceError)throw error;throw new BatchAcceptanceError('batch.package-invalid','The review package is inconsistent or unsupported.');}
 }
-export function parseReviewPackage(input:unknown):ReviewPackage {
+export function parseReviewPackage(input:unknown,expectedDeclarations?:string):ReviewPackage {
  try{
-  const packet=packageSchema.parse(input),payload=validateBatchReport(packet.payload);
+  const packet=packageSchema.parse(input),payload=validateBatchReport(packet.payload,expectedDeclarations);
   if(contentHash(payload)!==packet.payload_sha256)throw Error();
   return {...packet,payload};
  }catch(error){if(error instanceof BatchAcceptanceError)throw error;throw new BatchAcceptanceError('batch.package-invalid','The review package integrity could not be verified.');}
