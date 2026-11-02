@@ -18,6 +18,13 @@ The default boundary is:
 - CI generation is plan-only unless `ci init --apply` is explicitly supplied;
 - existing CI files require `--force` before replacement.
 
+A present Git URL and resolved commit produce `provenance.declared-source` with
+`status: unknown`. The local digest can be checked independently, but these
+declarations do not prove that the named commit contains the current files or
+authenticate a publisher. The scanner no longer emits `provenance.verified` for
+that case. Policies with `fail_on: [unknown-provenance]` also block declared
+sources and missing commits; ordinary warning-only policies remain non-blocking.
+
 Replay is deterministic protocol evidence, not a claim that a real Agent was
 securely isolated. It does not start a process, access the network, inherit
 environment values, or mutate the fixture. The Docker backend requires a

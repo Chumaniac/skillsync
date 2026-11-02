@@ -68,6 +68,14 @@ describe("evaluatePolicy", () => {
     expect(result.exitCode).toBe(1);
   });
 
+  it.each(["provenance.declared-source", "provenance.missing-commit"])(
+    "does not treat %s as authenticated when unknown provenance is blocked", code => {
+      const findings = [finding({ code, status: "unknown" })];
+      expect(evaluatePolicy(findings, policy(["unknown-provenance"])).exitCode).toBe(1);
+      expect(evaluatePolicy(findings, policy(["structure-error"])).exitCode).toBe(0);
+    },
+  );
+
   it("returns configuration exit code 2 for an invalid policy", () => {
     const result = evaluatePolicy([], { schema_version: 2 } as unknown as Policy);
 

@@ -36,7 +36,7 @@ describe("inspectProvenance", () => {
     );
   });
 
-  it("verifies a Git source when URL and resolved commit are present", async () => {
+  it("records a Git declaration without authenticating its remote identity", async () => {
     const findings = await inspectProvenance(
       makeSkill({
         kind: "git",
@@ -48,8 +48,8 @@ describe("inspectProvenance", () => {
 
     expect(findings).toContainEqual(
       expect.objectContaining({
-        code: "provenance.verified",
-        status: "pass",
+        code: "provenance.declared-source",
+        status: "unknown",
       }),
     );
   });
@@ -74,6 +74,17 @@ describe("inspectProvenance", () => {
         status: "fail",
       }),
     );
+  });
+
+  it("does not authenticate a declared Git identity from a plausible URL and commit", async () => {
+    const findings = await inspectProvenance(makeSkill({
+      kind: "git", url: "https://github.com/example/unrelated.git",
+      resolvedCommit: "f".repeat(40),
+    }));
+    expect(findings.some(item => item.code === "provenance.verified")).toBe(false);
+    expect(findings).toContainEqual(expect.objectContaining({
+      code: "provenance.declared-source", status: "unknown", severity: "warn",
+    }));
   });
 
   it("enforces an explicit root-path provenance policy", async () => {

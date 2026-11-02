@@ -8,7 +8,7 @@ export type ProvenanceEvidence = {
   source: Skill["source"];
   contentDigest: string;
   resolvedCommit?: string;
-  evidenceStatus: "verified" | "local-only" | "unknown";
+  evidenceStatus: "declared" | "local-only" | "unknown";
 };
 
 export type ProvenanceOptions = {
@@ -94,12 +94,12 @@ export async function inspectProvenance(
     if (skill.source.url && hasCommit) {
       findings.push(
         finding({
-          level: 0,
-          severity: "info",
-          status: "pass",
-          code: "provenance.verified",
+          level: 1,
+          severity: "warn",
+          status: "unknown",
+          code: "provenance.declared-source",
           skill: skill.name,
-          message: "Git source URL and resolved commit are present.",
+          message: "Git source URL and commit are declared; remote identity and commit contents were not authenticated.",
           evidence: [
             {
               source_url: skill.source.url,
@@ -108,6 +108,7 @@ export async function inspectProvenance(
               content_digest: skill.digest,
             },
           ],
+          remediation: "Independently authenticate the source and commit when remote identity is required.",
         }),
       );
     } else {

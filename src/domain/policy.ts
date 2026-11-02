@@ -68,7 +68,8 @@ function isBlocking(finding: Finding, policy: Policy): boolean {
   }
 
   if (finding.code.startsWith("provenance.") && policy.fail_on.includes("unknown-provenance")) {
-    return finding.code === "provenance.unknown-source" || finding.code === "provenance.local-only";
+    return ["provenance.unknown-source", "provenance.local-only", "provenance.declared-source",
+      "provenance.missing-commit"].includes(finding.code);
   }
 
   if (finding.code.startsWith("compatibility.") && policy.fail_on.includes("compatibility-loss:required-target")) {

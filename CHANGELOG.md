@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased source - 2026-11-02
+
+- Report Git URL/commit declarations as unknown remote identity rather than
+  authenticated provenance. Explicit unknown-provenance policies also block
+  declared sources and missing commits; ordinary warning policies are unchanged.
+
 ## Unreleased source - 2026-10-21
 
 - Add a loopback graphical workbench for real Skill and contract directories,
