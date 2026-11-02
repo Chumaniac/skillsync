@@ -1,6 +1,6 @@
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { workbenchScript } from "../../src/workbench/page.js";
+import { workbenchPage, workbenchScript } from "../../src/workbench/page.js";
 
 class Element {
   value = ""; textContent = ""; content = "fixture"; disabled = false;
@@ -24,12 +24,14 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
   const get = (id: string) => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id)!; };
   get("kind").value = "skill"; get("root").value = "/synthetic/review";
   const offsets: number[] = [], actions: string[] = [];
+  const inputs: Array<{action: string; input: Record<string, unknown>}> = [];
   const rejected = new Map<string, string>(),responses=new Map<string,unknown>();
   let releaseHistory!: () => void, historyCalls = 0;
   const initialHistory = new Promise<void>(resolve => { releaseHistory = resolve; });
   const entries = Array.from({length: 14}, (_, i) => ({id: String(i), kind: "verify", label: `record ${i}`, createdAt: "2026-01-01T00:00:00Z"}));
   const fetch = async (url: string, options: {body: string}) => {
     const action = url.slice("/api/".length), input = JSON.parse(options.body); actions.push(action);
+    inputs.push({action, input});
     if (rejected.has(action)) return {ok: false, status: 400, json: async () => ({error: rejected.get(action)})};
     const firstHistory = action === "history" && historyCalls++ === 0;
     const savedHistory = {total: entries.length, items: entries.slice(input.offset, input.offset + 12), capacity: {files: entries.length * 2, maxFiles: 120}};
@@ -53,10 +55,20 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
   };
   runInNewContext(workbenchScript, {document: {getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()}, fetch, URL, Blob, setTimeout});
   await new Promise(resolve => setImmediate(resolve));
-  return {get, offsets, actions,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
+  return {get, offsets, actions,inputs,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
 }
 
 describe("workbench interactions", () => {
+ it('provides and sends an explicit legacy contract without automatic inspection',async()=>{
+  expect(workbenchPage('fixture')).toContain('for="batch-contract"');
+  const ui=await page();await ui.click('nav-batch');ui.get('batch-package').value='/synthetic/legacy.json';ui.get('batch-contract').value='/synthetic/contract.json';
+  const count=ui.actions.length;ui.get('batch-contract').events.get('input')?.();expect(ui.actions).toHaveLength(count);
+  ui.respond('batch/open',{summary:{counts:{passed:1,failed:0,incomplete:0}},package_sha256:'a'.repeat(64),html:'<p>Legacy checked</p>'});
+  await ui.click('batch-open');expect(ui.inputs.find(item=>item.action==='batch/open')?.input).toMatchObject({contract:'/synthetic/contract.json'});
+  ui.get('batch-digest').value='f'.repeat(64);ui.respond('choose',{path:'/synthetic/another-contract.json'});const opens=ui.actions.filter(item=>item==='batch/open').length;
+  await ui.click('choose-batch-contract');expect(ui.get('batch-contract').value).toBe('/synthetic/another-contract.json');
+  expect(ui.get('batch-digest').value).toBe('f'.repeat(64));expect(ui.get('result').hidden).toBe(true);expect(ui.actions.filter(item=>item==='batch/open')).toHaveLength(opens);
+ });
  it('switching packet paths drops only derived old digests and hides stale success',async()=>{
   const ui=await page();await ui.click('nav-batch');ui.get('batch-package').value='/synthetic/a.json';ui.respond('batch/open',{summary:{counts:{passed:1,failed:0,incomplete:0}},package_sha256:'a'.repeat(64),html:'<p>A</p>'});await ui.click('batch-open');expect(ui.get('batch-digest').value).toBe('');expect(ui.get('batch-receipt').textContent).toContain('a'.repeat(64));
   ui.get('batch-package').value='/synthetic/b.json';ui.get('batch-package').events.get('input')?.();expect(ui.get('batch-digest').value).toBe('');expect(ui.get('result').hidden).toBe(true);expect(ui.get('batch-receipt').textContent).toBe('');

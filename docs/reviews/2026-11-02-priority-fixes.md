@@ -9,8 +9,10 @@ Date: 2026-11-02. Status: implementation and local verification complete; main d
 | Batch declarations | Passed reports bind canonical contract metadata; legacy packets require an explicit contract | Rehashed-tampering, legacy byte preservation, retry and CLI/Workbench rendering checks |
 | Repeated scans | Required mutation checks retained; synthetic limits measured | [Scan baseline](../benchmarks/workspace-scans.md) |
 
-The local full suite passed 740 tests, with one explicitly skipped Docker reference scenario. Type checking, lint, build, package dry-run and the exact CI SARIF verification command passed. There was no live provider, remote worker, network capability activation, npm release, production deployment, or read of user datasets.
+The local full suite passed 741 tests, with one explicitly skipped Docker reference scenario. Type checking, lint, build, package dry-run and the exact CI SARIF verification command passed. There was no live provider, remote worker, network capability activation, npm release, production deployment, or read of user datasets.
 
 Three provenance/policy regressions and two report-state regressions first failed, then passed after implementation. Batch tests first reproduced acceptance of changed declarations and unbound legacy evidence. A further Workbench legacy-view failure identified a lost contract-validation context; the parser and both HTML renderers now retain that context. No assertion was relaxed.
 
 The original package remains immutable. Legacy revalidation and failed-only retry preserve original bytes and passed reports. Integrity hashes do not authenticate authorship; independent package digests and explicit contracts retain their separate roles.
+
+The independent AI review found one UI compatibility gap: legacy-contract selection was available to the API but absent from the form. The form now provides the path and picker, preserves manually supplied digests, hides stale evidence when either input changes, and sends the explicit contract only on inspection. Correct, missing, changed, and malformed contracts are covered without changing original package bytes.

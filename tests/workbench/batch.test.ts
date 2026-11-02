@@ -29,7 +29,10 @@ it('previews then creates and reopens a batch package without enabling Skill rep
  old.payload.declaration_sha256=contentHash(old.payload.declaration);old.payload_sha256=contentHash(old.payload);
  const legacy=join(base,'legacy.json');await writeFile(legacy,JSON.stringify(old));const legacyBytes=await readFile(legacy);
  expect((await post('batch/open',{path:legacy})).status).toBe(400);
+ expect((await post('batch/open',{path:legacy,contract:1})).status).toBe(400);
  expect((await post('batch/open',{path:legacy,contract:join(data,'north/contract.json')})).status).toBe(200);
+ await writeFile(join(data,'north/contract.json'),(await readFile(join(data,'north/contract.json'),'utf8'))+'\n');
+ expect((await post('batch/open',{path:legacy,contract:join(data,'north/contract.json')})).status).toBe(400);
  expect(await readFile(legacy)).toEqual(legacyBytes);
  expect(await readFile(output)).toEqual(saved);
  for(const secret of [base,'ORG_A','ORDER_1'])expect(result.data.html).not.toContain(secret);

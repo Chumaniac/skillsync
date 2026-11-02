@@ -41,6 +41,8 @@ records are added to the package.
 
 Legacy packages without this binding require the explicit original `--contract`
 for revalidation. The Workbench open API also accepts an explicit contract path.
+The saved-package form provides an original-contract path and file picker;
+changing either path clears stale results without inspecting automatically.
 Inspection and failed-only retry preserve the original package bytes; a retry
 creates a new bound package. The digest is an integrity boundary, not publisher
 authentication: retain an independently trusted package digest or verify the
