@@ -1,0 +1,91 @@
+{
+  "schema": "skillsync.workspace-scan-baseline/v1",
+  "synthetic": true,
+  "node": "v24.17.0",
+  "platform": "darwin",
+  "arch": "arm64",
+  "workspaceSourceSha256": "9d9ceb55204a35b5603bc31990bfd9b1a7a719be4cfbac8ab4a645b6d0c4f2b4",
+  "method": "Three pairs of required before/after scans in a fresh process per case; nearest-rank p95 from three samples is descriptive only.",
+  "memoryScope": "Whole child-process maximum RSS, including imports. Node maxRSS KiB is converted to bytes. Not a production or long-duration measurement.",
+  "decision": "Retain before/after mutation checks; no cross-request cache is introduced.",
+  "results": [
+    {
+      "name": "small",
+      "files": 16,
+      "bytesPerFile": 256,
+      "totalBytes": 4096,
+      "samples": [
+        {
+          "elapsedMs": 10.682459,
+          "cpuMs": 12.157,
+          "rssBytes": 55443456
+        },
+        {
+          "elapsedMs": 4.221333999999999,
+          "cpuMs": 6.735,
+          "rssBytes": 60194816
+        },
+        {
+          "elapsedMs": 3.661667000000005,
+          "cpuMs": 4.09,
+          "rssBytes": 60309504
+        }
+      ],
+      "p95Ms": 10.682459,
+      "peakRssBytes": 60325888,
+      "scans": 6
+    },
+    {
+      "name": "near-byte-limit",
+      "files": 4,
+      "bytesPerFile": 16777216,
+      "totalBytes": 67108864,
+      "samples": [
+        {
+          "elapsedMs": 57.669042,
+          "cpuMs": 66.265,
+          "rssBytes": 156139520
+        },
+        {
+          "elapsedMs": 49.648250000000004,
+          "cpuMs": 56.722,
+          "rssBytes": 156352512
+        },
+        {
+          "elapsedMs": 49.27874999999999,
+          "cpuMs": 56.175,
+          "rssBytes": 156483584
+        }
+      ],
+      "p95Ms": 57.669042,
+      "peakRssBytes": 156516352,
+      "scans": 6
+    },
+    {
+      "name": "near-file-limit",
+      "files": 9999,
+      "bytesPerFile": 0,
+      "totalBytes": 0,
+      "samples": [
+        {
+          "elapsedMs": 1770.925333,
+          "cpuMs": 1954.676,
+          "rssBytes": 143228928
+        },
+        {
+          "elapsedMs": 1702.6065,
+          "cpuMs": 1817.573,
+          "rssBytes": 158679040
+        },
+        {
+          "elapsedMs": 1721.6007919999997,
+          "cpuMs": 1835.715,
+          "rssBytes": 226164736
+        }
+      ],
+      "p95Ms": 1770.925333,
+      "peakRssBytes": 226197504,
+      "scans": 6
+    }
+  ]
+}

@@ -11,6 +11,8 @@
 - Bind passed batch declarations to canonical contract metadata. Legacy
   packages require their explicit contract for revalidation; failed-only retry
   preserves original packages and already-passed reports.
+- Record synthetic small, byte-limit and near-file-limit scan baselines while
+  retaining the required before/after mutation checks and no cross-request cache.
 
 ## Unreleased source - 2026-10-21
 
