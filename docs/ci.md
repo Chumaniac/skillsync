@@ -30,7 +30,35 @@ The default regression also runs the live-runtime preparation integration and
 documentation tests. Its package step is `npm pack --dry-run`; it does not publish
 or resolve any deployment-owned reference.
 
+## JUnit test reports (current source)
+
+Build the current source checkout, then export a test report:
+
+```bash
+node dist/cli/index.js verify --path ./skills --target codex --format junit > skillsync.junit.xml
+node dist/cli/index.js scan --path ./skills --format junit > inventory.junit.xml
+```
+
+Upload the XML through your CI's existing test-report step even when verification
+returns nonzero; retain that original exit code. This addition is not in the
+unchanged npm 0.1.0 or GitHub v0.3.0 archive, and enables no upload or workflow by
+itself. Other commands keep their existing format choices.
+
+Each finding is one uniquely named testcase. `fail` becomes a failure;
+`warn` and `unknown` become skipped checks, not successful verification. Verify
+adds a separate policy testcase: a nonzero policy result fails it, and invalid
+input (exit2) is an error. The finding and policy outcomes remain separate; a
+policy allowing a failed finding does not relabel that individual finding as a
+pass. An empty scan records only inventory completion, not Skill acceptance.
+
+Reports omit raw evidence, prompts and source bodies. Existing path-redaction
+policy is honored. XML characters and invalid code points are escaped or
+replaced; no DTD or external resources are emitted. Text fields are capped at
+2,048 UTF-16 units with an ellipsis. More than 10,000 total testcases or 2 MiB of
+UTF-8 XML fails explicitly before any partial report is returned.
+
 ## Runtime canary contracts
+
 
 `.github/workflows/skillsync-runtime-canary.yml` is manual-only and requires a
 named GitHub Environment so the canary evidence has an explicit owner. Its

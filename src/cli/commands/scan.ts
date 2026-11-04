@@ -8,6 +8,7 @@ import {
 } from "../../domain/inventory.js";
 import type { Finding } from "../../domain/result.js";
 import { formatOutput, parseOutputFormat, type OutputFormat } from "../output.js";
+import { renderJUnit } from "../../reporters/junit.js";
 
 export type ScanOptions = InventoryOptions & {
   paths: string[];
@@ -63,6 +64,7 @@ export async function runScan(options: ScanOptions): Promise<ScanReport> {
 }
 
 export function renderScan(report: ScanReport, format: string | undefined): string {
+  if (format === "junit") return renderJUnit(report, "scan");
   const outputFormat: OutputFormat = parseOutputFormat(format);
   return formatOutput(report, outputFormat);
 }
