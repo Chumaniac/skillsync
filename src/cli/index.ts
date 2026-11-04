@@ -62,6 +62,7 @@ import { renderSarif } from "../reporters/sarif.js";
 import { renderText } from "../reporters/text.js";
 import { renderVerificationHtml } from "../reporters/verification-html.js";
 import { parseOutputFormat } from "./output.js";
+import { renderJUnit } from "../reporters/junit.js";
 
 import { VERSION } from "../version.js";
 
@@ -265,7 +266,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .description("Inspect skill files without executing their instructions.")
     .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
     .option("--follow-symlinks", "Follow only symlinks that remain inside the Skill root")
-    .option("--format <format>", "Output format: text, json, or sarif", "text")
+    .option("--format <format>", "Output format: text, json, sarif, or junit", "text")
     .action(async (options: ScanCliOptions) => {
       const report = await runScan({
         paths: options.path ?? [],
@@ -303,7 +304,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .option("--policy <path>", "YAML or JSON policy file")
     .option("--profile-dir <path>", "Additional directory containing external profile YAML")
     .option("--follow-symlinks", "Follow only symlinks that remain inside the Skill root")
-    .option("--format <format>", "Output format: text, json, sarif, or offline html", "text")
+    .option("--format <format>", "Output format: text, json, sarif, junit, or offline html", "text")
     .action(async (options: VerifyCliOptions) => {
       const report = await runVerification({
         paths: options.path ?? [],
@@ -312,8 +313,10 @@ export function createCli(io: CliIO = defaultCliIO): Command {
         profileDir: options.profileDir,
         followSymlinks: options.followSymlinks,
       });
-      const format = options.format === "html" ? "html" : parseOutputFormat(options.format);
-      const output = format === "html"
+      const format = options.format === "html" || options.format === "junit" ? options.format : parseOutputFormat(options.format);
+      const output = format === "junit"
+        ? renderJUnit(report, "verify")
+        : format === "html"
         ? renderVerificationHtml(report)
         : format === "json"
         ? renderJson(report)

@@ -38,7 +38,7 @@ describe("release documentation", () => {
       repository?: { type?: string; url?: string };
     };
 
-    expect(readme).toContain("Verify Agent Skills before you trust them.");
+    expect(readme).toContain("Inspect local Skill folders and declared artifact deliveries.");
     expect(readme).toContain("Alpha · GitHub release v0.3.0 · Node.js 20+");
     expect(readme).toContain("GitHub Releases");
     expect(readme).toContain("download/v0.3.0");

@@ -1,6 +1,6 @@
 # SkillSync
 
-**Verify Agent Skills before you trust them.** SkillSync checks a local Skill's provenance, compatibility, and changes without executing it.
+Inspect local Skill folders and declared artifact deliveries. Review provenance, compatibility and changes without executing the Skill.
 
 > **Alpha · GitHub release v0.3.0 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
@@ -10,6 +10,10 @@ GitHub v0.3.0 adds a declared cross-file checklist to HTML, text and JSON report
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
 ## Local graphical workbench
+
+Current source also exports `verify` and `scan` results as JUnit XML for CI test
+views. Build this checkout and use `--format junit`; the existing policy exit
+code stays unchanged. [Report mapping and limits](docs/ci.md#junit-test-reports-current-source).
 
 Run `skillsync gui --state-dir /absolute/private/report-directory`, then open
 `http://127.0.0.1:14986`. Select a Skill directory, or select a contract and its
