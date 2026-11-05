@@ -59,6 +59,20 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
 }
 
 describe("workbench interactions", () => {
+  it("applies history filters explicitly, keeps them for paging and restores successful criteria on failure", async () => {
+    const ui=await page();
+    ui.get("history-query").value="review";ui.get("history-kind").value="verify";ui.get("history-exit").value="0";
+    const initial=ui.actions.length;
+    ui.get("history-query").events.get("input")?.();expect(ui.actions).toHaveLength(initial);
+    await ui.click("history-filter");
+    expect(ui.inputs.at(-1)?.input).toEqual({offset:0,query:"review",kind:"verify",exitCode:0});
+    ui.get("history-query").value="unapplied";await ui.click("history-next");
+    expect(ui.inputs.at(-1)?.input).toEqual({offset:12,query:"review",kind:"verify",exitCode:0});
+    ui.fail("history","Synthetic list failure");ui.get("history-query").value="other";await ui.click("history-filter");
+    expect(ui.get("history-query").value).toBe("review");expect(ui.get("history-list").children).toHaveLength(2);
+    expect(ui.get("history-info").textContent).toContain("保留");
+    expect(ui.actions.every(action=>action==="history")).toBe(true);
+  });
  it('provides and sends an explicit legacy contract without automatic inspection',async()=>{
   expect(workbenchPage('fixture')).toContain('for="batch-contract"');
   const ui=await page();await ui.click('nav-batch');ui.get('batch-package').value='/synthetic/legacy.json';ui.get('batch-contract').value='/synthetic/contract.json';

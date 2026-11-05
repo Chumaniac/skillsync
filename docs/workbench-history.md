@@ -138,3 +138,18 @@ report and success summary immediately, while preserving any manually supplied
 expected digest. An incorrect expected digest still rejects the read. Packet
 contents are never changed by this UI flow. Cancelled-output recovery remains a
 read-only integrity inspection, not authorship or current-input acceptance.
+
+
+## Find saved history
+
+History can now filter by directory basename (up to 128 characters), task kind
+and recorded exit code 0–4. Apply or clear criteria explicitly. Pagination and
+refresh keep the last successful criteria; a failed read preserves those criteria,
+rows and page. Directory parents, report bodies and backup locations are neither
+searched nor included in the list. Entries without a recorded exit code do not
+match an exit-code filter. A recorded zero is an outcome, not permission to apply.
+
+Filtering uses the existing bounded metadata index and precedes twelve-row
+pagination. Corrupt indexes remain counted separately as unavailable; they are
+never treated as passed results. No report is opened, verification rerun, file
+pruned or apply capability created by a search.
