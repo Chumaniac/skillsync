@@ -22,6 +22,28 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it("filters history metadata before paging without opening bodies or leaking parent paths", async () => {
+    const {api, base} = await setup();
+    const folder = join(base, "state"), info = await stat(folder);
+    const history = new WorkbenchHistory(folder, `${info.dev}:${info.ino}`);
+    const selection = {path:join(base,"private-parent","review-alpha"),identity:"1:2",kind:"skill" as const,delivery:false};
+    for(let i=0;i<13;i++)await history.append({kind:"verify",selection,exitCode:1},"PRIVATE_REPORT_BODY");
+    await history.append({kind:"verify",selection:{...selection,path:join(base,"review-beta")},exitCode:0},"PRIVATE_REPORT_BODY");
+    await history.append({kind:"apply-intent",selection});
+    await writeFile(join(folder,"ffffffff-ffff-4fff-8fff-ffffffffffff-history.json"),"broken metadata");
+    const before = await readdir(folder);
+    const page = await api("history",{query:"ALPHA",kind:"verify",exitCode:1,offset:12});
+    expect(page.status).toBe(200);expect(page.data.total).toBe(13);expect(page.data.items).toHaveLength(1);
+    expect(page.data.items[0].label).toBe("review-alpha");expect(page.data.unavailable).toBe(1);
+    expect(JSON.stringify(page.data)).not.toContain(base);expect(JSON.stringify(page.data)).not.toContain("PRIVATE_REPORT_BODY");
+    expect((await api("history",{query:"private-parent"})).data.total).toBe(0);
+    expect((await api("history",{kind:"verify",exitCode:0})).data.total).toBe(1);
+    expect((await api("history",{kind:"apply-intent",exitCode:0})).data.total).toBe(0);
+    for(const filter of [{query:"x".repeat(129)},{query:"../private"},{kind:"rerun"},{exitCode:-1},{exitCode:"0"},{exitCode:5}]) {
+      const denied=await api("history",filter);expect(denied.status).toBe(400);expect(JSON.stringify(denied.data)).not.toContain(base);
+    }
+    expect(await readdir(folder)).toEqual(before);
+  });
   it.each(["plan", "apply"])("rejects an identical replacement directory during %s", async phase => {
     const launcher = join(await realpath(await mkdtemp(join(tmpdir(), "sync-root-swap-"))), "swap.cjs");
     const realCli = resolve("dist/cli/index.js");

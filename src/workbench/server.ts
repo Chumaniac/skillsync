@@ -102,7 +102,9 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
       const input = await body(req);
       if (req.url === "/api/cancel") { if (applying) throw new Error("修复写入中，请等待回执后重新核验。"); cancelled = true; active?.kill("SIGTERM"); const child = active; const timer = setTimeout(() => child?.kill("SIGKILL"), 2000); timer.unref(); return send(res, 200, {cancelled: true}); }
       // Listing is bounded and read-only; it must not acquire or reset the CLI operation lock.
-      if (req.url === "/api/history") return send(res,200,await history.list(input.offset===undefined?0:Number(input.offset)));
+      if (req.url === "/api/history") return send(res,200,await history.list(input.offset===undefined?0:Number(input.offset),{
+        query:input.query??"",kind:input.kind,exitCode:input.exitCode,
+      }));
       if (busy) return send(res, 409, {error: "已有操作进行中。"});
       busy = true; cancelled = false;
       try {

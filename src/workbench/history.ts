@@ -10,6 +10,12 @@ const MAX_META = 16 * 1024;
 const MAX_STATE = 64 * 1024 * 1024;
 const MAX_FILES = 120;
 const uuid = z.string().uuid();
+const taskKind = z.enum(["verify","plan","apply-intent","apply"]);
+const filtersSchema = z.object({
+  query: z.string().max(128).refine(value => !/[\\/\p{Cc}]/u.test(value)).default("").transform(value => value.trim().toLowerCase()),
+  kind: taskKind.optional(),
+  exitCode: z.number().int().min(0).max(4).optional(),
+}).strict();
 const absolutePath = z.string().min(1).max(4096).refine(v => isAbsolute(v) && !/[\p{Cc}]/u.test(v));
 const selectionSchema = z.object({ path:absolutePath, identity:z.string().regex(/^\d+:\d+$/),
   kind:z.enum(["skill","artifacts"]), contract:absolutePath.optional(), delivery:z.boolean() }).strict();
@@ -19,7 +25,7 @@ const comparisonSchema = z.object({ status:z.enum(["compared","unavailable"]),
   resolved:z.number().int().nonnegative().optional(), changed:z.number().int().nonnegative().optional(), reason:z.string().max(100).optional() }).strict();
 export type HistoryComparison = z.infer<typeof comparisonSchema>;
 const recordSchema = z.object({ schema:z.literal("skillsync.workbench-history/v1"), id:uuid,
-  createdAt:z.string().datetime(), kind:z.enum(["verify","plan","apply-intent","apply"]),
+  createdAt:z.string().datetime(), kind:taskKind,
   selection:selectionSchema, snapshot:z.string().max(128).optional(), baselineId:uuid.optional(), parentId:uuid.optional(),
   dataFile:z.string().regex(/^[a-f0-9-]{36}-data\.json$/).optional(), dataSha256:z.string().regex(/^[a-f0-9]{64}$/).optional(),
   exitCode:z.number().int().min(0).max(4).optional(), comparison:comparisonSchema.optional(),
@@ -67,16 +73,22 @@ export class WorkbenchHistory {
     if(record.id!==key || (record.dataFile && record.dataFile!==`${key}-data.json`))throw new Error("历史关联不匹配。");
     return record;
   }
-  async list(offset=0) {
+  async list(offset=0, filters:unknown={}) {
     if(!Number.isInteger(offset)||offset<0||offset>=MAX_FILES)throw new Error("历史页码无效。");
+    const parsed=filtersSchema.safeParse(filters);
+    if(!parsed.success)throw new WorkbenchStateError("历史筛选条件无效，请使用目录名、任务类型和退出码 0–4。");
+    const {query,kind,exitCode}=parsed.data;
     const {entries,bytes}=await this.entries();
     const rows:HistoryRecord[]=[];let unavailable=0;
     for(const entry of entries)if(/^[a-f0-9-]{36}-history\.json$/.test(entry.name)) {
       try { rows.push(await this.metadata(entry.name.slice(0,-13))); } catch { unavailable++; }
     }
     rows.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id));
-    return {items:rows.slice(offset,offset+12).map(({id,createdAt,kind,selection,exitCode,baselineId,parentId})=>
-      ({id,createdAt,kind,label:selection.path.split(/[\\/]/).at(-1),exitCode,baselineId,parentId})),total:rows.length,offset,unavailable,
+    const summaries=rows.map(({id,createdAt,kind,selection,exitCode,baselineId,parentId})=>
+      ({id,createdAt,kind,label:selection.path.split(/[\\/]/).filter(Boolean).at(-1)??"",exitCode,baselineId,parentId}));
+    const matches=summaries.filter(row=>(!query||row.label.toLowerCase().includes(query))
+      &&(!kind||row.kind===kind)&&(exitCode===undefined||row.exitCode===exitCode));
+    return {items:matches.slice(offset,offset+12),total:matches.length,offset,unavailable,
       capacity:{files:entries.length,bytes,maxFiles:MAX_FILES,maxBytes:MAX_STATE}};
   }
   async read(id:unknown) {
