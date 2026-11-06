@@ -17,7 +17,7 @@ import { journeySummary } from "./journey-summary.js";
 import { workbenchPage, workbenchScript, workbenchStyle } from "./page.js";
 import { exportHistorySummary, MAX_OUTPUT, WorkbenchHistory, WorkbenchStateError, type HistoryComparison, type Selection } from "./history.js";
 import { parseStrictJson } from "../domain/strict-json.js";
-import { compareIssues } from "../domain/baseline.js";
+import {compareVerificationReports} from "./verification-comparison.js";
 import { compareArtifactReports, parseArtifactReport } from "../domain/artifact-report-comparison.js";
 import {previewAcceptancePlan,inspectAcceptancePackage,batchSummary} from "../cli/commands/batch.js";
 import {renderBatchHtml} from "../reporters/batch-html.js";
@@ -38,6 +38,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
   const nonce = randomBytes(32).toString("hex");
   const cliPath = options.cliPath ?? fileURLToPath(new URL("../cli/index.js", import.meta.url));
   let active: ChildProcess | undefined, busy = false, applying = false, cancelled = false;
+  let comparingHistory=false;
   let selection: Selection | undefined;
   let actionable: string[] = [];
   let plan: { id: string; path: string; value: ActionPlan; snapshot: string; historyId:string } | undefined;
@@ -105,6 +106,13 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
       if (req.url === "/api/history") return send(res,200,await history.list(input.offset===undefined?0:Number(input.offset),{
         query:input.query??"",kind:input.kind,exitCode:input.exitCode,
       }));
+      if(req.url==="/api/history/compare"){
+        if(comparingHistory)return send(res,409,{error:"已有历史对照读取中，请稍后重试。"});
+        comparingHistory=true;
+        try{return send(res,200,await history.compare(input.beforeId,input.afterId));}
+        catch(error){return send(res,400,{error:error instanceof WorkbenchStateError?error.message:"历史材料无法稳定读取，请检查两份原记录；没有重新执行核验。"});}
+        finally{comparingHistory=false;}
+      }
       if (busy) return send(res, 409, {error: "已有操作进行中。"});
       busy = true; cancelled = false;
       try {
@@ -202,18 +210,9 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
             if(selected.kind==="artifacts") {
               const compared=compareArtifactReports(baseline.report as ArtifactReport,parseArtifactReport(report),baseline.digest);
               comparison=compared.status==="compared"?{status:"compared",added:compared.findings!.added,ongoing:compared.findings!.ongoing,resolved:compared.findings!.resolved}:{status:"unavailable",reason:compared.reason};
-            } else if([baseline.report.exitCode,report.exitCode].some(c=>c===2||c===4)||[(baseline.report as VerificationReport).issues,report.issues].some(v=>v.length>=256))comparison={status:"unavailable",reason:"incomplete-evidence"};
-            else {
-              const pending=(value:VerificationReport)=>value.issues.filter(issue=>issue.finding.status==="fail"||issue.finding.status==="warn");
-              const before=pending(baseline.report as VerificationReport),after=pending(report),c=compareIssues(before,after);
-              // A warning may bind the entire Skill digest. Pair changed evidence
-              // within the same code/location, rather than claiming it was fixed.
-              const group=(issue:VerificationReport["issues"][number])=>JSON.stringify([issue.finding.code,issue.finding.skill,issue.finding.target,issue.location]);
-              const removed=new Map<string,number>();
-              for(const issue of before.filter(i=>c.resolvedIds.includes(i.id)))removed.set(group(issue),(removed.get(group(issue))??0)+1);
-              let changed=0;
-              for(const issue of after.filter(i=>c.newIds.includes(i.id))) {const key=group(issue),count=removed.get(key)??0;if(count){changed++;removed.set(key,count-1);}}
-              comparison={status:"compared",added:c.newIds.length-changed,ongoing:c.ongoingIds.length,resolved:c.resolvedIds.length-changed,changed};
+            } else {
+              const compared=compareVerificationReports(baseline.report as VerificationReport,report);
+              comparison=compared.status==='compared'?{status:'compared',...compared.counts}:{status:'unavailable',reason:compared.reason};
             }
           }
           const saved=await history.append({kind:"verify",selection:selected,snapshot,baselineId:baseline?.id,parentId:latestId,exitCode:report.exitCode,comparison},output);

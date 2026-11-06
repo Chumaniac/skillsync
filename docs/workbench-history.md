@@ -153,3 +153,41 @@ Filtering uses the existing bounded metadata index and precedes twelve-row
 pagination. Corrupt indexes remain counted separately as unavailable; they are
 never treated as passed results. No report is opened, verification rerun, file
 pruned or apply capability created by a search.
+
+
+## Compare two saved verification records
+
+History now has independent earlier/later record selectors. Pick two verification
+records from their rows or enter their IDs, then compare. This reads their existing
+metadata and digest-bound bodies; it never calls the verifier, changes the current
+selection/baseline, consumes an approved plan or grants repair permission. Leaving
+the history view, changing an ID or cancelling discards obsolete replies while
+retaining the entered IDs and unrelated drafts. Comparisons use one bounded read
+slot; a second concurrent comparison receives a recoverable busy response.
+
+Both records must describe the same saved directory identity and verification
+mode. Skill reports require matching declared targets and complete, unsaturated
+comparison fields, consistent summaries and finding coverage, unique issue IDs and
+matching recorded exit codes. The same owner computes fresh-baseline and historical
+issue differences, including pairing changed evidence at the same code/location.
+The result distinguishes new, continuing, no-longer-observed and changed evidence;
+no-longer-observed findings are not certified fixes. Old reports do not record
+all tool/policy conditions, so identical selection is not a controlled regression.
+
+Artifact records retain the existing contract, declaration and receipt-bound
+comparison rules. Their finding counts stay separate from per-check changes.
+Different selections/contracts, incomplete or invalid evidence remain unavailable;
+they do not produce invented zero counts. Corrupt or changed stored bodies fail
+before comparison. Current source directories and contract files need not exist:
+this is an offline comparison of saved evidence, not a fresh physical-file check.
+
+POST `/api/history/compare` accepts `beforeId` and `afterId` under the existing
+loopback origin and session guards. History still caps state at 120 files/64 MiB,
+metadata at 16 KiB and each body at 8 MiB. Early row/field caps precede deep schema
+parsing; saturated 256-row/unknown evidence is unavailable. At most 32 code/count
+or reconciliation-index details reach the browser, with full accepted counts and
+explicit truncation. Raw finding messages, source paths, cells, recipes and backup
+paths are not returned. No history or receipt is rewritten.
+
+The workflow borrows [Qodana's baseline distinctions](https://www.jetbrains.com/help/qodana/baseline.html)
+while preserving this workbench's local, non-authenticated evidence boundary.

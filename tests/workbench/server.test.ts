@@ -22,6 +22,47 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it("compares saved verification evidence without commands, history writes or consuming the current plan", async () => {
+    const {api,base,root,script}=await setup();
+    await api("select",{path:root,kind:"skill"});
+    const first=await api("verify"), planned=await api("plan");
+    const folder=join(base,"state"), info=await stat(folder), history=new WorkbenchHistory(folder,`${info.dev}:${info.ino}`);
+    const original=await history.read(first.data.historyId);
+    const after=JSON.parse(original.output!);
+    after.findings=after.findings.filter((row:{code:string})=>row.code!=="structure.invalid-script-mode");
+    after.issues=after.issues.filter((row:{finding:{code:string}})=>row.finding.code!=="structure.invalid-script-mode");
+    after.summary={total:after.findings.length,pass:0,warn:0,fail:0,unknown:0};
+    for(const row of after.findings)after.summary[row.status]++;
+    after.exitCode=0;
+    const later=await history.append({kind:"verify",selection:original.record.selection,exitCode:0},JSON.stringify(after));
+    const names=await readdir(folder), bytes=await Promise.all(names.map(name=>readFile(join(folder,name))));
+    const compared=await api("history/compare",{beforeId:first.data.historyId,afterId:later.id});
+    expect(compared.status).toBe(200);expect(compared.data.status).toBe("compared");
+    expect(compared.data.counts.resolved).toBe(1);expect(compared.data.readOnly).toBe(true);
+    expect(compared.data.execution).toBe("not-run");expect(JSON.stringify(compared.data)).not.toContain(base);
+    expect(await readdir(folder)).toEqual(names);
+    for(let i=0;i<names.length;i++)expect(await readFile(join(folder,names[i]))).toEqual(bytes[i]);
+    expect((await stat(script)).mode&0o777).toBe(0o777);
+    expect((await api("apply",{id:planned.data.id,confirm:true})).status).toBe(200);
+  });
+
+  it("never compares different selections, incomplete evidence or mutated bodies as empty successes", async () => {
+    const {api,base,root}=await setup();await api("select",{path:root,kind:"skill"});
+    const first=await api("verify"), folder=join(base,"state"), info=await stat(folder), history=new WorkbenchHistory(folder,`${info.dev}:${info.ino}`);
+    const saved=await history.read(first.data.historyId), report=JSON.parse(saved.output!);
+    const foreign=await history.append({kind:"verify",selection:{...saved.record.selection,identity:"9:9"},exitCode:0},"PRIVATE_INVALID_BODY");
+    const different=await api("history/compare",{beforeId:first.data.historyId,afterId:foreign.id});
+    expect(different.status).toBe(200);expect(different.data.reason).toBe("selection-changed");expect(different.data.counts).toBeUndefined();
+    report.exitCode=2;
+    const incomplete=await history.append({kind:"verify",selection:saved.record.selection,exitCode:2},JSON.stringify(report));
+    const missing=await api("history/compare",{beforeId:first.data.historyId,afterId:incomplete.id});
+    expect(missing.data.status).toBe("unavailable");expect(missing.data.counts).toBeUndefined();
+    expect((await api("history/compare",{beforeId:"../private",afterId:incomplete.id})).status).toBe(400);
+    expect((await api("history/compare",{beforeId:first.data.historyId,afterId:first.data.historyId})).status).toBe(400);
+    await writeFile(join(folder,saved.record.dataFile!),"PRIVATE_TAMPERED_BODY");
+    const tampered=await api("history/compare",{beforeId:first.data.historyId,afterId:incomplete.id});
+    expect(tampered.status).toBe(400);expect(JSON.stringify(tampered.data)).not.toContain("PRIVATE_TAMPERED_BODY");
+  });
   it("filters history metadata before paging without opening bodies or leaking parent paths", async () => {
     const {api, base} = await setup();
     const folder = join(base, "state"), info = await stat(folder);

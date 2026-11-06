@@ -53,12 +53,42 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
       return {};
     }};
   };
-  runInNewContext(workbenchScript, {document: {getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()}, fetch, URL, Blob, setTimeout});
+  runInNewContext(workbenchScript, {document: {getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()}, fetch, URL, Blob, setTimeout, AbortController});
   await new Promise(resolve => setImmediate(resolve));
   return {get, offsets, actions,inputs,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
 }
 
 describe("workbench interactions", () => {
+  it("ignores delayed history replies after an input change",async()=>{
+    const ui=await page(),before="11111111-1111-4111-8111-111111111111",after="22222222-2222-4222-8222-222222222222";
+    ui.get("history-compare-before").value=before;ui.get("history-compare-after").value=after;
+    let release!:(value:unknown)=>void;ui.respond("history/compare",new Promise(resolve=>{release=resolve}));
+    const pending=ui.click("history-compare");await new Promise(resolve=>setImmediate(resolve));
+    ui.get("history-compare-after").value=before;ui.get("history-compare-after").events.get("input")?.();
+    release({schema:"skillsync.history-comparison/v1",kind:"skill",status:"compared",before:{id:before},after:{id:after},counts:{added:0,ongoing:0,resolved:0,changed:0},details:[],detailsTotal:0,detailsTruncated:false,readOnly:true,execution:"not-run",provenance:"not-authenticated"});
+    await pending;expect(ui.get("history-compare-result").hidden).toBe(true);expect(ui.get("history-compare-info").textContent).toBe("");
+  });
+
+  it("compares history independently of entered paths and reviewed apply consent", async () => {
+    const ui=await page();await ui.click("verify");await ui.click("plan");
+    ui.get("confirm").checked=true;ui.get("confirm").onchange?.();await ui.click("nav-history");
+    const before="11111111-1111-4111-8111-111111111111",after="22222222-2222-4222-8222-222222222222";
+    ui.get("history-compare-before").value=before;ui.get("history-compare-after").value=after;
+    ui.respond("history/compare",{schema:"skillsync.history-comparison/v1",kind:"skill",status:"compared",before:{id:before},after:{id:after},counts:{added:1,ongoing:2,resolved:3,changed:1},details:[{code:"test.code",change:"added",count:1},{code:"test.code",change:"ongoing",count:2},{code:"test.code",change:"resolved",count:3},{code:"test.code",change:"changed",count:1}],detailsTotal:4,detailsTruncated:false,readOnly:true,execution:"not-run",provenance:"not-authenticated"});
+    const initial=ui.actions.length;await ui.click("history-compare");
+    expect(ui.actions.slice(initial)).toEqual(["history/compare"]);
+    expect(ui.inputs.at(-1)?.input).toEqual({beforeId:before,afterId:after});
+    expect(ui.get("history-compare-info").textContent).toContain("历史");
+    expect(ui.get("root").value).toBe("/synthetic/review");expect(ui.get("confirm").checked).toBe(true);
+    await ui.click("nav-single");expect(ui.get("apply").disabled).toBe(false);
+  });
+
+  it("keeps unavailable history comparison distinct from zero changes", async () => {
+    const ui=await page();const before="11111111-1111-4111-8111-111111111111",after="22222222-2222-4222-8222-222222222222";
+    ui.get("history-compare-before").value=before;ui.get("history-compare-after").value=after;
+    ui.respond("history/compare",{schema:"skillsync.history-comparison/v1",kind:"skill",status:"unavailable",before:{id:before},after:{id:after},reason:"incomplete-evidence",readOnly:true,execution:"not-run",provenance:"not-authenticated"});
+    await ui.click("history-compare");expect(ui.get("history-compare-info").textContent).toContain("不完整");expect(ui.get("history-compare-result").children).toHaveLength(0);
+  });
   it("applies history filters explicitly, keeps them for paging and restores successful criteria on failure", async () => {
     const ui=await page();
     ui.get("history-query").value="review";ui.get("history-kind").value="verify";ui.get("history-exit").value="0";

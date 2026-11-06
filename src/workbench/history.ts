@@ -4,6 +4,8 @@ import { isAbsolute, join } from "node:path";
 import { z } from "zod";
 import { parseStrictJson } from "../domain/strict-json.js";
 import { readDirectoryEntries, readWorkspaceText } from "../sandbox/workspace-tree.js";
+import {parseComparisonReport,compareVerificationReports} from "./verification-comparison.js";
+import {compareArtifactReports,parseArtifactReport} from "../domain/artifact-report-comparison.js";
 
 export const MAX_OUTPUT = 8 * 1024 * 1024;
 const MAX_META = 16 * 1024;
@@ -94,9 +96,40 @@ export class WorkbenchHistory {
   async read(id:unknown) {
     await this.entries();
     const record=await this.metadata(id);
+    return {record,output:await this.output(record)};
+  }
+  private async output(record:HistoryRecord) {
     const output=record.dataFile?await readWorkspaceText(join(this.root,record.dataFile),MAX_OUTPUT):undefined;
     if(output!==undefined && sha(output)!==record.dataSha256)throw new Error("历史材料摘要不匹配。");
-    return {record,output};
+    return output;
+  }
+  async compare(beforeId:unknown,afterId:unknown) {
+    const first=uuid.parse(beforeId),second=uuid.parse(afterId);
+    if(first===second)throw new WorkbenchStateError("请选择两份不同的历史记录。");
+    await this.entries();
+    const before=await this.metadata(first),after=await this.metadata(second);
+    const identity=(record:HistoryRecord)=>({id:record.id,createdAt:record.createdAt,reportSha256:record.dataSha256,exitCode:record.exitCode});
+    const base={schema:"skillsync.history-comparison/v1",before:identity(before),after:identity(after),kind:before.selection.kind,
+      readOnly:true,execution:"not-run",provenance:"not-authenticated"};
+    const unavailable=(reason:string)=>({...base,status:"unavailable" as const,reason});
+    if(before.kind!=="verify"||after.kind!=="verify")return unavailable("not-verification");
+    if(JSON.stringify(before.selection)!==JSON.stringify(after.selection))return unavailable("selection-changed");
+    // Scope predicates precede any body read. Do not reopen current source directories.
+    const left=await this.output(before),right=await this.output(after);
+    try {
+      if(before.selection.kind==="skill"){
+        const a=parseComparisonReport(parseStrictJson(left!)),b=parseComparisonReport(parseStrictJson(right!));
+        if(a.exitCode!==before.exitCode||b.exitCode!==after.exitCode)return unavailable("incomplete-evidence");
+        if(JSON.stringify(a.targets.map(row=>[row.name,row.scope,row.profileId]))!==JSON.stringify(b.targets.map(row=>[row.name,row.scope,row.profileId])))return unavailable("declared-targets-changed");
+        return {...base,...compareVerificationReports(a,b)};
+      }
+      const a=parseArtifactReport(parseStrictJson(left!)),b=parseArtifactReport(parseStrictJson(right!));
+      if(a.exitCode!==before.exitCode||b.exitCode!==after.exitCode)return unavailable("incomplete-evidence");
+      const compared=compareArtifactReports(a,b,before.dataSha256!);
+      if(compared.status!=="compared")return unavailable(compared.reason??"incomplete-evidence");
+      const details=(compared.checks??[]).filter(row=>row.change!=="unchanged").map(row=>({code:"reconciliation."+row.index,change:row.change,count:1}));
+      return {...base,status:"compared" as const,counts:compared.findings!,details:details.slice(0,32),detailsTotal:details.length,detailsTruncated:details.length>32};
+    }catch{return unavailable("invalid-evidence");}
   }
 }
 
