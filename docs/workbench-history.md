@@ -191,3 +191,20 @@ paths are not returned. No history or receipt is rewritten.
 
 The workflow borrows [Qodana's baseline distinctions](https://www.jetbrains.com/help/qodana/baseline.html)
 while preserving this workbench's local, non-authenticated evidence boundary.
+
+
+## Reconnect to a running local operation (current source)
+
+Refreshing or reopening the workbench now reads a small authenticated operation snapshot before enabling a new action. If the same server is still working, the page shows the current kind/phase and any pending cancellation; it does not restore the old selected-directory authority, plan, report-as-current or confirmation checkbox. Entered form nodes are not replaced by polling. A readonly status read never invokes the CLI or changes a plan/history record.
+
+`POST /api/operation` uses the existing loopback Host/Origin/nonce guards. It returns at most the current and most recent operation: opaque UUID, fixed kind/phase/outcome, times and optional saved-history UUID. No source/output path, PID, command, report body, plan or mutation capability is returned. These are request lifecycle outcomes, not a passing verification verdict. After server restart both in-memory entries are empty and the nonce changes; immutable history remains. An old apply-intent still needs the original evidence and a fresh recheck.
+
+Accepted write/inspection operations receive a fresh operation UUID; cancellation must name the exact current UUID. Missing/stale IDs return409 and cannot stop a later command. Apply and finalizing/uncancellable read phases refuse cancellation. Repeated cancellation of the same active operation is idempotent, with one bounded SIGTERM→2s SIGKILL path; shutdown also reaps its own child, including an open system picker. Cancellation may precede child dispatch but never authorizes a retry. A batch/apply submitted outcome without its final evidence remains unconfirmed.
+
+The reconnect view owns at most one status fetch/controller and one2s polling timer, limited to90 automatic reads while observing a background operation. Hidden/leaving pages cancel status reads and timers; returning checks again. A status read that fails or cannot be validated keeps write controls unavailable until explicit recheck. The page never automatically cancels the server job on disconnect. It discards late operation/plan replies after leaving, including a browser back/forward cache return; old apply confirmation is not revived. Completion offers historical review, not automatic selection, rerun or apply.
+
+Existing history comparison remains separately readonly, with its own concurrency guards. Reports/plans/receipts retain120-file/64MiB storage limits. This source addition neither publishes npm/GitHub downloads nor enables live Skill/provider/remote-worker execution.
+
+A page leaving for navigation also releases its report string and hides the old result view. Returning from the browser cache cannot display that prior report as the current result; its immutable history record is retained and can be reopened explicitly. Form path nodes are not cleared by status polling.
+
+Local source validation:766 tests passed,1 optional Docker-reference test skipped; type checking,lint and build passed. Native synthetic Chrome390px covered refresh/current ID, stale cancel refusal, apply-in-progress refresh/refusal, explicit safe fixture fix, server restart/old nonce denial and browser return with the old report hidden. Seven immutable history files stayed byte-identical. The Skill script was never executed; Provider calls0. Formal release and external business acceptance remain separate.
