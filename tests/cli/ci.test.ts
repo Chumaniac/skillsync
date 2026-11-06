@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -80,4 +80,28 @@ describe("skillsync ci", () => {
     expect(result.stdout).toContain("contents: read");
     expect(result.stdout).toContain("plan");
   });
+});
+
+it('pins an explicit GitHub source commit and refuses ambiguous channels', async () => {
+  const result = await runCiInit({target:'github',nodeVersion:'20',paths:['.agents/skills'],source:'github-source',sourceRevision:'a'.repeat(40)})
+  expect(result.content).toMatch(/git -C "\$install_root" fetch --depth 1 https:\/\/github\.com\/Chumaniac\/skillsync\.git a{40}/)
+  expect(result.content).toContain('capabilities --expect-source '+ 'a'.repeat(40))
+  expect(result.content).toContain('npm ci --ignore-scripts')
+  expect(result.content).not.toContain('npx --yes @chumanic/skillsync@')
+  await expect(runCiInit({target:'github',nodeVersion:'20',paths:[],source:'github-source',sourceRevision:'main'})).rejects.toThrow(/40/)
+  await expect(runCiInit({target:'pre-commit',nodeVersion:'20',paths:[],source:'github-source',sourceRevision:'a'.repeat(40)})).rejects.toThrow(/GitHub/)
+})
+
+
+it('two simultaneous apply requests publish one complete file and force refuses links', async () => {
+  const root = await mkdtemp(join(tmpdir(),'skillsync-ci-race-'));
+  const options = {target:'github' as const,nodeVersion:'20',paths:['.agents/skills'],cwd:root,apply:true};
+  const results = await Promise.allSettled([runCiInit(options),runCiInit(options)]);
+  expect(results.filter(r=>r.status==='fulfilled')).toHaveLength(1);
+  const path=join(root,'.github/workflows/skillsync.yml');
+  expect(await readFile(path,'utf8')).toContain('@chumanic/skillsync@0.1.0 verify');
+  const another=await mkdtemp(join(tmpdir(),'skillsync-ci-link-'));await mkdir(join(another,'.github/workflows'),{recursive:true});
+  const outside=join(another,'preserve.txt');await writeFile(outside,'synthetic preserved content');await symlink(outside,join(another,'.github/workflows/skillsync.yml'));
+  await expect(runCiInit({...options,cwd:another,force:true})).rejects.toThrow();
+  expect(await readFile(outside,'utf8')).toBe('synthetic preserved content');
 });

@@ -107,3 +107,23 @@ the npm registry remains at 0.1.0. A tag does not activate a live runtime.
 
 The operator-facing activation, revocation, rollback, and evidence review
 procedure is in [`runtime-operator-runbook.md`](runtime-operator-runbook.md).
+
+
+## Installation channel and source capabilities (current main)
+
+`skillsync capabilities --json` inspects the installed build manifest and this CLI's declared capabilities without network, Skill execution or history writes. A missing/changed manifest remains unconfirmed; a source revision or capability list is not apply, runner or export permission. `--expect-source <40-character-commit>` additionally refuses an unknown, locally changed or different build. The build manifest records the version, immutable source revision, local-change flag and capability list; normal `npm run build`/`npm pack` produces it. A direct `tsc` invocation without that step cannot claim a build identity.
+
+Channel observations are dated, not refreshed implicitly. On 2026-11-06 the npm default remains published `@chumanic/skillsync@0.1.0`, GitHub's release remains `v0.3.0`, and current source includes JUnit, acceptance batches and tracked workbench operations beyond those fixed downloads. Local `0.3.0` source tarballs do not mean npm0.3.0 was published. The current command reports that the default CI pin only asserts the published verify/SARIF interface; it does not claim current-source extensions for that pin. A custom npm version is the user's explicit selection, not a live availability check.
+
+The default template and pre-commit hook keep their existing npm pin. To build a reviewed current source commit in a GitHub consumer workflow instead:
+
+```sh
+skillsync ci init --target github --source github-source \
+  --source-revision FULL_40_CHARACTER_LOWERCASE_COMMIT --path .agents/skills
+```
+
+Replace the placeholder with a real full commit containing this capability command. Branches/tags, missing/invalid commits, conflicting npm/version flags and source-channel pre-commit hooks are refused; `ci init` itself performs no fetch or write unless `--apply` is given. Existing output requires `--force`; concurrent default applies cannot overwrite each other, and output links are refused.
+
+The generated source workflow fetches only the fixed public SkillSync repository into a new runner temporary directory, checks the exact HEAD, installs its lockfile with `npm ci --ignore-scripts`, explicitly builds that selected trusted source, and checks `capabilities --expect-source` before verify. Pinning source is a deliberate code-trust decision: review the selected source and its locked dependencies. No Skill instruction or Skill script is executed. An old commit without the capability command fails this preparation gate; no fallback silently uses another channel. Missing dependencies or fetch failures stop rather than weakening the pin.
+
+The consumer keeps the existing verify exit status and SARIF upload step/permissions. This source option adds no additional report destination; local validation does not run an upload action. The generated command addresses Skill paths in the consumer workspace, while the CLI build remains outside it. Nothing automatically replaces a user's current CI file, upgrades npm, publishes a package or enables a live runtime.

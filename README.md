@@ -171,3 +171,6 @@ maintenance changes are included in GitHub v0.1.7 and are absent from npm 0.1.0.
 ### Offline verification review
 
 Install GitHub v0.1.7 or build the source checkout, then run `skillsync verify --path ./skills --format html > verification.html`. Open the report locally to review severity groups, causes, and next steps. Summary counts cover all findings; details are capped at 256 deduplicated issues. JSON retains complete evidence. No scripts, network assets, Skill execution, or automatic fixes are added. Inspired by [MLflow's reviewable tracking UI](https://mlflow.org/docs/latest/ml/tracking/). This option is included in the GitHub v0.1.7 package; npm 0.1.0 does not include it.
+
+
+Current source adds `skillsync capabilities --json` to distinguish an identified source build from fixed downloads, and `ci init --source github-source --source-revision <full-commit>` to pin a reviewed CLI source in consumer CI. The npm default stays at published0.1.0; no new package is published. [Channel and CI details](docs/ci.md#installation-channel-and-source-capabilities-current-main).
