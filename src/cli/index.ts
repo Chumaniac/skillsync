@@ -64,6 +64,7 @@ import { renderVerificationHtml } from "../reporters/verification-html.js";
 import { parseOutputFormat } from "./output.js";
 import { renderJUnit } from "../reporters/junit.js";
 
+import { installationInfo } from "./commands/installation.js";
 import { VERSION } from "../version.js";
 
 const COMMANDS = [
@@ -684,6 +685,15 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     });
   adapterValidate.exitOverride();
 
+  program.command("capabilities")
+    .description("Inspect installed build, channels and declared capabilities without network or Skill execution.")
+    .option("--json", "Print content-free structured metadata")
+    .option("--expect-source <commit>", "Refuse an unknown, dirty or different installed source commit")
+    .action(async (options: {json?: boolean; expectSource?: string}) => {
+      const info = await installationInfo(options.expectSource);
+      io.writeOut(options.json ? JSON.stringify(info,null,2)+"\n" : `SkillSync ${info.version} · ${info.identity}\nSource: ${info.build?.sourceRevision ?? "unconfirmed"}${info.build?.dirty ? " (local changes)" : ""}\nTemplate default: npm @chumanic/skillsync@${info.templateDefault.packageVersion}; current-source extensions not asserted.\nDeclared capabilities: ${info.declaredCapabilities.join(", ")}\nNo execution authority or network check is granted.\n`);
+    });
+
   const ci = program
     .command("ci")
     .description("Generate CI and pre-commit verification templates.");
@@ -691,7 +701,9 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .command("init")
     .option("--target <target>", "Template target: github or pre-commit", "github")
     .option("--node-version <version>", "Node.js version for GitHub Actions", "20")
-    .option("--package-version <version>", "Pinned published npm package version", "0.1.0")
+    .option("--package-version <version>", "Pinned published npm package version (default 0.1.0)")
+    .option("--source <source>", "Installation channel: npm or github-source", "npm")
+    .option("--source-revision <commit>", "Full immutable SkillSync source commit for github-source")
     .option("--path <paths...>", "Project Skill paths")
     .option("--apply", "Write the generated file")
     .option("--force", "Allow replacing an existing generated file")
@@ -699,7 +711,9 @@ export function createCli(io: CliIO = defaultCliIO): Command {
       const result = await runCiInit({
         target: options.target ?? "github",
         nodeVersion: options.nodeVersion ?? "20",
-        packageVersion: options.packageVersion ?? "0.1.0",
+        packageVersion: options.packageVersion,
+        source: options.source,
+        sourceRevision: options.sourceRevision,
         paths: options.path ?? [],
         apply: options.apply,
         force: options.force,

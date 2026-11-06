@@ -10,6 +10,7 @@ on:
       - ".claude/skills/**"
       - ".cursor/skills/**"
       - "src/**"
+      - "scripts/**"
       - "tests/**"
       - "runner/**"
       - "fixtures/behavior/**"

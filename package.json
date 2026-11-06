@@ -49,7 +49,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
-    "build": "tsc",
+    "build": "tsc && node scripts/build-info.mjs",
     "lint": "eslint .",
     "check": "npm test && npm run type-check && npm run lint && npm run build",
     "prepack": "npm run build",

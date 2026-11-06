@@ -1,0 +1,10 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { URL, fileURLToPath } from 'node:url';
+import { CURRENT_CAPABILITIES } from '../dist/capabilities.js';
+const root = fileURLToPath(new URL('..', import.meta.url));
+const git = args => { try { return execFileSync('git', args, {cwd:root,encoding:'utf8',stdio:['ignore','pipe','ignore'],maxBuffer:1024*1024}).trim(); } catch { return null; } };
+const source = existsSync(root+'/.git') ? git(['rev-parse','HEAD']) : null;
+const metadata = JSON.parse(readFileSync(root+'/package.json','utf8'));
+const value = {schema:'skillsync.build-info/v1',version:metadata.version,artifactKind:'source-build',sourceRevision:source&&/^[a-f0-9]{40}$/.test(source)?source:null,dirty:!source||git(['status','--porcelain','--untracked-files=normal'])!=='',capabilities:CURRENT_CAPABILITIES};
+writeFileSync(root+'/dist/build-info.json',JSON.stringify(value,null,2)+'\n');
