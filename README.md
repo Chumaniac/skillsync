@@ -11,6 +11,8 @@ GitHub v0.3.0 adds a declared cross-file checklist to HTML, text and JSON report
 
 ## Local graphical workbench
 
+Current source also reconnects a refreshed page to a still-running local operation. It restores progress and scoped cancellation only; an old plan or apply confirmation is never revived. [Lifecycle, limits and restart behavior](docs/workbench-history.md#reconnect-to-a-running-local-operation-current-source).
+
 Current source also exports `verify` and `scan` results as JUnit XML for CI test
 views. Build this checkout and use `--format junit`; the existing policy exit
 code stays unchanged. [Report mapping and limits](docs/ci.md#junit-test-reports-current-source).

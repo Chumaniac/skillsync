@@ -6,7 +6,7 @@ export function workbenchPage(nonce: string): string {
 <section id="task-batch" hidden aria-labelledby="batch-title"><h2 id="batch-title" tabindex="-1">验收多个交付</h2><p class="task-steps">预检计划 → 逐批核验 → 保存复核包</p><p>按计划只读核验多个交付；修正失败批次后保留已通过的证据。打开复核包只检查完整性，不重新核验原始数据或认证作者。</p><label for="batch-plan">验收计划文件</label><div class="row"><input id="batch-plan" autocomplete="off" placeholder="/project/acceptance-plan.json"><button id="choose-batch-plan" type="button">选择计划…</button></div><button id="batch-preview" type="button">预检验收计划</button><p id="batch-info" role="status"></p><label for="batch-output">新复核包文件</label><input id="batch-output" autocomplete="off"><label for="batch-previous">上次复核包（可选）</label><input id="batch-previous" autocomplete="off"><label><input id="batch-retry" type="checkbox">只重验失败或不完整批次，已通过输入必须保持不变</label><div class="row actions"><button class="primary" id="batch-run" type="button" disabled>执行并生成复核包</button></div><div id="batch-recovery" class="mode-help" hidden><h3>先核对此次输出</h3><p id="batch-recovery-state" role="status"></p><button id="batch-recover" type="button">检查此次输出包</button></div><hr><h3>查阅已保存的复核包</h3><p>此操作只读取已有证据，不重新核验原始文件。</p><label for="batch-package">复核包路径</label><div class="row"><input id="batch-package" autocomplete="off"><button id="choose-batch-package" type="button">选择复核包…</button></div><label for="batch-digest">预期 SHA-256（可选，来自独立可信来源，不会自动填入包自身摘要）</label><input id="batch-digest" autocomplete="off" maxlength="64"><label for="batch-contract">原契约路径（旧复核包必填，新包可选）</label><div class="row"><input id="batch-contract" autocomplete="off"><button id="choose-batch-contract" type="button">选择原契约…</button></div><button id="batch-open" type="button">打开并复核完整性</button><p id="batch-receipt" role="status"></p></section>
 <section id="task-history" hidden aria-labelledby="history-title"><h2 id="history-title" tabindex="-1">查看已存证据</h2><div class="history-filters"><label for="history-query">目录名包含</label><input id="history-query" maxlength="128" autocomplete="off" placeholder="只查目录名"><label for="history-kind">任务类型</label><select id="history-kind"><option value="">全部任务</option><option value="verify">核验</option><option value="plan">修复计划</option><option value="apply-intent">应用请求</option><option value="apply">应用回执</option></select><label for="history-exit">已记录的退出码</label><select id="history-exit"><option value="">全部结果</option><option value="0">0 · 正常完成</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select><div class="row actions"><button id="history-filter" type="button">筛选记录</button><button id="history-clear" type="button">清除筛选</button></div></div><p id="history-info" role="status"></p><div id="history-list"></div><div class="row actions"><button id="history-prev" type="button" disabled>上一页</button><button id="history-next" type="button" disabled>下一页</button><button id="history-refresh" type="button">刷新</button></div><p>选择历史记录作为基线，再核验当前文件。历史记录只读，打开不会重新执行核验或授予修复权限。</p><div class="history-comparison" role="region" aria-labelledby="history-compare-title"><h3 id="history-compare-title">比较两份已存核验</h3><p>在记录旁选择较早、较晚的核验，或输入两份记录编号。不会重新运行核验，也不改变当前修复计划。</p><label for="history-compare-before">较早记录编号</label><input id="history-compare-before" maxlength="36" autocomplete="off" spellcheck="false"><label for="history-compare-after">较晚记录编号</label><input id="history-compare-after" maxlength="36" autocomplete="off" spellcheck="false"><div class="row actions"><button id="history-compare" type="button">比较已存记录</button><button id="history-compare-cancel" type="button" hidden>取消历史对照</button></div><p id="history-compare-info" role="status"></p><div id="history-compare-result" hidden></div><p>仅对照保存的证据；较晚记录未出现某项，不代表当前目录已经修复。报告未完整记录工具与策略条件，不能据此授予执行或修复权限。</p></div></section>
 <section id="task-single" aria-labelledby="selection"><h2 id="selection" tabindex="-1">核验一个目录</h2><p class="task-steps">选择目录与范围 → 核验 → 查看结果</p><label for="root" id="root-label">Skill 根目录或包含 Skills 的目录</label><div class="row"><input id="root" name="root" aria-describedby="mode-help root-error" placeholder="/path/to/skill…" autocomplete="off"><button id="choose" type="button">选择目录…</button></div><p id="root-error" class="field-error" role="alert"></p><fieldset class="selection-options"><legend>选择要完成的任务</legend><label><input id="mode-skill" name="verification-kind" type="radio" value="skill" checked><span><strong>检查一个 Skill</strong><small>检查结构、兼容性与声明；可继续审阅处理计划</small></span></label><label><input id="mode-artifacts" name="verification-kind" type="radio" value="artifacts"><span><strong>验收交付文件</strong><small>对照清单核对文件与数据，保留只读证据</small></span></label></fieldset><input id="kind" type="hidden" value="skill"><p id="mode-help" class="mode-help"></p><div id="contract-fields" hidden><label for="contract">验收清单路径（YAML / JSON）</label><div class="row"><input id="contract" name="contract" aria-describedby="contract-error" autocomplete="off"><button id="choose-contract" type="button">选择清单…</button></div><p id="contract-error" class="field-error" role="alert"></p><label><input id="delivery" type="checkbox">按 SkillTape 交付清单核验（delivery.json）</label></div><div class="row actions"><button class="primary" id="verify" type="button">核验目录</button></div></section>
-<div class="operation-status"><p id="status" role="status" aria-live="polite">尚未核验</p><button id="cancel" type="button" disabled>取消当前核验</button></div><section id="result" hidden aria-labelledby="result-title"><h2 id="result-title" tabindex="-1">核验结果与证据</h2><div id="task-summary" class="result-summary" aria-labelledby="summary-title"><h3 id="summary-title"></h3><p id="summary-next" role="status"></p><ul id="summary-counts"></ul><div class="row actions"><button id="plan" type="button" hidden>生成处理计划</button><button id="result-recheck" type="button">重新核验当前文件</button><button id="result-details" type="button">查看报告明细</button></div></div><p id="comparison" role="status"></p><button id="export-summary" type="button" disabled>导出摘要</button><iframe id="report" title="核验报告" sandbox=""></iframe></section>
+<section class="operation-reconnect" aria-labelledby="operation-title"><h2 id="operation-title">后台操作</h2><p id="operation-state" role="status" aria-live="polite">正在核对后台状态…</p><button id="operation-check" type="button">检查后台状态</button></section><div class="operation-status"><p id="status" role="status" aria-live="polite">尚未核验</p><button id="cancel" type="button" disabled>取消当前核验</button></div><section id="result" hidden aria-labelledby="result-title"><h2 id="result-title" tabindex="-1">核验结果与证据</h2><div id="task-summary" class="result-summary" aria-labelledby="summary-title"><h3 id="summary-title"></h3><p id="summary-next" role="status"></p><ul id="summary-counts"></ul><div class="row actions"><button id="plan" type="button" hidden>生成处理计划</button><button id="result-recheck" type="button">重新核验当前文件</button><button id="result-details" type="button">查看报告明细</button></div></div><p id="comparison" role="status"></p><button id="export-summary" type="button" disabled>导出摘要</button><iframe id="report" title="核验报告" sandbox=""></iframe></section>
 <section id="fix" hidden aria-labelledby="fix-title"><h2 id="fix-title" tabindex="-1">审阅修复计划</h2><pre id="changes"></pre><label><input id="confirm" type="checkbox">我已审阅，应用以上安全修复并保留备份</label><div class="row actions"><button id="apply" type="button" disabled>应用并备份</button><button id="reverify" type="button">重新核验</button></div><p id="receipt"></p></section><footer><p>只检查本机文件，不运行 Skill。</p><details><summary>报告保存位置</summary><p>报告、计划和回执保存在本机私有目录；历史功能启用前的文件仍保留。</p></details></footer></main><script src="/app.js"></script></body></html>`;
 }
 
@@ -16,6 +16,10 @@ export const workbenchScript = `"use strict";
 const $ = id => document.getElementById(id);
 const nonce = document.querySelector('meta[name="client"]').content;
 let busy = false, planId = null, selected = null, baselineId = null, historyId = null, historyOffset = 0, historyTotal = 0, historyLoading = false, historyRefreshQueued = false, renderedHistory = null, batchReady=false, summaryCanPlan=false, recoveryPath=null;
+let localBusy=false,localApplying=false,checkingOperation=true,observedOperation=null,ownedOperationId=null,ownedOperationKind=null,operationTimer=null,operationController=null,operationReads=0,operationDisposed=false;
+const trackedActions=new Set(['select','choose','verify','plan','apply','batch/preview','batch/run','batch/open','history/open','history/export']);
+const operationLabels={select:'选择目录',choose:'选择文件',verify:'核验',plan:'准备处理计划',apply:'应用已确认修复',batch_preview:'预检多批次计划',batch_run:'逐批核验',batch_open:'只读复核包',history_open:'读取历史',history_export:'导出历史摘要'};
+const operationUUID=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 // Switching tasks hides existing controls; it never replaces form nodes or submits them.
 let historyFilters={query:''};
 let historyCompareController=null,historyCompareSerial=0,historyCompareLoading=false;
@@ -31,12 +35,20 @@ function hideResult(){resultAvailable=false;syncWorkspace();}
 function setFix(visible){fixAvailable=visible;syncWorkspace();}
 for(const task of ['single','batch','history'])$('nav-'+task).onclick=()=>setTask(task);
 async function api(action, body = {}, signal) {
- let response; try { response = await fetch('/api/' + action, {method:'POST',headers:{'Content-Type':'application/json','X-SkillSync-Client':nonce},body:JSON.stringify(body),signal}); }
- catch { throw new Error('无法连接本机服务，请确认核验台已启动后重试。'); }
- let data; try { data = await response.json(); } catch { throw new Error('服务响应不完整，请重新打开核验台后重试。'); }
- if(response.status===403) throw new Error('核验台会话已失效，请重新打开页面后重试。');
- if(!response.ok) throw new Error(data.error || '请求未完成，请重试。'); return data;
+ const id=trackedActions.has(action)?crypto.randomUUID():null;
+ if(id){ownedOperationId=id;ownedOperationKind=action;renderLocks();}
+ try{
+  let response;try{response=await fetch('/api/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-SkillSync-Client':nonce},body:JSON.stringify(id?{...body,operationId:id}:body),signal});}
+  catch{throw new Error('无法连接本机服务，请确认核验台已启动后重试。');}
+  let data;try{data=await response.json();}catch{throw new Error('服务响应不完整，请重新打开核验台后重试。');}
+  if(response.status===403)throw new Error('核验台会话已失效，请重新打开页面后重试。');
+  if(!response.ok)throw new Error(data.error||'请求未完成，请重试。');
+  if(id&&(operationDisposed||ownedOperationId!==id))throw new Error('页面状态已改变，旧操作回应仅保留在历史，不恢复处理权限。');
+  if(id&&data.operationId!==id)throw new Error('操作回应编号未能核对，请先查看后台状态和历史，原文件未重试。');
+  return data;
+ }finally{if(id&&ownedOperationId===id){ownedOperationId=null;ownedOperationKind=null;renderLocks();}}
 }
+
 // Keep one bounded report string and one fresh opaque browsing context.
 let reportHtml='';
 function mountReport(){
@@ -46,7 +58,8 @@ function mountReport(){
 function showReport(html){reportHtml=html.replaceAll('href="#','href="about:srcdoc#');if(!$('result').hidden)mountReport();}
 function clearReport(){summaryCanPlan=false;if(!reportHtml)return;reportHtml='';$('report').srcdoc='';}
 function status(text){ $('status').textContent = text; }
-function lock(value, applying = false){ busy=value; ['verify','plan','result-recheck','result-details','mode-skill','mode-artifacts','reverify','choose','choose-contract','root','contract','kind','delivery','history-refresh','batch-plan','batch-preview','batch-recover','batch-output','batch-previous','batch-retry','batch-package','batch-digest','batch-open','choose-batch-plan','choose-batch-package'].forEach(id => $(id).disabled=value); $('batch-run').disabled=value||!batchReady; document.querySelectorAll('.history-open').forEach(button=>button.disabled=value||historyLoading); ['history-query','history-kind','history-exit','history-filter','history-clear','history-refresh'].forEach(id=>$(id).disabled=value||historyLoading); $('history-prev').disabled=value||historyLoading||historyOffset===0; $('history-next').disabled=value||historyLoading||historyOffset+12>=historyTotal; $('export-summary').disabled=value||!historyId; $('cancel').disabled=!value || applying; $('confirm').disabled=value||!planId; $('apply').disabled=value || !$('confirm').checked || !planId; $('plan').disabled=value||!selected||!summaryCanPlan; syncHistoryCompareControls(); document.querySelectorAll('.history-compare-pick').forEach(button=>button.disabled=value||historyLoading); }
+function renderLocks(){const value=localBusy||checkingOperation||Boolean(observedOperation)||Boolean(ownedOperationId),applying=localApplying; busy=value; ['verify','plan','result-recheck','result-details','mode-skill','mode-artifacts','reverify','choose','choose-contract','root','contract','kind','delivery','history-refresh','batch-plan','batch-preview','batch-recover','batch-output','batch-previous','batch-retry','batch-package','batch-digest','batch-open','choose-batch-plan','choose-batch-package'].forEach(id => $(id).disabled=value); $('batch-run').disabled=value||!batchReady; document.querySelectorAll('.history-open').forEach(button=>button.disabled=value||historyLoading); ['history-query','history-kind','history-exit','history-filter','history-clear','history-refresh'].forEach(id=>$(id).disabled=value||historyLoading); $('history-prev').disabled=value||historyLoading||historyOffset===0; $('history-next').disabled=value||historyLoading||historyOffset+12>=historyTotal; $('export-summary').disabled=value||!historyId; $('cancel').disabled=checkingOperation||!(observedOperation?.cancellable||ownedOperationId&&['verify','plan','batch/run'].includes(ownedOperationKind)&&!applying); $('confirm').disabled=value||!planId; $('apply').disabled=value || !$('confirm').checked || !planId; $('plan').disabled=value||!selected||!summaryCanPlan; syncHistoryCompareControls(); document.querySelectorAll('.history-compare-pick').forEach(button=>button.disabled=value||historyLoading); }
+function lock(value,applying=false){localBusy=value;localApplying=value&&applying;renderLocks();}
 function clearPlan(){$('fix-title').textContent='审阅修复计划';planId=null;$('confirm').checked=false;setFix(false);$('changes').textContent='';$('apply').disabled=true;}
 function invalidate(){ $('plan').disabled=true;$('plan').hidden=true;fieldError('root','');fieldError('contract','');selected=null; planId=null; baselineId=null; historyId=null; $('comparison').textContent=''; $('export-summary').disabled=true; hideResult(); setFix(false); $('confirm').checked=false; clearReport(); status('目录或模式已更改，请重新核验'); }
 ['root','contract'].forEach(id=>$(id).addEventListener('input',()=>{invalidate();syncMode();}));
@@ -65,7 +78,7 @@ async function verify(recheck=false){ if(busy||!validateInputs())return;clearPla
  const data=await api('verify'); selected=true; historyId=data.historyId; baselineId=data.baselineId; planId=null; $('confirm').checked=false; setFix(false); showComparison(data.comparison); await loadHistory(true); revealResult('single'); showReport(data.html); showTaskSummary(data.summary); status((recheck?'重新核验完成':'核验完成')+' · '+data.status); if(recheck) $('receipt').textContent='最新核验：'+data.status;
  }catch(e){status(e.message);}finally{lock(false);} }
 $('verify').onclick=()=>verify(); $('reverify').onclick=()=>verify(true);
-$('cancel').onclick=async()=>{try{await api('cancel');status('已请求取消，等待核验器退出…');}catch(e){status(e.message);}};
+$('cancel').onclick=async()=>{const id=observedOperation?.id||ownedOperationId;if(!id){status('当前操作尚未核对，请先检查后台状态。');return;}try{await api('cancel',{operationId:id});status('已请求取消，等待准备或核验器退出；结果以回执为准。');if(observedOperation){observedOperation={...observedOperation,cancellable:false};renderLocks();}}catch(e){status(e.message);}};
 $('plan').onclick=async()=>{if(!selected||!summaryCanPlan)return;clearPlan();lock(true);try{const data=await api('plan');planId=data.id; $('changes').textContent=data.description; setFix(true); $('confirm').checked=false; $('receipt').textContent='确认应用后才会修改文件。'; status('计划已生成，请审阅'); await loadHistory(true);}catch(e){status(e.message);}finally{lock(false);}};
 $('confirm').onchange=()=>{$('apply').disabled=busy||!$('confirm').checked||!planId;};
 $('apply').onclick=async()=>{
@@ -115,7 +128,7 @@ for(const name of ['before','after']){const field=$('history-compare-'+name);fie
 function showComparison(value){ $('comparison').textContent=!value?'此次结果可作为后续复查基线。':value.status==='compared'?'与基线相比：新增 '+value.added+' · 仍然存在 '+value.ongoing+' · 证据变化 '+(value.changed||0)+' · 本次不再出现 '+value.resolved:'基线无法比较：范围已变化或证据不完整。'; }
 function showHistoryFilters(){ $('history-query').value=historyFilters.query; $('history-kind').value=historyFilters.kind||''; $('history-exit').value=historyFilters.exitCode===undefined?'':String(historyFilters.exitCode); }
 async function loadHistory(newest=false, filters=historyFilters, offset=newest?0:historyOffset){
- if(historyLoading){if(newest)historyRefreshQueued=true;return;}historyLoading=true;lock(busy);
+ if(historyLoading){if(newest)historyRefreshQueued=true;return;}historyLoading=true;renderLocks();
  try{ const data=await api('history',{offset,...filters}); historyTotal=data.total;historyOffset=offset;historyFilters=filters;showHistoryFilters();
  // At most 12 metadata rows; unchanged refreshes keep existing elements and listeners.
  const signature=JSON.stringify(data.items); if(signature!==renderedHistory){ $('history-list').replaceChildren();
@@ -128,7 +141,7 @@ async function loadHistory(newest=false, filters=historyFilters, offset=newest?0
  renderedHistory=signature; }
  $('history-info').textContent=data.total+' 条匹配记录 · 保存文件 '+data.capacity.files+'/'+data.capacity.maxFiles+(data.unavailable?' · '+data.unavailable+' 条索引无法读取（不参与筛选）':'');
  $('history-prev').disabled=busy||historyOffset===0;$('history-next').disabled=busy||historyOffset+12>=historyTotal;
- }catch(e){$('history-info').textContent='历史暂不可用，保留上次结果与筛选条件，原文件未删除。';showHistoryFilters();}finally{historyLoading=false;lock(busy);if(historyRefreshQueued){historyRefreshQueued=false;await loadHistory(true);}}
+ }catch(e){$('history-info').textContent='历史暂不可用，保留上次结果与筛选条件，原文件未删除。';showHistoryFilters();}finally{historyLoading=false;renderLocks();if(historyRefreshQueued){historyRefreshQueued=false;await loadHistory(true);}}
 }
 $('history-refresh').onclick=()=>loadHistory(true);
 $('history-prev').onclick=()=>{if(historyLoading)return;return loadHistory(false,historyFilters,Math.max(0,historyOffset-12));};
@@ -154,6 +167,48 @@ function offerBatchRecovery(path,message){
 $('batch-run').onclick=async()=>{const output=$('batch-output').value;clearBatchContext();batchReady=false;lock(true);status('正在逐批核验并生成新复核包…');try{const data=await api('batch/run',{path:$('batch-plan').value,output,previous:$('batch-previous').value,retryFailed:$('batch-retry').checked});$('batch-package').value=data.packagePath;showBatch(data);}catch(e){status(e.message);offerBatchRecovery(output,e.message);}finally{lock(false);}};
 $('batch-recover').onclick=async()=>{if(busy||!recoveryPath)return;const path=recoveryPath;lock(true);status('正在只读核对此次输出…');try{showBatch(await api('batch/open',{path,expectSha256:'',contract:$('batch-contract').value||undefined}));$('batch-package').value=path;recoveryPath=null;$('batch-recovery').hidden=true;}catch(e){$('batch-recovery-state').textContent=e.message+'；路径保留，可稍后再检查。';status(e.message);}finally{lock(false);}};
 $('batch-open').onclick=async()=>{clearBatchContext();batchReady=false;lock(true);status('正在复核已保存的包…');try{showBatch(await api('batch/open',{path:$('batch-package').value,expectSha256:$('batch-digest').value,contract:$('batch-contract').value||undefined}));}catch(e){status(e.message);}finally{lock(false);}};
+function validOperationStatus(value){
+ if(!value||value.schema!=='skillsync.workbench-operation/v1'||value.readOnly!==true||!Object.hasOwn(value,'active')||!Object.hasOwn(value,'last'))return false;
+ const basic=v=>v&&operationUUID(v.id)&&Object.hasOwn(operationLabels,v.kind)&&Number.isSafeInteger(v.startedAt)&&v.startedAt>0;
+ if(value.active!==null&&(!basic(value.active)||!['preparing','running','finalizing','applying'].includes(value.active.phase)||typeof value.active.cancellable!=='boolean'||typeof value.active.cancelRequested!=='boolean'))return false;
+ if(value.last!==null&&(!basic(value.last)||!Number.isSafeInteger(value.last.finishedAt)||value.last.finishedAt<value.last.startedAt||!['completed','failed','cancelled','unconfirmed'].includes(value.last.outcome)||(value.last.historyId!==undefined&&!operationUUID(value.last.historyId))))return false;
+ return true;
+}
+function stopOperationPolling(){if(operationTimer!==null){clearTimeout(operationTimer);operationTimer=null;}}
+function scheduleOperationPolling(){
+ stopOperationPolling();if(operationDisposed||document.hidden||!observedOperation||checkingOperation)return;
+ if(operationReads>=90){$('operation-state').textContent+=' 自动读取已暂停，请手动检查；后台操作未自动取消。';return;}
+ operationTimer=setTimeout(()=>{operationTimer=null;void checkOperation(false);},2000);
+}
+async function checkOperation(reset=true){
+ if(operationDisposed||ownedOperationId)return;if(reset)operationReads=0;stopOperationPolling();operationController?.abort();
+ const controller=new AbortController();operationController=controller;operationReads++;checkingOperation=true;$('operation-check').disabled=true;renderLocks();
+ try{
+  const value=await api('operation',{},controller.signal);
+  if(operationController!==controller||controller.signal.aborted||operationDisposed||ownedOperationId)return;
+  if(!validOperationStatus(value))throw new Error('后台状态回应无法核对，请重新打开核验台。');
+  checkingOperation=false;const previous=observedOperation;
+  if(value.active){
+   if(!previous||previous.id!==value.active.id){clearPlan();clearReport();hideResult();selected=null;baselineId=null;historyId=null;batchReady=false;summaryCanPlan=false;}
+   observedOperation=value.active;
+   const phase={preparing:'正在准备',running:'仍在后台进行',finalizing:'正在保存结果',applying:'正在写入，暂不可取消'}[value.active.phase];
+   $('operation-state').textContent=operationLabels[value.active.kind]+' · '+(value.active.cancelRequested?'已请求取消，等待退出':phase)+'。这里只恢复状态，不恢复旧处理计划或勾选确认。';
+  }else{
+   observedOperation=null;
+   const ended=value.last&&(!previous||value.last.id===previous.id)?value.last:null;const words={completed:'操作请求已结束，核验结论以报告为准。',failed:'上次操作未完成。',cancelled:'上次取消请求已收口。',unconfirmed:'上次写入或批次输出结果尚未确认。'};
+   $('operation-state').textContent=ended?words[ended.outcome]+' 请到历史或原输出位置查看保留证据，重新选择后再核验；不会自动重跑。':'后台当前空闲。重启前或未确认的写入仍需查看历史并重新核验。';
+   if(previous)void loadHistory(true);
+  }
+ }catch(error){
+  if(operationController===controller&&!controller.signal.aborted&&!operationDisposed){checkingOperation=true;if(observedOperation)observedOperation={...observedOperation,cancellable:false};$('operation-state').textContent=error.message+' 后台状态未确认，原文件与输入保留；请检查后再继续。';}
+ }finally{if(operationController===controller){operationController=null;$('operation-check').disabled=false;renderLocks();scheduleOperationPolling();}}
+}
+$('operation-check').onclick=()=>checkOperation();
+window.addEventListener('pagehide',()=>{operationDisposed=true;stopOperationPolling();operationController?.abort();operationController=null;ownedOperationId=null;ownedOperationKind=null;clearHistoryComparison();clearPlan();clearReport();hideResult();selected=null;baselineId=null;historyId=null;batchReady=false;});
+window.addEventListener('pageshow',event=>{if(event.persisted){operationDisposed=false;localBusy=false;localApplying=false;ownedOperationId=null;ownedOperationKind=null;checkingOperation=true;void checkOperation();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopOperationPolling();operationController?.abort();operationController=null;}else if(!ownedOperationId)void checkOperation();});
 syncWorkspace();
+renderLocks();
 loadHistory();
+void checkOperation();
 `;

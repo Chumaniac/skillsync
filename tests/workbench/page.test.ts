@@ -1,6 +1,7 @@
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { workbenchPage, workbenchScript } from "../../src/workbench/page.js";
+import {randomUUID} from 'node:crypto';
 
 class Element {
   value = ""; textContent = ""; content = "fixture"; disabled = false;
@@ -19,13 +20,14 @@ class Element {
   append(...elements: Element[]) { this.children.push(...elements); }
 }
 
-async function page(failure?: "network" | "invalid-json" | "expired-session", delayInitialHistory = false) {
+async function page(failure?: "network" | "invalid-json" | "expired-session", delayInitialHistory = false, initialOperation?:unknown) {
   const elements = new Map<string, Element>();
   const get = (id: string) => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id)!; };
   get("kind").value = "skill"; get("root").value = "/synthetic/review";
   const offsets: number[] = [], actions: string[] = [];
   const inputs: Array<{action: string; input: Record<string, unknown>}> = [];
   const rejected = new Map<string, string>(),responses=new Map<string,unknown>();
+  responses.set('operation',initialOperation??{schema:'skillsync.workbench-operation/v1',active:null,last:null,readOnly:true});
   let releaseHistory!: () => void, historyCalls = 0;
   const initialHistory = new Promise<void>(resolve => { releaseHistory = resolve; });
   const entries = Array.from({length: 14}, (_, i) => ({id: String(i), kind: "verify", label: `record ${i}`, createdAt: "2026-01-01T00:00:00Z"}));
@@ -37,6 +39,7 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
     const savedHistory = {total: entries.length, items: entries.slice(input.offset, input.offset + 12), capacity: {files: entries.length * 2, maxFiles: 120}};
     if (action === "select" && failure === "network") throw new TypeError("Failed to fetch");
     return {ok: failure !== "expired-session" || action !== "select", status: failure === "expired-session" && action === "select" ? 403 : 200, json: async () => {
+      const data = await (async()=>{
       if(responses.has(action))return responses.get(action);
       if (action === "select" && failure === "invalid-json") throw new SyntaxError("Unexpected token '<'");
       if (action === "history") {
@@ -51,14 +54,52 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
       if (action === "history/open") return {id: input.id, selection: {path:"/synthetic/review",kind:"skill",delivery:false},summary:{title:"历史证据 · 只读",description:"请重新核验当前目录",counts:[],canPlan:false,readOnly:true},html:"<p>Stored report</p>"};
       if (action === "plan") return {id: "synthetic-plan", description: "Review this synthetic change"};
       return {};
+      })();
+      return input.operationId?{...(data as Record<string,unknown>),operationId:input.operationId}:data;
     }};
   };
-  runInNewContext(workbenchScript, {document: {getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()}, fetch, URL, Blob, setTimeout, AbortController});
+  const timers=new Map<number,()=>void>(),events=new Map<string,()=>void>();let nextTimer=0;
+  runInNewContext(workbenchScript, {document: {hidden:false,addEventListener:(name:string,fn:()=>void)=>events.set(name,fn),getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()},window:{addEventListener:(name:string,fn:()=>void)=>events.set(name,fn)},crypto:{randomUUID},fetch, URL, Blob, setTimeout:(fn:()=>void)=>{timers.set(++nextTimer,fn);return nextTimer;},clearTimeout:(id:number)=>timers.delete(id), AbortController});
   await new Promise(resolve => setImmediate(resolve));
-  return {get, offsets, actions,inputs,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
+  return {get, offsets, actions,inputs,timers,events,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
 }
 
 describe("workbench interactions", () => {
+  it('a cached return cannot display an old report as the current result',async()=>{
+    const ui=await page();await ui.click('verify');expect(ui.get('result').hidden).toBe(false);
+    ui.events.get('pagehide')?.();expect(ui.get('result').hidden).toBe(true);expect(ui.get('report').srcdoc).toBe('');expect(ui.get('root').value).toBe('/synthetic/review');
+  });
+  it('automatic status polling stops at90 reads and leaves an explicit check available',async()=>{
+    const id=randomUUID();const ui=await page(undefined,false,{schema:'skillsync.workbench-operation/v1',active:{id,kind:'verify',phase:'running',startedAt:1,cancellable:true,cancelRequested:false},last:null,readOnly:true});
+    for(let i=0;i<100&&ui.timers.size;i++){const [key,fn]=[...ui.timers][0];ui.timers.delete(key);fn();await new Promise(r=>setImmediate(r));}
+    expect(ui.actions.filter(a=>a==='operation')).toHaveLength(90);expect(ui.timers.size).toBe(0);expect(ui.get('operation-state').textContent).toContain('自动读取已暂停');expect(ui.get('operation-check').disabled).toBe(false);
+  });
+  it('background polling is bounded, cancelled reads clean up and apply authority remains unavailable',async()=>{
+    const id=randomUUID(),active={id,kind:'apply',phase:'applying',startedAt:1,cancellable:false,cancelRequested:false};
+    const ui=await page(undefined,false,{schema:'skillsync.workbench-operation/v1',active,last:null,readOnly:true});
+    expect(ui.get('verify').disabled).toBe(true);expect(ui.get('cancel').disabled).toBe(true);expect(ui.get('apply').disabled).toBe(true);
+    expect(ui.timers.size).toBe(1);await ui.click('operation-check');expect(ui.timers.size).toBe(1);
+    ui.events.get('pagehide')?.();expect(ui.timers.size).toBe(0);expect(ui.get('confirm').checked).toBe(false);
+  });
+  it('unconfirmed completions and malformed status cannot unlock an old plan',async()=>{
+    const id=randomUUID();const ui=await page(undefined,false,{schema:'skillsync.workbench-operation/v1',active:null,last:{id,kind:'apply',startedAt:1,finishedAt:2,outcome:'unconfirmed',historyId:randomUUID()},readOnly:true});
+    expect(ui.get('operation-state').textContent).toContain('尚未确认');expect(ui.get('apply').disabled).toBe(true);
+    ui.respond('operation',{schema:'skillsync.workbench-operation/v1',active:{id:'PRIVATE_INVALID_ID'},last:null,readOnly:true});await ui.click('operation-check');
+    expect(ui.get('verify').disabled).toBe(true);expect(ui.get('operation-state').textContent).toContain('无法核对');expect(ui.get('operation-state').textContent).not.toContain('PRIVATE_INVALID_ID');
+  });
+
+  it('leaving a page discards a late plan rather than reviving its authority',async()=>{
+    const ui=await page();await ui.click('verify');let release!:(value:unknown)=>void;
+    ui.respond('plan',new Promise(resolve=>{release=resolve}));const pending=ui.click('plan');await new Promise(resolve=>setImmediate(resolve));
+    ui.events.get('pagehide')?.();release({id:'old-plan',description:'SYNTHETIC_OLD_PLAN'});await pending;
+    expect(ui.get('fix').hidden).toBe(true);expect(ui.get('changes').textContent).not.toContain('SYNTHETIC_OLD_PLAN');expect(ui.get('confirm').checked).toBe(false);
+    expect(ui.timers.size).toBe(0);
+  });
+  it('refresh shows the existing background operation without restoring apply authority',async()=>{
+    const id=randomUUID();const ui=await page(undefined,false,{schema:'skillsync.workbench-operation/v1',active:{id,kind:'verify',phase:'running',startedAt:1,cancellable:true,cancelRequested:false},last:null,readOnly:true});
+    expect(ui.get('verify').disabled).toBe(true);expect(ui.get('cancel').disabled).toBe(false);expect(ui.get('apply').disabled).toBe(true);expect(ui.get('confirm').checked).toBe(false);
+    expect(ui.get('operation-state').textContent).toContain('核验');
+  });
   it("ignores delayed history replies after an input change",async()=>{
     const ui=await page(),before="11111111-1111-4111-8111-111111111111",after="22222222-2222-4222-8222-222222222222";
     ui.get("history-compare-before").value=before;ui.get("history-compare-after").value=after;
@@ -101,7 +142,7 @@ describe("workbench interactions", () => {
     ui.fail("history","Synthetic list failure");ui.get("history-query").value="other";await ui.click("history-filter");
     expect(ui.get("history-query").value).toBe("review");expect(ui.get("history-list").children).toHaveLength(2);
     expect(ui.get("history-info").textContent).toContain("保留");
-    expect(ui.actions.every(action=>action==="history")).toBe(true);
+    expect(ui.actions.every(action=>action==="history"||action==="operation")).toBe(true);
   });
  it('provides and sends an explicit legacy contract without automatic inspection',async()=>{
   expect(workbenchPage('fixture')).toContain('for="batch-contract"');

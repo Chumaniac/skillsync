@@ -251,7 +251,8 @@ describe("real CLI graphical workbench", () => {
     await new Promise(resolve => setTimeout(resolve, 100));
     expect((await api("history")).status).toBe(200);
     expect((await api("plan")).status).toBe(409);
-    expect((await api("cancel")).status).toBe(200);
+    const operation=(await api("operation")).data.active;expect(operation.cancellable).toBe(true);
+    expect((await api("cancel",{operationId:operation.id})).status).toBe(200);
     expect((await verification).data.error).toContain("已取消");
     expect((await api("select", {path:root,kind:"skill"})).status).toBe(200);
   });
