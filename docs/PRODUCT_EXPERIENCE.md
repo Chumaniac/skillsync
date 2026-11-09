@@ -1,36 +1,33 @@
-# 六项目共用设计规范
+# Product experience
 
-面向效率工具：先显示当前任务、输入、结果与下一步。示例只填入，不自动提交；真实/合成/虚拟/只读边界与错误不可隐藏。
+The workbench is a local efficiency tool. Show the current task, its inputs, results and next action. Examples fill or preview inputs; they do not submit work or grant permissions. Keep synthetic data, local calculations, saved evidence and live results distinct.
 
-色彩：页面 #f7f7f5，表面 #fff，正文 #242424，次要文字 #62655f，边线 #dedfd9，操作色 #31594d。危险与警告保留语义色；不使用紫色渐变、光晕、装饰性背景。
+## Visual rules
 
-字体：系统无衬线与中文系统字体，不新增远程字体；正文14–16px，行高1.6–1.7，标题24–36px，数字等宽。布局宽度1040–1280px，间距8/16/24/32px，圆角6–8px，无浮夸阴影。
+Use a neutral background (#f7f7f5), white surfaces, dark text (#242424), secondary text (#62655f), thin borders (#dedfd9) and a restrained action color (#31594d). Preserve warning and error colors. Use system fonts and existing local font assets; do not add remote font requests.
 
-交互：一个明确主操作，次要操作分组；200ms颜色/边框过渡，尊重减少动态效果。触控目标至少44px；窄屏单列，长表格局部滚动，不压缩文字。键盘焦点清晰、表单有标签、状态用role=status、错误不依赖颜色。
+Body text is 14-16px with generous line height. Use clear headings, spacing in 8px steps, small corners and minimal shadows. Use approximately 200ms color and border transitions and respect reduced-motion preferences. Keep visible keyboard focus, labelled controls and status messages. Main touch actions are at least 44px; narrow screens use one column and bounded table scrolling.
 
-文案：动作+对象，如“保存记录”“导出报告”；说明限制与下一步。移除营销式热情、英文内部组件角色和无事实支撑的智能承诺。技术文档中的必要术语、授权、来源、教师审阅和硬件限制保留。
+## Data and interaction rules
 
-数据：新增历史有容量限制；不自动保存敏感输入。保留成功资产与历史，不清空异常存储。导出只取当前授权范围，不含令牌、Cookie或凭据。
+Provide examples, explicit run/save/export actions, useful empty states and actionable errors. Retain inputs after failures and invalidate old results after input changes. Bound history, input sizes and retained resources. Preserve invalid stored data rather than silently resetting it. Never include credentials in reports or diagnostics.
 
-参考链接无法通过当前工具读取，本规范依据用户在本轮给出的风格描述。
+The supplied reference page was not accessible through the available reader. These changes follow the user's written description of a restrained, practical product style.
 
-## 本仓实现
+## Implemented workflow
 
-现有核验/计划/备份/复查与历史保持；新增固定示例目录填入，读取已存核验的结构化证据面板与JSON导出，不重新执行核验。
+The existing directory verification, immutable history, reviewed repair plans, backups, rechecks and batch acceptance remain in place. The new example action fills a fixed fixture directory without running it. Structured evidence can be inspected and downloaded from a saved verification record without rerunning the command.
 
-## 数据、异常与资源边界
+The service retains loopback, Origin, nonce, UUID, bounded-read and history-integrity checks. Viewing or exporting evidence never executes a Skill, certifies its author or grants repair authority.
 
-沿用loopback、origin、nonce和历史UUID/读完整性边界。导出不授予Skill执行或修复权限。示例只填入，需用户点击核验。
+## Validation
 
-## 验证口径
+Build and type checks, 54 focused workbench tests, actual local CLI verification and JSON download, and desktop/390px/320px browser flows passed. Hosted checks also run the existing repository-wide regression and verification gates. Real providers and production deployment are outside this change.
 
-构建和类型、54项工作台定向检查、真实本机CLI核验与JSON下载、桌面/390px/320px。
-
-## 本地启动
+## Local startup
 
 ```sh
-npm ci && npm run build
+npm ci
+npm run build
 node dist/cli/index.js gui --state-dir /absolute/private/report-directory
 ```
-
-本轮为独立本地候选分支，无新增费用、真实数据、硬件操作或生产部署。
