@@ -126,6 +126,17 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         if(child){cancelKiller=setTimeout(()=>child.kill("SIGKILL"),2000);cancelKiller.unref();}
         return send(res,200,{cancelled:true,operationId:currentOperation.id});
       }
+      if(req.url === "/api/example") {
+        const path=fileURLToPath(new URL("../../fixtures/product/trust-loop/review",import.meta.url));
+        const info=await lstat(path);
+        if(!info.isDirectory()||info.isSymbolicLink())throw new WorkbenchStateError("示例目录不可用，请选择自己的 Skill 目录。");
+        return send(res,200,{path});
+      }
+      if(req.url === "/api/history/json") {
+        const {record,output}=await history.read(input.id);
+        if(record.kind!=="verify"||!output)return send(res,400,{error:"此记录没有结构化核验报告。"});
+        return send(res,200,{schema:"skillsync.local-export/v1",recordId:record.id,createdAt:record.createdAt,report:parseStrictJson(output),scope:"本机已存核验，不执行 Skill，不认证作者"});
+      }
       // Listing is bounded and read-only; it must not acquire or reset the CLI operation lock.
       if (req.url === "/api/history") return send(res,200,await history.list(input.offset===undefined?0:Number(input.offset),{
         query:input.query??"",kind:input.kind,exitCode:input.exitCode,

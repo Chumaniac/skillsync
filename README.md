@@ -174,3 +174,7 @@ Install GitHub v0.1.7 or build the source checkout, then run `skillsync verify -
 
 
 Current source adds `skillsync capabilities --json` to distinguish an identified source build from fixed downloads, and `ci init --source github-source --source-revision <full-commit>` to pin a reviewed CLI source in consumer CI. The npm default stays at published0.1.0; no new package is published. [Channel and CI details](docs/ci.md#installation-channel-and-source-capabilities-current-main).
+
+## Local workbench update (2026-11-09)
+
+Load an example directory, inspect structured saved evidence and download verification JSON without rerunning the command. See [Product experience](docs/PRODUCT_EXPERIENCE.md) for scope, startup and validation.
