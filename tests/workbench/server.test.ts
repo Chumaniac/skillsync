@@ -22,6 +22,17 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it("fills a fixed example and exports saved JSON without another verification or mutation", async () => {
+    const {api,base,root}=await setup();
+    const example=await api("example");expect(example.status).toBe(200);expect(example.data.path).toContain("fixtures/product/trust-loop/review");
+    await api("select",{path:root,kind:"skill"});
+    const verified=await api("verify");expect(verified.status).toBe(200);
+    const filesBefore=(await readdir(join(base,"state"))).sort();
+    const exported=await api("history/json",{id:verified.data.historyId});expect(exported.status).toBe(200);expect(exported.data.recordId).toBe(verified.data.historyId);expect(exported.data.report).toHaveProperty("issues");
+    expect((await readdir(join(base,"state"))).sort()).toEqual(filesBefore);
+    expect((await api("history/json",{id:"../outside"})).status).not.toBe(200);
+  });
+
   it("compares saved verification evidence without commands, history writes or consuming the current plan", async () => {
     const {api,base,root,script}=await setup();
     await api("select",{path:root,kind:"skill"});
