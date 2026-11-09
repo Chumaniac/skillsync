@@ -1,3 +1,4 @@
+import { request as httpRequest } from 'node:http';
 import { chmod, cp, mkdir, mkdtemp, readFile, readdir, realpath, rename, stat, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -22,6 +23,19 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it("accepts an activated top-level page navigation while rejecting cross-site APIs and frames", async () => {
+    const {app,token}=await setup();
+    const get=(path:string,headers:Record<string,string>)=>new Promise<number>((resolve,reject)=>{const request=httpRequest(app.url+path,{headers},response=>{response.resume();response.on('end',()=>resolve(response.statusCode!));});request.on('error',reject);request.end();});
+    const navigation={'sec-fetch-site':'cross-site','sec-fetch-mode':'navigate','sec-fetch-dest':'document','sec-fetch-user':'?1'};
+    expect(await get('/',navigation)).toBe(200);
+    expect(await get('/',{...navigation,'sec-fetch-dest':'iframe'})).toBe(403);
+    expect(await get('/',{...navigation,'sec-fetch-user':'?0'})).toBe(403);
+    expect(await get('/',{...navigation,origin:'https://untrusted.invalid'})).toBe(403);
+    expect(await get('/api/history',navigation)).toBe(403);
+    const write=await fetch(app.url+'/api/verify',{method:'POST',headers:{'Content-Type':'application/json','X-SkillSync-Client':token,'sec-fetch-site':'cross-site'},body:'{}'});
+    expect(write.status).toBe(403);
+  });
+
   it("fills a fixed example and exports saved JSON without another verification or mutation", async () => {
     const {api,base,root}=await setup();
     const example=await api("example");expect(example.status).toBe(200);expect(example.data.path).toContain("fixtures/product/trust-loop/review");

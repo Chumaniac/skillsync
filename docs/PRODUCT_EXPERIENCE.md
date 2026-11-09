@@ -31,3 +31,7 @@ npm ci
 npm run build
 node dist/cli/index.js gui --state-dir /absolute/private/report-directory
 ```
+
+## Live browser navigation
+
+The static entry page accepts an explicit user-activated top-level navigation, including a reload that retains cross-site Fetch Metadata. The literal loopback Host, Origin, API nonce and mutation checks remain enforced. Cross-site iframes, script/API reads and writes are rejected. This fixes a real Chrome launch refusal without changing file-selection or repair authority.

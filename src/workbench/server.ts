@@ -103,7 +103,13 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
     res.end(type === "application/json" ? JSON.stringify(value) : value);
   }
   const server = createServer(async (req, res) => {
-    if (req.headers.host !== new URL(origin).host || (req.headers.origin && req.headers.origin !== origin) || req.headers["sec-fetch-site"] === "cross-site") return send(res, 403, {error: "仅允许本机核验台访问。"});
+    // A clicked/typed top-level page may retain cross-site Fetch Metadata on reload.
+    // Only the static entry document is admitted; API writes still require same-origin and nonce checks.
+    const entryNavigation = req.method === "GET" && req.url === "/" &&
+      req.headers["sec-fetch-mode"] === "navigate" && req.headers["sec-fetch-dest"] === "document" &&
+      req.headers["sec-fetch-user"] === "?1" && !req.headers.origin;
+    if (req.headers.host !== new URL(origin).host || (req.headers.origin && req.headers.origin !== origin) ||
+      (req.headers["sec-fetch-site"] === "cross-site" && !entryNavigation)) return send(res, 403, {error: "仅允许本机核验台访问。"});
     if (req.method === "GET") {
       if (req.url === "/favicon.ico") { res.writeHead(204); return res.end(); }
       if (req.url === "/health") return send(res, 200, {service: "skillsync-workbench", schema: 1});
