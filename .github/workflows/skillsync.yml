@@ -10,6 +10,7 @@ on:
       - ".claude/skills/**"
       - ".cursor/skills/**"
       - "src/**"
+      - "desktop/**"
       - "scripts/**"
       - "tests/**"
       - "runner/**"
@@ -49,6 +50,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+      - run: python3 desktop/tests/test_fixture_paths.py
       - run: npm ci
       - run: npm test
       - run: npm test -- --run tests/integration/product-trust-loop.test.ts tests/integration/live-runtime-preparation.test.ts tests/docs/documentation.test.ts
