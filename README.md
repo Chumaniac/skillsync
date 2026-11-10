@@ -178,3 +178,7 @@ Current source adds `skillsync capabilities --json` to distinguish an identified
 ## Local workbench update (2026-11-09)
 
 Load an example directory, inspect structured saved evidence and download verification JSON without rerunning the command. See [Product experience](docs/PRODUCT_EXPERIENCE.md) for scope, startup and validation.
+
+## Native macOS window
+
+The local workbench also has an independent macOS window and Dock identity. Build instructions, private history location and lifecycle boundaries are in [desktop/README.md](desktop/README.md). Its interface uses a quiet sidebar while retaining all existing directory verification, repair confirmation, backup and evidence boundaries.
