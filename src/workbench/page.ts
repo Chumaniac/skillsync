@@ -13,6 +13,23 @@ export const workbenchStyle = `
 @media(max-width:980px){.workspace-shell{grid-template-columns:218px minmax(0,1fr)}main{padding:30px 26px}.row{flex-wrap:wrap}.row input{flex-basis:100%}}
 @media(max-width:720px){.workspace-shell{display:block}.app-sidebar{position:static;height:auto;padding:18px 16px}.app-brand{padding-bottom:0}.sidebar-label,.sidebar-bottom{display:none}.task-nav{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px}.task-nav button{text-align:center;padding:8px;min-width:0;line-height:1.4}.workspace-bar{padding:0 20px;height:52px}main{padding:28px 20px}.page-heading h1{font-size:23px}section{padding:18px}.selection-options,.history-filters{grid-template-columns:1fr}.row{flex-wrap:wrap}.row input{flex-basis:100%}.operation-status{align-items:flex-start;flex-direction:column}button,input,select{min-height:44px}input,select{font-size:16px}.actions button{flex:1 1 120px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+/* SkillSync · cobalt workspace, with state colors reserved for outcomes. */
+:root{background:#f6f8fd;color:#243149;--line:#d8e2f3;--muted:#5e6e88;--sidebar:#edf2fc;--panel:#f2f6fd;--accent:#315db0;--accent-deep:#244886;--accent-soft:#dfe9fc}
+body,.workspace-main{background:#f6f8fd}.app-sidebar{background:var(--sidebar);border-color:var(--line)}
+.app-mark{width:32px;height:32px;background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 3px 8px #315db020}
+.sidebar-label{color:var(--accent);font-weight:550}.task-nav button:hover{background:#e0e9fa}.task-nav button[aria-pressed=true]{background:#d4e1fb;color:#244886;box-shadow:inset 3px 0 var(--accent);font-weight:600}
+.sidebar-bottom{color:#385278}.workspace-bar{background:#fff;border-bottom-color:var(--line)}.workspace-status{color:var(--accent);background:#edf3ff;padding:4px 10px;border-radius:20px}
+.page-heading{padding:24px;background:#eaf0fc;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:14px}.page-heading h1{color:#233c66}
+#task-single,#task-batch,#task-history,#result,#fix,.operation-reconnect{border-radius:14px;background:#fff;box-shadow:0 6px 24px #2448860b}
+h2{color:#244886}#task-single>h2,#task-batch>h2,#task-history>h2{border-bottom:1px solid var(--line);padding-bottom:14px}
+button{border-color:#bdcee9}button:hover{background:#eaf0fc;border-color:#94b0df}button.primary{background:var(--accent);border-color:var(--accent);box-shadow:0 3px 8px #315db01c}button.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+input,select{border-color:#bdcee9;background:#fff}input[type=radio],input[type=checkbox]{accent-color:var(--accent)}:focus-visible{outline-color:var(--accent)}
+.selection-options label{background:#f3f6fd;border-radius:10px}.selection-options label:has(input:checked){background:#e7effe;border-color:#8ba9dc;box-shadow:inset 0 0 0 1px #8ba9dc}
+.mode-help{background:#f0f5ff;border-left:3px solid #9bb5e1}.result-summary{padding:16px;background:#edf3ff;border:1px solid var(--line);border-radius:10px}
+#result{border-top:3px solid var(--accent)}pre{background:#f4f7fc}.history-comparison{background:#f3f6fc;padding:18px;border:1px solid var(--line);border-radius:10px}
+#history-list>article,#history-list>div{border-color:var(--line)}.history-comparison-counts dd{color:#244886;font-weight:600;font-variant-numeric:tabular-nums}
+@media(max-width:720px){.page-heading{padding:18px}.workspace-status{font-size:11px}.app-mark{width:30px;height:30px}}
+
 `;
 
 export const workbenchScript = `"use strict";
