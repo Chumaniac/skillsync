@@ -54,7 +54,7 @@
     "check": "npm test && npm run type-check && npm run lint && npm run build",
     "prepack": "npm run build",
     "pretest": "npm run build",
-    "build:browser": "vite build browser --base ./ --outDir ../browser-dist --emptyOutDir"
+    "build:browser": "tsc -p browser/tsconfig.json && vite build browser --base ./ --outDir ../browser-dist --emptyOutDir"
   },
   "dependencies": {
     "commander": "^13.1.0",
