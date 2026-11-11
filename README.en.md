@@ -159,7 +159,7 @@ maintenance changes are included in GitHub v0.1.7 and are absent from npm 0.1.0.
 
 ## Reference
 
-- [Project overview](https://chumanic.com/projects/skillsync/)
+- [Try the browser document check](https://chumaniac.github.io/skillsync/)
 - [Offline domain adaptation](./docs/domain-adaptation.md)
 - [Expansion and deep optimization roadmap](./docs/deep-optimization-roadmap.md)
 - [Security and privacy](./docs/security-boundary.md)
