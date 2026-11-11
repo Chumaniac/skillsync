@@ -42,9 +42,9 @@ describe("artifact correction review", () => {
     const result = await runCli(["artifacts", "--contract", options.contract, "--path", options.path,
       "--compare", baseline, "--format", "html"]);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("Changes since baseline review");
-    expect(result.stdout).toContain("1 improved");
-    expect(result.stdout).toContain("resolved");
+    expect(result.stdout).toContain("相较基准复核的变化");
+    expect(result.stdout).toContain("1 改善");
+    expect(result.stdout).toContain("已解决");
     expect(result.stdout).not.toMatch(/PRIVATE_HISTORY_MESSAGE|ORG_A|ORG_B|ORDER_1|<script\b|<iframe\b/);
     expect(result.stdout).not.toContain(root);
     expect(await readFile(baseline)).toEqual(preserved);
@@ -63,7 +63,7 @@ describe("artifact correction review", () => {
     expect(after.comparison?.findings).toEqual({ added: 1, ongoing: 0, resolved: 0 });
     const ordinary = await runArtifacts(options);
     expect(ordinary.comparison).toBeUndefined();
-    expect(renderArtifacts(ordinary, "html")).not.toContain("Changes since baseline review");
+    expect(renderArtifacts(ordinary, "html")).not.toContain("相较基准复核的变化");
   }));
 
   it("fails comparison on changed expectations while retaining the current inspection result", async () => fixture(async (root, options) => {
@@ -126,8 +126,8 @@ describe("artifact correction review", () => {
     after.reconciliations = Array.from({ length: 128 }, () => after.reconciliations![0]);
     after.comparison = compareArtifactReports(before, after, "c".repeat(64));
     const html = renderArtifacts(after, "html");
-    expect(html).toContain("Showing 64 of 128 check transitions");
-    expect(html).toContain("128 unchanged");
+    expect(html).toContain("按声明顺序展示 64 / 128 项检查变化");
+    expect(html).toContain("128 未变化");
     expect(html).not.toContain('<td>65</td>');
     expect(Buffer.byteLength(html)).toBeLessThan(1024 * 1024);
   }));

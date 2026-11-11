@@ -51,7 +51,7 @@ describe('portable multi-batch acceptance',()=>{
   expect(saved.payload.batches.map((item:{status:string})=>item.status)).toEqual(['passed','failed']);
   for(const value of [root,'ORG_A','ORG_B','ORDER_1'])expect(JSON.stringify(saved)).not.toContain(value);
   const checked=await runCli(['batch','inspect','--package',output,'--format','json']);expect(checked.exitCode).toBe(0);expect(JSON.parse(checked.stdout).integrity).toBe('verified');
-  const html=await runCli(['batch','inspect','--package',output,'--format','html']);expect(html.exitCode).toBe(0);expect(html.stdout).toContain('Batch acceptance');expect(html.stdout).toContain('not authenticated');
+  const html=await runCli(['batch','inspect','--package',output,'--format','html']);expect(html.exitCode).toBe(0);expect(html.stdout).toContain('批次验收');expect(html.stdout).toContain('不认证作者');
   expect((await stat(output)).mode&0o777).toBe(0o600);
  });
 

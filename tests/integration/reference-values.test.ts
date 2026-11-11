@@ -56,7 +56,7 @@ describe("reference metadata binding", () => {
     const reparsed = parseArtifactReport(report);
     expect(reparsed.findings).toEqual(report.findings);
     const html = renderArtifacts(report, "html");
-    expect(html).toContain("<h1>Reference metadata needs review</h1>");
+    expect(html).toContain("<h1>引用元数据需要复核</h1>");
     expect(html).toContain('data-reference-path="sources.csv"');
     expect(html).toContain('data-reference-row="2"');
     expect(html).toContain('data-source-column="digest"');

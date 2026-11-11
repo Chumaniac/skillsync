@@ -46,7 +46,7 @@ describe("declared cross-file review", () => {
     const input = await fixture(); await rm(join(input.path, "actual.csv"));
     const missing = await runArtifacts(input);
     expect(missing.status).toBe("failed"); expect(missing.declarations?.checks).toHaveLength(3);
-    expect(renderArtifacts(missing, "html")).toContain("These are declarations, not proof of a completed check");
+    expect(renderArtifacts(missing, "html")).toContain("这些内容是声明，不证明检查已完成");
     await writeFile(input.contract, '{"schema":"invalid"}');
     const invalid = await runArtifacts(input);
     expect(invalid.exitCode).toBe(2); expect(invalid.declarations).toBeUndefined();

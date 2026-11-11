@@ -21,6 +21,7 @@ describe("human acceptance report CLI", () => {
     const args = ["artifacts","--contract",join(root,"contract.json"),"--path",join(root,"artifacts"),"--format","json"];
     const ordinary = JSON.parse((await runCli(args)).stdout);
     expect(ordinary.reconciliations[0].recordEvidence).toBeUndefined();
+    expect(ordinary.receipt_binding).toBe("not-provided");
     const human = JSON.parse((await runCli([...args,"--include-row-evidence"])).stdout);
     expect(human.reconciliations[0].recordEvidence.items[0].sourceRows).toEqual([1]);
     expect(human.reconciliations[0].recordEvidence.items[0].targetRows).toEqual([1,3]);
@@ -31,7 +32,7 @@ describe("human acceptance report CLI", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout.startsWith("<!doctype html>")).toBe(true);
     expect(result.stdout.includes("声明的检查已通过")).toBe(true);
-    expect(result.stdout.includes("not-provided")).toBe(true);
+    expect(result.stdout.includes("未提供")).toBe(true);
     expect(result.stdout.includes("tenant_id + order_id")).toBe(true);
     for (const secret of [root, "ORG_A", "ORG_B", "ORDER_1"]) expect(result.stdout.includes(secret)).toBe(false);
   }));
