@@ -2,6 +2,17 @@ import { parseSkillDocument } from "../src/domain/frontmatter";
 const input = document.querySelector<HTMLTextAreaElement>("#source")!;
 const status = document.querySelector<HTMLElement>("#status")!;
 const message = document.querySelector<HTMLElement>("#message")!;
+const locate = document.querySelector<HTMLButtonElement>("#locate")!;
+let errorLocation: {start: number; end: number} | undefined;
+function resetLocation() {
+  errorLocation = undefined;
+  locate.hidden = true;
+}
+locate.addEventListener("click", () => {
+  if (!errorLocation) return;
+  input.focus();
+  input.setSelectionRange(errorLocation.start, errorLocation.end);
+});
 const fields = document.querySelector<HTMLElement>("#fields")!;
 const example = "---\nname: inventory-check\ndescription: 对照清单核对库存。\n---\n\n先读取清单，再逐项核对应有与实收数量。";
 const byteLimit = 24 * 1024;
@@ -10,6 +21,7 @@ function tooLarge(value: string) {
   return value.length > byteLimit || encoder.encode(value).length > byteLimit;
 }
 function oversized() {
+  resetLocation();
   fields.replaceChildren();
   status.textContent = "文档过大";
   message.textContent = "最多可检查 24 KiB。请缩短文档后重试。";
@@ -27,18 +39,30 @@ input.addEventListener("beforeinput", event => {
   if (event.cancelable && event.inputType.startsWith("insert")) checkInsertion(event, event.data);
 });
 function clear() {
+  resetLocation();
   status.textContent = "等待检查";
   message.textContent = "文档已更新，请重新检查。";
   fields.replaceChildren();
 }
 function check() {
+  resetLocation();
   fields.replaceChildren();
   if (tooLarge(input.value)) {
     oversized(); return;
   }
   const parsed = parseSkillDocument(input.value);
   if (!parsed.ok) {
-    status.textContent = "无法解析文档"; message.textContent = parsed.error; return;
+    status.textContent = "无法解析文档";
+    errorLocation = parsed.location;
+    if (errorLocation) {
+      const lines = input.value.slice(0, errorLocation.start).split("\n");
+      const column = Array.from(lines[lines.length-1] ?? "").length + 1;
+      message.textContent = "第 " + lines.length + " 行，第 " + column + " 列。" + parsed.error;
+      locate.hidden = false;
+    } else {
+      message.textContent = parsed.error;
+    }
+    return;
   }
   status.textContent = "文档可解析";
   const {frontmatter, body} = parsed.value;
