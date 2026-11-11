@@ -30,7 +30,7 @@ describe("human acceptance report CLI", () => {
     const result = await runCli(command(root));
     expect(result.exitCode).toBe(0);
     expect(result.stdout.startsWith("<!doctype html>")).toBe(true);
-    expect(result.stdout.includes("Declared checks passed")).toBe(true);
+    expect(result.stdout.includes("声明的检查已通过")).toBe(true);
     expect(result.stdout.includes("not-provided")).toBe(true);
     expect(result.stdout.includes("tenant_id + order_id")).toBe(true);
     for (const secret of [root, "ORG_A", "ORG_B", "ORDER_1"]) expect(result.stdout.includes(secret)).toBe(false);
@@ -41,14 +41,14 @@ describe("human acceptance report CLI", () => {
     const result = await runCli(command(root));
     expect(result.exitCode).toBe(1);
     expect(result.stdout.includes('data-value-mismatches="2"')).toBe(true);
-    expect(result.stdout.includes("Compare expected and delivered records using the declared key columns")).toBe(true);
+    expect(result.stdout.includes("按声明的键列比较预期与交付记录")).toBe(true);
     expect(result.stdout.includes("artifact.reconciliation-sum")).toBe(true);
-    expect(result.stdout.includes("Review required")).toBe(true);
+    expect(result.stdout.includes("需要复核")).toBe(true);
     expect(result.stdout.includes('data-source-records="1"')).toBe(true);
     expect(result.stdout.includes('data-target-records="1,3"')).toBe(true);
     expect(result.stdout.includes('data-source-records="2"')).toBe(true);
     expect(result.stdout.includes('data-target-records="2"')).toBe(true);
-    expect(result.stdout.includes("exclude the header")).toBe(true);
+    expect(result.stdout.includes("不包含表头")).toBe(true);
     expect(result.stdout.includes("ORG_A")).toBe(false);
   }));
 
@@ -58,8 +58,8 @@ describe("human acceptance report CLI", () => {
     await writeFile(path, csv.replace(",400", ",9007199254740991"));
     const result = await runCli(command(root));
     expect(result.exitCode).toBe(1);
-    expect(result.stdout.includes("Unknown — check incomplete")).toBe(true);
-    expect(result.stdout.includes("No partial result is accepted")).toBe(true);
+    expect(result.stdout.includes("未知，检查未完成")).toBe(true);
+    expect(result.stdout.includes("不接受部分检查结果")).toBe(true);
     expect(result.stdout.includes('data-value-mismatches="0"')).toBe(false);
   }));
 
@@ -67,7 +67,7 @@ describe("human acceptance report CLI", () => {
     const result = await runCli(["artifacts", "--contract", "/private/tmp/ABSENT_CONTRACT_SENTINEL",
       "--path", "/private/tmp/ABSENT_PAYLOAD_SENTINEL", "--format", "html"]);
     expect(result.exitCode).toBe(2);
-    expect(result.stdout.includes("Check setup required")).toBe(true);
+    expect(result.stdout.includes("需要配置检查环境")).toBe(true);
     expect(result.stdout.includes("artifact.contract-invalid")).toBe(true);
     expect(result.stdout.includes("ABSENT_CONTRACT_SENTINEL")).toBe(false);
   });
