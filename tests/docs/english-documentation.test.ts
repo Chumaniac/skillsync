@@ -51,7 +51,7 @@ function shouldSkipBrokenLink(file: string, rawTarget: string): boolean {
   return intentionallyBrokenMarkdownLinks.get(file)?.has(canonicalMarkdownTarget(rawTarget)) ?? false;
 }
 
-describe("English repository documentation", () => {
+describe("Community repository documentation", () => {
   it("skips only the exact known broken negative-fixture links", () => {
     expect(shouldSkipBrokenLink("fixtures/invalid/missing-reference/SKILL.md", "references/does-not-exist.md")).toBe(true);
     expect(shouldSkipBrokenLink("fixtures/invalid/path-traversal/SKILL.md", "../outside.md")).toBe(true);
@@ -59,14 +59,10 @@ describe("English repository documentation", () => {
     expect(shouldSkipBrokenLink("fixtures/invalid/path-traversal/SKILL.md", "../different-outside.md")).toBe(false);
   });
 
-  it("contains no Han characters in tracked Markdown", async () => {
+  it("keeps user guides readable UTF-8 without replacement characters", async () => {
     for (const file of trackedMarkdownFiles()) {
       const source = await readFile(file, "utf8");
-      const match = /\p{Script=Han}/u.exec(source);
-
-      if (match?.index !== undefined) {
-        throw new Error(`${file}:${lineNumber(source, match.index)} contains a Han character`);
-      }
+      expect(source).not.toContain("\uFFFD");
     }
   });
 

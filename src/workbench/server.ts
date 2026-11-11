@@ -267,7 +267,11 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           const saved=await history.append({kind:"verify",selection:selected,snapshot,baselineId:baseline?.id,parentId:latestId,exitCode:report.exitCode,comparison},output);
           owned.historyId=saved.id;
           latestId=saved.id;baseline??={id:saved.id,report,digest:saved.dataSha256!};
-          return respond( 200, {html, historyId:saved.id, baselineId:baseline.id, comparison, summary:journeySummary(selected.kind,report), status: report.exitCode === 0 ? "已声明检查通过" : "存在待处理项", exitCode: report.exitCode});
+          const summary = journeySummary(selected.kind, report);
+          const warnings = selected.kind === "skill" ? (report as VerificationReport).summary.warn : 0;
+          const status = report.exitCode !== 0 ? "存在待处理项"
+            : warnings ? `已完成，${warnings} 项警告待复核` : summary.title;
+          return respond(200, {html, historyId:saved.id, baselineId:baseline.id, comparison, summary, status, exitCode:report.exitCode});
         }
         if (selected.kind !== "skill") throw new WorkbenchStateError("交付核验不提供自动修复。");
         if (req.url === "/api/plan") {

@@ -19,7 +19,7 @@ describe("offline artifact acceptance HTML", () => {
     expect(html).toContain('id="batch-north-issue-title"');
     expect(html).toContain('href="#batch-north-file-title"');
     expect(html).not.toMatch(/<!doctype|<style|<iframe|<script/i);
-    expect(()=>renderArtifactsFragment(report(),'bad" onclick="x')).toThrow("Invalid report section prefix");
+    expect(()=>renderArtifactsFragment(report(),'bad" onclick="x')).toThrow("报告分区前缀无效");
   });
   it("escapes and bounds declaration metadata with no scripts or external destinations", () => {
     const value = report();
@@ -29,18 +29,18 @@ describe("offline artifact acceptance HTML", () => {
     expect(html).not.toContain("PRIVATE_DECLARATION");
     expect(html).toContain('href="#declarations"');
     expect(html.match(/id="declared-check-/gu)).toHaveLength(128);
-    expect(html).toContain("8 of 128 sum mappings shown");
+    expect(html).toContain("展示 8 / 128 个求和映射");
     expect(Buffer.byteLength(html)).toBeLessThan(2 * 1024 * 1024);
   });
   it("turns physical evidence into a human decision surface without stronger claims", () => {
     const html = renderArtifacts(report(), "html");
     expect(html).toMatch(/^<!doctype html>/iu);
-    expect(html.includes("Declared checks passed")).toBe(true);
+    expect(html.includes("声明的检查已通过")).toBe(true);
     expect(html.includes("tenant_id + order_id")).toBe(true);
     expect(html.includes("expected.csv")).toBe(true);
     expect(html.includes("execution: not-run")).toBe(true);
     expect(html.includes("provenance: not-authenticated")).toBe(true);
-    expect(html.includes("Receipt / file binding")).toBe(true);
+    expect(html.includes("回执与文件绑定")).toBe(true);
     expect(html.includes(VERSION)).toBe(true);
     expect(html.includes("default-src &#39;none&#39;")).toBe(true);
     expect(html).not.toMatch(/<script\b|<iframe\b|<img\b|https?:\/\//iu);
@@ -51,11 +51,11 @@ describe("offline artifact acceptance HTML", () => {
     value.reconciliations![0].status = "failed"; value.reconciliations![0].valueMismatches = 2;
     value.findings = [{ code: "artifact.reconciliation-sum", path: "allocations.csv", field: "cents" }];
     const html = renderArtifacts(value, "html");
-    expect(html.includes("Review required")).toBe(true);
-    expect(html.includes("Mismatched values")).toBe(true);
+    expect(html.includes("需要复核")).toBe(true);
+    expect(html.includes("数值不一致")).toBe(true);
     expect(html.includes('data-value-mismatches="2"')).toBe(true);
-    expect(html.includes("Compare expected and delivered records using the declared key columns")).toBe(true);
-    expect(html.includes("Declared checks passed")).toBe(false);
+    expect(html.includes("按声明的键列比较预期与交付记录")).toBe(true);
+    expect(html.includes("声明的检查已通过")).toBe(false);
   });
 
   it("keeps incomplete reconciliation distinct from a zero mismatch result", () => {
@@ -64,8 +64,8 @@ describe("offline artifact acceptance HTML", () => {
     value.reconciliations = [{ type, source, target, status: "unknown" }];
     value.findings = [{ code: "artifact.reconciliation-capacity" }];
     const html = renderArtifacts(value, "html");
-    expect(html.includes("Unknown — check incomplete")).toBe(true);
-    expect(html.includes("No partial result is accepted")).toBe(true);
+    expect(html.includes("未知，检查未完成")).toBe(true);
+    expect(html.includes("不接受部分检查结果")).toBe(true);
     expect(html.includes('data-value-mismatches="0"')).toBe(false);
   });
 
@@ -93,9 +93,9 @@ describe("offline artifact acceptance HTML", () => {
     value.reconciliations = Array.from({ length: 128 }, () => ({ ...report().reconciliations![0] }));
     value.findings = Array.from({ length: 256 }, () => ({ code: "artifact.json-value", message: "x".repeat(10_000) }));
     const html = renderArtifacts(value, "html");
-    expect(html.includes("Showing 100 of 1000 files")).toBe(true);
-    expect(html.includes("Showing 64 of 128 reconciliation checks")).toBe(true);
-    expect(html.includes("Metadata values longer than 160 characters are shortened")).toBe(true);
+    expect(html.includes("展示 100 / 1000 个文件")).toBe(true);
+    expect(html.includes("展示 64 / 128 项对账检查")).toBe(true);
+    expect(html.includes("超过160字符的元数据会缩短展示")).toBe(true);
     expect(html.includes("file-100.csv")).toBe(false);
     expect(html.includes("x".repeat(161))).toBe(false);
     expect(Buffer.byteLength(html)).toBeLessThan(2 * 1024 * 1024);
@@ -118,7 +118,7 @@ describe("offline artifact acceptance HTML", () => {
       reference: { path: "sources.csv", field: "id", row: 2,
         matches: Array.from({ length: 8 }, () => ({ source: "&".repeat(128), target: "&".repeat(128) })) } }));
     const html = renderArtifacts(value, "html");
-    expect(html).toContain("first 32 of 256 reported findings shown");
+    expect(html).toContain("展示 256 项问题中的前 32 项");
     expect(html.match(/data-reference-path=/gu)).toHaveLength(32);
     expect(html.match(/artifact[.]reference-value-mismatch/gu)).toHaveLength(256);
     expect(Buffer.byteLength(html)).toBeLessThan(2 * 1024 * 1024);

@@ -21,3 +21,5 @@ docs/superpowers/
 
 desktop/build/
 __pycache__/
+
+/browser-dist/
