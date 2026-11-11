@@ -55,4 +55,4 @@ not vendor certification, and unknown/runtime-dependent features stay explicit.
 - Validate a separately approved local execution backend using synthetic inputs
   before describing it as an actual integration.
 - Keep [compatibility](compatibility.md), [security boundaries](security-boundary.md),
-  and [the project overview](https://chumanic.com/projects/skillsync/) synchronized.
+  and [the browser document check](https://chumaniac.github.io/skillsync/) synchronized.
