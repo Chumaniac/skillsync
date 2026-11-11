@@ -13,7 +13,7 @@ describe("skillsync verify", () => {
     const result = await runCli(["verify", "--path", root, "--target", "codex", "--format", "html"]);
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toContain("<!doctype html>");
-    expect(result.stdout).toContain("Add the referenced file");
+    expect(result.stdout).toContain("补充被引用文件，或移除失效引用。");
     expect(result.stdout).toContain("Content-Security-Policy");
     expect(result.stdout).not.toContain(root);
   });

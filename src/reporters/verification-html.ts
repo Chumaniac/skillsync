@@ -1,4 +1,4 @@
-import { reportLabel } from "./report-labels.js";
+import { reportLabel, reportCopy } from "./report-labels.js";
 import type { VerificationReport } from "../cli/commands/verify.js";
 import { toIssues } from "../domain/issue.js";
 import { redactLocalPaths } from "./local-paths.js";
@@ -34,8 +34,8 @@ export function renderVerificationHtml(input: VerificationReport): string {
       const steps = resolution?.kind === "manual" ? resolution.steps.slice(0, 8) : [];
       return `<article id="${severity}-${index}"><h3>${text(f.code)} <small>${text(reportLabel(f.status))}</small></h3>
       <p><strong>技能包：</strong> ${text(f.skill)} · <strong>目标：</strong> ${text(f.target ?? "全部")}</p>
-      <p>原始检查说明：${text(issue.explanation.cause)}</p><p><strong>下一步：</strong> ${text(resolution?.title ?? f.remediation ?? issue.explanation.impact)}</p>
-      ${steps.length ? `<ol>${steps.map(step => `<li>${text(step)}</li>`).join("")}</ol>` : ""}
+      <p>检查说明：${text(reportCopy(issue.explanation.cause))}</p><p><strong>下一步：</strong> ${text(reportCopy(resolution?.title ?? f.remediation ?? issue.explanation.impact))}</p>
+      ${steps.length ? `<ol>${steps.map(step => `<li>${text(reportCopy(step))}</li>`).join("")}</ol>` : ""}
       <details><summary>问题参考</summary><code>${text(issue.id)}</code><p>${text(issue.location?.path ?? "未包含位置")}</p></details></article>`;
     }).join("")}${all.length > shown.length ? `<p>本组展示 ${shown.length} / ${all.length} 项问题，完整证据请查看 JSON。</p>` : ""}</details>`;
   }).join("");

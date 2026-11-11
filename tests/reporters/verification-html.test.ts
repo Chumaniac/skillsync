@@ -41,3 +41,18 @@ it("does not fill an empty report with four empty severity panels", () => {
   expect(html).not.toContain('class="issue-group"');
   expect(html).not.toContain('aria-label="问题优先级"');
 });
+
+it("renders owned review guidance in Chinese without rewriting saved evidence", () => {
+  const finding = { level: 1 as const, severity: "warn" as const, status: "warn" as const,
+    code: "provenance.local-only", skill: "sample", evidence: [],
+    message: "Skill source is local-only and has no verifiable remote identity.",
+    remediation: "Record a repository URL and resolved commit when publishing the Skill." };
+  const report: VerificationReport = { schema_version: 1, generated_at: "now", targets: [],
+    findings: [finding], issues: toIssues([finding]), summary: { total: 1, pass: 0, fail: 0, warn: 1, unknown: 0 }, exitCode: 0 };
+  const original = JSON.stringify(report);
+  const html = renderVerificationHtml(report);
+  expect(html).toContain("尚无可核验的远端来源身份");
+  expect(html).toContain("记录仓库地址与确定的提交版本");
+  expect(html).not.toContain(finding.message);
+  expect(JSON.stringify(report)).toBe(original);
+});
