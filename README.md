@@ -10,7 +10,7 @@
 
 ## 快速开始
 
-使用 Node.js 24 和 npm，在示例目录上做一次只读检查。
+CLI 支持 Node.js 20 及以上版本。下面使用 Node.js 24 和 npm，在示例目录做一次只读检查。桌面打包所需的运行时见[构建说明](docs/build.md)。
 
 ```sh
 git clone https://github.com/Chumaniac/skillsync.git
