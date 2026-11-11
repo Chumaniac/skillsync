@@ -1,0 +1,71 @@
+{
+  "name": "@chumanic/skillsync",
+  "version": "0.3.0",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "description": "A provenance, compatibility, and behavior verification layer for Agent Skills.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chumaniac/skillsync-app.git"
+  },
+  "homepage": "https://github.com/Chumaniac/skillsync-app#readme",
+  "bugs": {
+    "url": "https://github.com/Chumaniac/skillsync-app/issues"
+  },
+  "keywords": [
+    "agent-skills",
+    "developer-tools",
+    "provenance",
+    "verification",
+    "compatibility",
+    "cli"
+  ],
+  "type": "module",
+  "files": [
+    "dist",
+    "runner",
+    "profiles",
+    "templates",
+    "fixtures/behavior",
+    "fixtures/product",
+    "fixtures/runner",
+    "config",
+    "fixtures/policy",
+    "docs/*.md",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "bin": {
+    "skillsync": "dist/cli/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit",
+    "build": "tsc && node scripts/build-info.mjs",
+    "lint": "eslint .",
+    "check": "npm test && npm run type-check && npm run lint && npm run build",
+    "prepack": "npm run build",
+    "pretest": "npm run build"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skillsync.dev/schemas/runtime-activation-root-pin.v1.json",
+  "title": "SkillSync Deployment-Owned Runtime Trust Root Pin",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["trustedRoot", "expectedRootFingerprint"],
+  "properties": {
+    "trustedRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["keyId", "publicKeyPem"],
+      "properties": {
+        "keyId": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "maxLength": 80
+        },
+        "publicKeyPem": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384
+        }
+      }
+    },
+    "expectedRootFingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

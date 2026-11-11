@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "scenario": "redirect-revalidation",
+  "request": {
+    "requestId": "egress-redirect-revalidation-1",
+    "host": "api.example.com",
+    "port": 443,
+    "protocol": "https"
+  },
+  "policy": {
+    "mode": "allowlist",
+    "allowedHosts": ["api.example.com"]
+  },
+  "expected_decision": {
+    "schema_version": 1,
+    "request_id": "egress-redirect-revalidation-1",
+    "requested_host": "api.example.com",
+    "port": 443,
+    "protocol": "https",
+    "decision": "allowed",
+    "enforcement": "proxy",
+    "proxy_status": "available",
+    "resolved_addresses": ["203.0.113.10"],
+    "redirect_chain": ["other.example.com"]
+  },
+  "expected_finding": {
+    "code": "egress.redirect-forbidden",
+    "status": "fail"
+  },
+  "expected_digests": {
+    "request_digest": "sha256:bf31c4bb217c88ac8d03bbc3ffea6ab5f7064ee579755dd9c039dfbce9f807f1",
+    "decision_digest": "sha256:7a7b25bbab557c8b002fa62b4fc0b0e3428348ff8a9e1165064ffd34d5bc3ce6",
+    "evidence_digest": "sha256:0de498b292ad8298e94366f6d5f226b4c72b07afb39bbbe199be0fd34d447528"
+  }
+}

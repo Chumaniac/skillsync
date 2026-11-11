@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "id": "domain-data-export",
+  "description": "Synthetic export Replay contract; no live data system.",
+  "skill_path": "skill",
+  "agent": "codex",
+  "execution": {
+    "backend": "replay",
+    "replay_trace": "events.jsonl",
+    "timeout_ms": 30000,
+    "memory_mb": 512,
+    "cpu_limit": 1,
+    "pids_limit": 64,
+    "network": {
+      "mode": "deny",
+      "allowed_hosts": []
+    },
+    "environment": {
+      "allow": []
+    }
+  },
+  "invariants": {
+    "allowed_writes": [
+      "workspace/export.csv"
+    ],
+    "required_outputs": [
+      "workspace/export.csv"
+    ],
+    "forbidden_paths": [
+      "/Users/**",
+      "workspace/.private/**",
+      "workspace/secrets/**"
+    ],
+    "allowed_tools": []
+  }
+}

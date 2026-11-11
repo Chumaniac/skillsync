@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "evidenceMode": "offline-simulated",
+  "liveCapabilitiesEnabled": false,
+  "runner": "controlled-ci",
+  "mode": "isolated",
+  "hostMounts": "none",
+  "image": {
+    "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "source": "preseeded",
+    "preseeded": true,
+    "immutable": true
+  },
+  "network": {
+    "mode": "deny",
+    "egress": "deny-by-default"
+  },
+  "limits": {
+    "cpuMs": 60000,
+    "memoryBytes": 268435456,
+    "processCount": 64,
+    "outputBytes": 262144,
+    "lifetimeMs": 600000
+  },
+  "teardown": {
+    "required": true,
+    "cleanupProof": "required"
+  }
+}

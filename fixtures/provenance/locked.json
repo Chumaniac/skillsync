@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-04T10:00:00Z",
+  "skills": {
+    "review": {
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/example/skills.git",
+        "ref": "v1",
+        "resolvedCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "content_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "targets": {
+        "codex": {
+          "profile": "codex@1",
+          "status": "pass"
+        }
+      }
+    }
+  }
+}

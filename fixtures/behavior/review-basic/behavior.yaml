@@ -1,0 +1,8 @@
+schema_version: 1
+id: review-basic
+description: Review a change without touching sensitive paths.
+skill_path: .
+required_files:
+  - SKILL.md
+forbidden_paths:
+  - secrets

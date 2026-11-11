@@ -1,0 +1,112 @@
+{
+  "schema": "skillsync.artifacts/v1",
+  "limits": {
+    "max_files": 3,
+    "max_file_bytes": 4096,
+    "max_total_bytes": 8192
+  },
+  "files": [
+    {
+      "path": "expected.csv",
+      "format": "csv",
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "cents",
+          "type": "integer"
+        },
+        {
+          "name": "revision",
+          "type": "string"
+        }
+      ],
+      "unique_by": [
+        "id"
+      ],
+      "max_rows": 10
+    },
+    {
+      "path": "actual.csv",
+      "format": "csv",
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "cents",
+          "type": "integer"
+        },
+        {
+          "name": "revision",
+          "type": "string"
+        }
+      ],
+      "unique_by": [
+        "id"
+      ],
+      "max_rows": 10
+    },
+    {
+      "path": "summary.json",
+      "format": "json",
+      "fields": [
+        {
+          "name": "rows",
+          "type": "integer"
+        },
+        {
+          "name": "cents",
+          "type": "integer"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "csv_summary",
+      "csv": "actual.csv",
+      "json": "summary.json",
+      "row_count_field": "rows",
+      "sums": [
+        {
+          "column": "cents",
+          "field": "cents"
+        }
+      ]
+    },
+    {
+      "type": "reference_exists",
+      "source": {
+        "path": "actual.csv",
+        "field": "id"
+      },
+      "target": {
+        "path": "expected.csv",
+        "field": "id"
+      },
+      "matches": [
+        {
+          "source": "revision",
+          "target": "revision"
+        }
+      ]
+    },
+    {
+      "type": "keyed_integer_sum_equals",
+      "source": {
+        "path": "expected.csv",
+        "key": "id",
+        "value": "cents"
+      },
+      "target": {
+        "path": "actual.csv",
+        "key": "id",
+        "value": "cents"
+      }
+    }
+  ]
+}

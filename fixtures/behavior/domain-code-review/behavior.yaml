@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "domain-code-review",
+  "description": "Code review material preflight. Structure checks only; no agent execution.",
+  "skill_path": "skill",
+  "required_files": [
+    "SKILL.md",
+    "references/change.diff",
+    "templates/review.md"
+  ],
+  "forbidden_paths": [
+    "private",
+    "secrets",
+    "credentials"
+  ]
+}

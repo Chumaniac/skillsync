@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "scenario": "dns-rebinding",
+  "request": {
+    "requestId": "egress-dns-rebinding-1",
+    "host": "api.example.com",
+    "port": 443,
+    "protocol": "https"
+  },
+  "policy": {
+    "mode": "allowlist",
+    "allowedHosts": ["api.example.com"]
+  },
+  "expected_decision": {
+    "schema_version": 1,
+    "request_id": "egress-dns-rebinding-1",
+    "requested_host": "api.example.com",
+    "port": 443,
+    "protocol": "https",
+    "decision": "blocked",
+    "enforcement": "proxy",
+    "proxy_status": "available",
+    "resolved_addresses": ["203.0.113.10", "127.0.0.1"],
+    "redirect_chain": []
+  },
+  "expected_finding": {
+    "code": "egress.allowlist-mismatch",
+    "status": "fail"
+  },
+  "expected_digests": {
+    "request_digest": "sha256:8c173604669c9e122af2e28e36b66de9249f088891b12f6246fbad25364b39b8",
+    "decision_digest": "sha256:bad90059f606dc8a29115cad8a02d8ef3b33e5b2dbe1ad30393f2a9a3ba6d63f",
+    "evidence_digest": "sha256:fe1030e22a4f0bcd91d5dce39da1b19bab1d335fc3ae19c6213d192c70bcc20c"
+  }
+}

@@ -1,0 +1,26 @@
+schema_version: 2
+id: docker-unavailable
+description: Prove Docker execution stays explicit when the backend is unavailable.
+skill_path: skill
+agent: codex
+execution:
+  backend: docker
+  image: ghcr.io/skillsync/runner@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  timeout_ms: 30000
+  memory_mb: 512
+  cpu_limit: 1
+  pids_limit: 64
+  network:
+    mode: deny
+    allowed_hosts: []
+  environment:
+    allow: []
+invariants:
+  allowed_writes:
+    - workspace/review.md
+  required_outputs:
+    - workspace/review.md
+  forbidden_paths:
+    - /Users/**
+    - workspace/.secrets/**
+  allowed_tools: []

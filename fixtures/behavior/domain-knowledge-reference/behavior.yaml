@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "domain-knowledge-reference",
+  "description": "Knowledge reference material preflight. Structure checks only; no agent execution.",
+  "skill_path": "skill",
+  "required_files": [
+    "SKILL.md",
+    "references/source.md",
+    "templates/note.md"
+  ],
+  "forbidden_paths": [
+    "private",
+    "secrets",
+    "credentials"
+  ]
+}

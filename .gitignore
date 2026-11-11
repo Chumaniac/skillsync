@@ -1,0 +1,35 @@
+node_modules
+dist/
+coverage/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.tgz
+.superpowers/
+.worktrees/
+docs/superpowers/
+.idea/
+.vscode/
+
+desktop/build/
+__pycache__/
+
+# Community distribution build outputs and private runtime
+release/
+.runtime/
+*.app/
+*.sqlite3*
+*.db
+*.log
+.local/
+
+# Never publish a local target directory or build-cache link
+/target

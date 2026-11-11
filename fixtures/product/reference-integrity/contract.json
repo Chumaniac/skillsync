@@ -1,0 +1,13 @@
+{
+  "schema": "skillsync.artifacts/v1",
+  "limits": { "max_files": 2, "max_file_bytes": 4096, "max_total_bytes": 8192 },
+  "files": [
+    { "path": "citations.csv", "format": "csv", "max_rows": 100,
+      "columns": [{ "name": "claim_id", "type": "string" }, { "name": "source_id", "type": "string" }] },
+    { "path": "sources.csv", "format": "csv", "max_rows": 100, "unique_by": ["source_id"],
+      "columns": [{ "name": "source_id", "type": "string" }, { "name": "title", "type": "string" }] }
+  ],
+  "checks": [{ "type": "reference_exists",
+    "source": { "path": "citations.csv", "field": "source_id" },
+    "target": { "path": "sources.csv", "field": "source_id" } }]
+}

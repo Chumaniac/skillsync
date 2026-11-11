@@ -1,0 +1,858 @@
+#!/usr/bin/env node
+
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { resolve, join } from "node:path";
+import { homedir } from "node:os";
+
+import { Command, CommanderError } from "commander";
+
+import { runCiInit, type CiInitOptions, type CiTarget } from "./commands/ci.js";
+import { renderAdopt, runAdopt, type AdoptOptions } from "./commands/adopt.js";
+import { renderCompat, runCompat, type CompatOptions } from "./commands/compat.js";
+import { renderDiff, runDiff, type DiffOptions } from "./commands/diff.js";
+import { renderLock, runLock, type LockOptions } from "./commands/lock.js";
+import { renderScan, runScan, type ScanOptions } from "./commands/scan.js";
+import { renderExplain, runExplain, type ExplainOptions } from "./commands/explain.js";
+import { renderReport, runReport, type ReportFormat, type ReportOptions } from "./commands/report.js";
+import {
+  renderProfileList,
+  renderProfileValidate,
+  runProfileList,
+  runProfileValidate,
+} from "./commands/profile.js";
+import {
+  renderBaselineCheck,
+  renderBaselineCreate,
+  runBaselineCheck,
+  runBaselineCreate,
+  type BaselineFormat,
+} from "./commands/baseline.js";
+import {
+  renderFixApply,
+  renderFixApplyError,
+  renderFixPlan,
+  runFixApply,
+  runFixPlan,
+  writeFixPlan,
+  type FixApplyOptions,
+  type FixPlanOptions,
+} from "./commands/fix.js";
+import { ActionPlanApplyError } from "../domain/patch-application.js";
+import { runArtifacts, renderArtifacts, type ArtifactsOptions } from "./commands/artifacts.js";
+import {runAcceptanceBatch,inspectAcceptancePackage,previewAcceptancePlan,batchSummary,type BatchRunOptions} from "./commands/batch.js";
+import {renderBatchHtml} from "../reporters/batch-html.js";
+import {
+  listBehaviorFixtures,
+  renderBehaviorTest,
+  runBehaviorTest,
+} from "./commands/test.js";
+import { runVerification, type VerifyOptions } from "./commands/verify.js";
+import {
+  renderRunnerValidation,
+  runRunnerValidate,
+  type RunnerValidateOptions,
+} from "./commands/runner.js";
+import {
+  renderProviderAdapterValidation,
+  runProviderAdapterValidate,
+  type ProviderAdapterValidateOptions,
+} from "./commands/provider-adapter.js";
+import { renderJson } from "../reporters/json.js";
+import { renderSarif } from "../reporters/sarif.js";
+import { renderText } from "../reporters/text.js";
+import { renderVerificationHtml } from "../reporters/verification-html.js";
+import { parseOutputFormat } from "./output.js";
+import { renderJUnit } from "../reporters/junit.js";
+
+import { installationInfo } from "./commands/installation.js";
+import { VERSION } from "../version.js";
+
+const COMMANDS = [
+  ["scan", "Inspect skill files without executing their instructions."],
+  ["verify", "Verify skill metadata, provenance, and deterministic rules."],
+  ["explain", "Explain a stable verification Issue."],
+  ["fix", "Plan or explicitly apply fixes for verification Issues."],
+  ["report", "Compare explicit verification reports and render evidence."],
+  ["baseline", "Create or check a read-only verification baseline."],
+  ["compat", "Check compatibility against a target agent profile."],
+  ["diff", "Explain semantic changes between two skill revisions."],
+  ["lock", "Generate, normalize, or check Skill lock data."],
+  ["adopt", "Plan or explicitly apply a managed Skill lock snapshot."],
+  ["test", "Run fixture preflight or explicit sandbox execution."],
+  ["runner", "Validate a local Runner image contract."],
+  ["profile", "Validate and list agent capability profiles."],
+  ["ci", "Run CI-oriented checks and emit machine-readable findings."],
+] as const;
+
+export interface CliResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}
+
+export interface CliIO {
+  writeOut(message: string): void;
+  writeErr(message: string): void;
+  setExitCode?(code: number): void;
+}
+
+const defaultCliIO: CliIO = {
+  writeOut: (message) => process.stdout.write(message),
+  writeErr: (message) => process.stderr.write(message),
+  setExitCode: (code) => {
+    process.exitCode = code;
+  },
+};
+
+function explicitErrorExitCode(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("exitCode" in error)) {
+    return undefined;
+  }
+  const value = error.exitCode;
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 255
+    ? value
+    : undefined;
+}
+
+export function isCliEntryPoint(moduleUrl: string, argvPath: string | undefined): boolean {
+  if (!argvPath) return false;
+  try {
+    return moduleUrl === pathToFileURL(realpathSync(argvPath)).href;
+  } catch {
+    return moduleUrl === pathToFileURL(resolve(argvPath)).href;
+  }
+}
+
+type ScanCliOptions = Omit<ScanOptions, "paths"> & {
+  path?: string[];
+  format?: string;
+};
+
+type CompatCliOptions = Omit<CompatOptions, "paths" | "targets"> & {
+  path?: string[];
+  target?: string;
+  profileDir?: string;
+  format?: string;
+};
+
+type DiffCliOptions = {
+  source?: string;
+  target?: string;
+  before?: string;
+  after?: string;
+  base?: string;
+  head?: string;
+  semantic?: boolean;
+  format?: string;
+};
+
+type LockCliOptions = Omit<LockOptions, "paths"> & {
+  path?: string[];
+  format?: string;
+};
+
+type AdoptCliOptions = Omit<AdoptOptions, "paths"> & {
+  path?: string[];
+  format?: string;
+};
+
+type BehaviorCliOptions = {
+  fixture?: string;
+  agent?: string;
+  list?: boolean;
+  execute?: boolean;
+  backend?: string;
+  format?: string;
+};
+
+type VerifyCliOptions = Omit<VerifyOptions, "paths" | "targets" | "policy"> & {
+  path?: string[];
+  target?: string;
+  policy?: string;
+  profileDir?: string;
+  format?: string;
+};
+
+type ExplainCliOptions = Omit<ExplainOptions, "issueId" | "paths" | "targets"> & {
+  path?: string[];
+  target?: string;
+  policy?: string;
+  format?: string;
+};
+
+type FixCliOptions = {
+  plan?: true | string;
+  apply?: boolean;
+  path?: string[];
+  target?: string;
+  policy?: string;
+  issue?: string[];
+  output?: string;
+  yes?: boolean;
+  approveReviewRequired?: boolean;
+  backup?: boolean;
+  format?: string;
+};
+
+type ReportCliOptions = Omit<ReportOptions, "beforePath" | "afterPath" | "planPath" | "receiptPath"> & {
+  before?: string;
+  after?: string;
+  plan?: string;
+  receipt?: string;
+  format?: ReportFormat;
+  failOnUnverified?: boolean;
+};
+
+type BaselineCliOptions = {
+  create?: boolean;
+  check?: boolean;
+  path?: string;
+  output?: string;
+  from?: string;
+  target?: string;
+  policy?: string;
+  format?: BaselineFormat;
+};
+
+type CiCliOptions = Omit<CiInitOptions, "paths" | "target" | "cwd"> & {
+  path?: string[];
+  target?: CiTarget;
+  nodeVersion?: string;
+  packageVersion?: string;
+};
+
+type RunnerValidateCliOptions = {
+  config?: string;
+  image?: string;
+  provenance?: string;
+  requireProvenance?: boolean;
+  requireSignature?: boolean;
+  trustedBuilder?: string[];
+  trustedSource?: string[];
+  format?: string;
+};
+
+type ProviderAdapterValidateCliOptions = {
+  config?: string;
+  image?: string;
+  policy?: string;
+  policyDigest?: string;
+  format?: string;
+};
+
+export function createCli(io: CliIO = defaultCliIO): Command {
+  const program = new Command();
+
+  program
+    .name("skillsync")
+    .description("Provenance, compatibility, and behavior verification for Agent Skills.")
+    .version(VERSION);
+
+  program.command("gui")
+    .description("Open the loopback-only graphical verification workbench.")
+    .option("--state-dir <path>", "Private directory for plans and reports (outside Skill roots)",
+      process.platform === "darwin" ? join(homedir(), "Library/Application Support/SkillSync/workspace")
+        : join(homedir(), ".local/share/skillsync/workspace"))
+    .option("--port <port>", "Loopback port", "14986")
+    .action(async (options: {stateDir: string; port: string}) => {
+      const port = Number(options.port);
+      if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Invalid port.");
+      const { startWorkbench } = await import("../workbench/server.js");
+      const workbench = await startWorkbench({port, stateDir: options.stateDir});
+      io.writeOut(`SkillSync: ${workbench.url}\n`);
+      const close = () => { void workbench.close(); };
+      process.once("SIGINT", close); process.once("SIGTERM", close);
+    });
+
+  program
+    .command("scan")
+    .description("Inspect skill files without executing their instructions.")
+    .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
+    .option("--follow-symlinks", "Follow only symlinks that remain inside the Skill root")
+    .option("--format <format>", "Output format: text, json, sarif, or junit", "text")
+    .action(async (options: ScanCliOptions) => {
+      const report = await runScan({
+        paths: options.path ?? [],
+        followSymlinks: options.followSymlinks,
+      });
+      io.writeOut(renderScan(report, options.format));
+    });
+
+  program
+    .command("compat")
+    .description("Check compatibility against a target agent profile.")
+    .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
+    .option("--target <targets>", "Comma-separated target profiles", "codex,claude-code,cursor")
+    .option("--profile-dir <path>", "Additional directory containing external profile YAML")
+    .option("--follow-symlinks", "Follow only symlinks that remain inside the Skill root")
+    .option("--format <format>", "Output format: text, json, or sarif", "text")
+    .action(async (options: CompatCliOptions) => {
+      const report = await runCompat({
+        paths: options.path ?? [],
+        targets: options.target?.split(",") ?? [],
+        profileDir: options.profileDir,
+        followSymlinks: options.followSymlinks,
+      });
+      io.writeOut(renderCompat(report, options.format));
+      if (report.exitCode !== 0) {
+        io.setExitCode?.(report.exitCode);
+      }
+    });
+
+  program
+    .command("verify")
+    .description("Run structure, compatibility, provenance, and policy verification.")
+    .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
+    .option("--target <targets>", "Comma-separated target profiles", "codex,claude-code,cursor")
+    .option("--policy <path>", "YAML or JSON policy file")
+    .option("--profile-dir <path>", "Additional directory containing external profile YAML")
+    .option("--follow-symlinks", "Follow only symlinks that remain inside the Skill root")
+    .option("--format <format>", "Output format: text, json, sarif, junit, or offline html", "text")
+    .action(async (options: VerifyCliOptions) => {
+      const report = await runVerification({
+        paths: options.path ?? [],
+        targets: options.target?.split(",") ?? [],
+        policyPath: options.policy,
+        profileDir: options.profileDir,
+        followSymlinks: options.followSymlinks,
+      });
+      const format = options.format === "html" || options.format === "junit" ? options.format : parseOutputFormat(options.format);
+      const output = format === "junit"
+        ? renderJUnit(report, "verify")
+        : format === "html"
+        ? renderVerificationHtml(report)
+        : format === "json"
+        ? renderJson(report)
+        : format === "sarif"
+          ? renderSarif(report)
+          : renderText(report);
+      io.writeOut(output);
+      if (report.exitCode !== 0) {
+        io.setExitCode?.(report.exitCode);
+      }
+    });
+
+  program
+    .command("explain <issue-id>")
+    .description("Explain a stable verification Issue.")
+    .requiredOption("--path <paths...>", "Explicit Skill directory or directory containing Skills")
+    .option("--target <targets>", "Comma-separated target profiles", "codex,claude-code,cursor")
+    .option("--policy <path>", "YAML or JSON policy file")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (issueId: string, options: ExplainCliOptions) => {
+      const issue = await runExplain({
+        issueId,
+        paths: options.path ?? [],
+        targets: options.target?.split(",") ?? [],
+        policyPath: options.policy,
+      });
+      io.writeOut(renderExplain(issue, options.format));
+    });
+
+  program
+    .command("fix")
+    .description("Plan or explicitly apply fixes for verification Issues.")
+    .option("--plan [plan-file]", "Create a plan, or provide the plan file required by --apply")
+    .option("--apply", "Apply the ActionPlan from --plan <plan-file>")
+    .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
+    .option("--target <targets>", "Comma-separated target profiles")
+    .option("--policy <path>", "YAML or JSON policy file")
+    .option("--issue <issue-ids...>", "Only plan the specified stable Issue IDs")
+    .option("--output <path>", "Write the generated ActionPlan JSON to this new file")
+    .option("--yes", "Confirm the explicit ActionPlan apply")
+    .option("--approve-review-required", "Approve review-required ActionPlan changes")
+    .option("--backup", "Retain backups while applying the ActionPlan")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: FixCliOptions) => {
+      if (options.apply) {
+        if (typeof options.plan !== "string") {
+          throw new Error("fix --apply requires --plan <plan-file>.");
+        }
+        if (options.path || options.target || options.policy || options.issue || options.output) {
+          throw new Error("fix --apply accepts only --plan, --yes, --approve-review-required, --backup, and --format.");
+        }
+        if (options.format !== "text" && options.format !== "json") {
+          throw new Error(`Unsupported fix output format: ${options.format}`);
+        }
+        try {
+          const receipt = await runFixApply({
+            planPath: options.plan,
+            yes: options.yes === true,
+            approveReviewRequired: options.approveReviewRequired,
+            backup: options.backup,
+          } satisfies FixApplyOptions);
+          io.writeOut(renderFixApply(receipt, options.format));
+        } catch (error: unknown) {
+          if (error instanceof ActionPlanApplyError) {
+            io.writeOut(renderFixApplyError(error, options.format));
+          }
+          throw error;
+        }
+        return;
+      }
+
+      if (options.plan !== true) {
+        throw new Error("fix requires either --plan or --apply --plan <plan-file>.");
+      }
+      if (!options.path || options.path.length === 0) {
+        throw new Error("fix --plan requires --path <skills-root>.");
+      }
+      if (options.yes || options.approveReviewRequired || options.backup) {
+        throw new Error("fix --plan does not accept apply confirmation options.");
+      }
+      const plan = await runFixPlan({
+        paths: options.path,
+        targets: options.target?.split(",") ?? [],
+        policyPath: options.policy,
+        issueIds: options.issue,
+        output: options.output,
+      } satisfies FixPlanOptions);
+      const output = renderFixPlan(plan, options.format);
+      if (options.output) {
+        await writeFixPlan(plan, options.output);
+      }
+      if (options.output && options.format === "text") {
+        io.writeOut(`${output}Plan file written: ${resolve(options.output)}\n`);
+      } else {
+        io.writeOut(output);
+      }
+    });
+
+  program
+    .command("report")
+    .description("Compare explicit verification reports and render evidence.")
+    .requiredOption("--before <report.json>", "Earlier verification report JSON file")
+    .requiredOption("--after <report.json>", "Later verification report JSON file")
+    .option("--plan <plan.json>", "Optional ActionPlan JSON file")
+    .option("--receipt <receipt.json>", "Optional ApplyReceipt JSON file")
+    .option("--fail-on-unverified", "Exit 1 when the supplied after-report is not verified; does not rerun verification")
+    .requiredOption("--format <format>", "Output format: markdown, json, or sarif")
+    .action(async (options: ReportCliOptions) => {
+      const report = await runReport({
+        beforePath: options.before ?? "",
+        afterPath: options.after ?? "",
+        planPath: options.plan,
+        receiptPath: options.receipt,
+      });
+      io.writeOut(renderReport(report, options.format ?? "markdown"));
+      if (options.failOnUnverified && report.conclusion !== "verified") io.setExitCode?.(1);
+    });
+
+  program
+    .command("baseline")
+    .description("Create or check a read-only verification baseline.")
+    .option("--create", "Create a new baseline file")
+    .option("--check", "Compare the current verification result with a baseline")
+    .option("--path <skills-root>", "Explicit Skill root containing a direct SKILL.md")
+    .option("--output <baseline.json>", "New baseline file path required by --create")
+    .option("--from <baseline.json>", "Baseline JSON file required by --check")
+    .option("--target <targets>", "Comma-separated target profiles")
+    .option("--policy <path>", "YAML or JSON policy file")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: BaselineCliOptions) => {
+      if (options.create === options.check) {
+        throw new Error("baseline requires exactly one of --create or --check.");
+      }
+      if (!options.path) {
+        throw new Error("baseline requires --path <skills-root>.");
+      }
+      const targets = options.target?.split(",") ?? [];
+      const format = options.format;
+      if (format !== "text" && format !== "json") {
+        throw new Error(`Unsupported baseline output format: ${String(format)}`);
+      }
+      if (options.create) {
+        if (!options.output) throw new Error("baseline --create requires --output <baseline.json>.");
+        if (options.from) throw new Error("baseline --create does not accept --from.");
+        const baseline = await runBaselineCreate({
+          path: options.path,
+          output: options.output,
+          targets,
+          policyPath: options.policy,
+        });
+        io.writeOut(renderBaselineCreate(baseline, format));
+        return;
+      }
+      if (!options.from) throw new Error("baseline --check requires --from <baseline.json>.");
+      if (options.output) throw new Error("baseline --check does not accept --output.");
+      const report = await runBaselineCheck({
+        path: options.path,
+        from: options.from,
+        targets,
+        policyPath: options.policy,
+      });
+      io.writeOut(renderBaselineCheck(report, format));
+      if (report.exitCode !== 0) io.setExitCode?.(report.exitCode);
+    });
+
+  program
+    .command("diff")
+    .description("Explain semantic changes between two skill revisions.")
+    .option("--source <path>", "Before/source Skill directory")
+    .option("--target <path>", "After/target Skill directory")
+    .option("--before <path>", "Alias for --source")
+    .option("--after <path>", "Alias for --target")
+    .option("--base <path>", "Alias for --source")
+    .option("--head <path>", "Alias for --target")
+    .option("--semantic", "Use semantic change classification (default)")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: DiffCliOptions) => {
+      const beforePath = options.before ?? options.base ?? options.source;
+      const afterPath = options.after ?? options.head ?? options.target;
+      if (!beforePath || !afterPath) {
+        throw new Error(
+          "diff requires two Skill directories; provide --source/--target or --before/--after.",
+        );
+      }
+
+      const diffOptions: DiffOptions = { beforePath, afterPath };
+      const report = await runDiff(diffOptions);
+      io.writeOut(renderDiff(report, options.format));
+    });
+
+  program
+    .command("lock")
+    .description("Generate, normalize, or check Skill lock data.")
+    .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
+    .option("--from <path>", "Read an existing lock JSON file")
+    .option("--check", "Compare scanned Skill digests with --from")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: LockCliOptions) => {
+      const report = await runLock({
+        paths: options.path ?? [],
+        from: options.from,
+        check: options.check,
+      });
+      io.writeOut(renderLock(report, options.format));
+      if (report.exitCode !== 0) {
+        io.setExitCode?.(report.exitCode);
+      }
+    });
+
+  program
+    .command("adopt")
+    .description("Plan or explicitly apply a managed Skill lock snapshot.")
+    .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
+    .option("--plan", "Print the adoption plan without writing files (default)")
+    .option("--apply", "Write the generated lock snapshot")
+    .option("--output <path>", "Lock snapshot path required by --apply")
+    .option("--backup", "Back up an existing output before replacement")
+    .option("--force", "Allow replacing an existing output")
+    .option("--yes", "Confirm the explicit write requested by --apply")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: AdoptCliOptions) => {
+      const report = await runAdopt({
+        paths: options.path ?? [],
+        plan: options.plan,
+        apply: options.apply,
+        output: options.output,
+        backup: options.backup,
+        force: options.force,
+        yes: options.yes,
+      });
+      io.writeOut(renderAdopt(report, options.format));
+    });
+
+  program
+    .command("test")
+    .description("Run fixture preflight or explicit sandbox execution.")
+    .option("--fixture <path>", "Behavior fixture directory")
+    .option("--agent <agent>", "Target label recorded in the report")
+    .option("--list", "List fixtures below fixtures/behavior")
+    .option("--execute", "Execute a schema_version: 2 fixture in an explicit sandbox backend")
+    .option("--backend <backend>", "Execution backend: replay or docker")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: BehaviorCliOptions) => {
+      if (options.list && options.fixture) {
+        throw new Error("test accepts either --fixture or --list, not both.");
+      }
+      if (!options.list && !options.fixture) {
+        throw new Error("test requires --fixture <path> unless --list is used.");
+      }
+
+      if (options.list) {
+        const report = {
+          schema_version: 1 as const,
+          fixtures: await listBehaviorFixtures(resolve("fixtures/behavior")),
+        };
+        io.writeOut(renderBehaviorTest(report, options.format));
+        return;
+      }
+
+      const report = await runBehaviorTest({
+        fixturePath: options.fixture,
+        agent: options.agent,
+        execute: options.execute,
+        backend: options.backend,
+      });
+      io.writeOut(renderBehaviorTest(report, options.format));
+      const reportExitCode = "exitCode" in report ? report.exitCode : report.execution.exit_code;
+      if (reportExitCode !== 0) {
+        io.setExitCode?.(reportExitCode);
+      }
+    });
+
+  const batch=program.command('batch').description('Run multi-delivery acceptance and verify portable offline evidence.');
+  batch.command('preview').requiredOption('--plan <path>','Explicit acceptance plan').action(async(options:{plan:string})=>{
+    io.writeOut(JSON.stringify(await previewAcceptancePlan(options.plan),null,2)+'\n');
+  });
+  batch.command('run').requiredOption('--plan <path>','Explicit acceptance plan').requiredOption('--output <file>','New private review-package JSON file')
+    .option('--previous <file>','Prior immutable review package').option('--retry-failed','Reuse only unchanged passed batches; inspect failed/incomplete batches again')
+    .option('--expect-plan-sha256 <sha256>','Bind an explicitly previewed plan file').option('--format <format>','Summary format: text or json','text')
+    .action(async(options:BatchRunOptions&{format?:string})=>{
+      if(!['text','json'].includes(options.format??'text'))throw new Error('Batch summary format must be text or json.');
+      const result=await runAcceptanceBatch(options),summary={...batchSummary(result.packet.payload),package_sha256:result.package_sha256};
+      io.writeOut(options.format==='json'?JSON.stringify(summary,null,2)+'\n':`Batch acceptance: ${summary.status}; passed=${summary.counts.passed}, failed=${summary.counts.failed}, incomplete=${summary.counts.incomplete}\nReview package SHA-256: ${summary.package_sha256}\n`);
+      if(summary.exitCode)io.setExitCode?.(summary.exitCode);
+    });
+  batch.command('inspect').requiredOption('--package <file>','Review-package JSON file').option('--expect-sha256 <sha256>','Expected package digest from a separately trusted source')
+    .option('--contract <file>','Optionally verify the original contract binding').option('--plan <file>','Optionally verify the exact original plan bytes without reading its sources').option('--format <format>','Output format: text, json or offline html','text')
+    .action(async(options:{package:string;expectSha256?:string;contract?:string;plan?:string;format?:string})=>{
+      if(!['text','json','html'].includes(options.format??'text'))throw new Error('Batch inspection format must be text, json or html.');
+      const result=await inspectAcceptancePackage(options.package,options);
+      io.writeOut(options.format==='html'?renderBatchHtml(result.packet.payload,result.declarations_sha256):options.format==='json'?JSON.stringify({integrity:'verified',original_data:'not-rechecked',package_sha256:result.package_sha256,...batchSummary(result.packet.payload)},null,2)+'\n':`Review-package integrity: verified\nRecorded batch outcome: ${result.packet.payload.status}\nOriginal data not rechecked; authors not authenticated.\n`);
+    });
+
+  program.command("artifacts")
+    .description("Inspect actual local delivery artifacts against a bounded contract.")
+    .requiredOption("--contract <path>", "JSON or YAML artifact contract")
+    .option("--delivery <path>", "SkillTape delivery bundle directory")
+    .option("--path <path>", "Standalone artifact directory; choose this or --delivery")
+    .option("--compare <path>", "Compare with a bounded prior artifacts JSON report from the same contract")
+    .option("--include-row-evidence", "Include bounded CSV record positions without record identities or values")
+    .option("--format <format>", "Output format: text, json, offline html or sarif", "text")
+    .action(async (options: ArtifactsOptions & { format?: string }) => {
+      if (!["text", "json", "html", "sarif"].includes(options.format ?? "text")) throw new Error("artifacts format must be text, json, html or sarif");
+      if (options.format === "sarif" && options.compare) throw new Error("artifacts SARIF does not support --compare; use json or html");
+      const report = await runArtifacts({ ...options, includeRowEvidence: options.format === "html" || options.includeRowEvidence === true });
+      io.writeOut(renderArtifacts(report, options.format));
+      if (report.exitCode) io.setExitCode?.(report.exitCode);
+    });
+
+  const runner = program
+    .command("runner")
+    .description("Validate a local Runner image contract.");
+  runner.exitOverride();
+  const runnerValidate = runner
+    .command("validate")
+    .description("Validate a Runner image Config from a file or local immutable image.")
+    .option("--config <path>", "Offline Docker Config JSON file")
+    .option("--image <image>", "Local immutable image reference with @sha256:<digest>")
+    .option("--provenance <path>", "Detached Runner provenance JSON file")
+    .option("--require-provenance", "Fail when no detached provenance is supplied")
+    .option("--require-signature", "Require an approved signature verifier")
+    .option("--trusted-builder <builders...>", "Trusted provenance builder identity")
+    .option("--trusted-source <sources...>", "Trusted provenance source identity")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: RunnerValidateCliOptions) => {
+      const report = await runRunnerValidate({
+        configPath: options.config,
+        image: options.image,
+        provenancePath: options.provenance,
+        requireProvenance: options.requireProvenance,
+        requireSignature: options.requireSignature,
+        trustedBuilders: options.trustedBuilder,
+        trustedSources: options.trustedSource,
+      } satisfies RunnerValidateOptions);
+      io.writeOut(renderRunnerValidation(report, options.format));
+      if (report.exitCode !== 0) {
+        io.setExitCode?.(report.exitCode);
+      }
+    });
+  runnerValidate.exitOverride();
+
+  const adapter = runner
+    .command("adapter")
+    .description("Validate a provider adapter conformance manifest.");
+  adapter.exitOverride();
+  const adapterValidate = adapter
+    .command("validate")
+    .description("Validate an offline provider adapter manifest.")
+    .option("--config <path>", "Provider adapter manifest JSON file")
+    .option("--image <image>", "Required external immutable image reference")
+    .option("--policy <path>", "Required external adapter/provider identity policy JSON file")
+    .option("--policy-digest <digest>", "Required external immutable policy sha256 digest")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: ProviderAdapterValidateCliOptions) => {
+      const report = await runProviderAdapterValidate({
+        configPath: options.config,
+        image: options.image,
+        policyPath: options.policy,
+        policyDigest: options.policyDigest,
+      } satisfies ProviderAdapterValidateOptions);
+      io.writeOut(renderProviderAdapterValidation(report, options.format));
+      if (report.exitCode !== 0) {
+        io.setExitCode?.(report.exitCode);
+      }
+    });
+  adapterValidate.exitOverride();
+
+  program.command("capabilities")
+    .description("Inspect installed build, channels and declared capabilities without network or Skill execution.")
+    .option("--json", "Print content-free structured metadata")
+    .option("--expect-source <commit>", "Refuse an unknown, dirty or different installed source commit")
+    .action(async (options: {json?: boolean; expectSource?: string}) => {
+      const info = await installationInfo(options.expectSource);
+      io.writeOut(options.json ? JSON.stringify(info,null,2)+"\n" : `SkillSync ${info.version} · ${info.identity}\nSource: ${info.build?.sourceRevision ?? "unconfirmed"}${info.build?.dirty ? " (local changes)" : ""}\nTemplate default: npm @chumanic/skillsync@${info.templateDefault.packageVersion}; current-source extensions not asserted.\nDeclared capabilities: ${info.declaredCapabilities.join(", ")}\nNo execution authority or network check is granted.\n`);
+    });
+
+  const ci = program
+    .command("ci")
+    .description("Generate CI and pre-commit verification templates.");
+  ci
+    .command("init")
+    .option("--target <target>", "Template target: github or pre-commit", "github")
+    .option("--node-version <version>", "Node.js version for GitHub Actions", "20")
+    .option("--package-version <version>", "Pinned published npm package version (default 0.1.0)")
+    .option("--source <source>", "Installation channel: npm or github-source", "npm")
+    .option("--source-revision <commit>", "Full immutable SkillSync source commit for github-source")
+    .option("--path <paths...>", "Project Skill paths")
+    .option("--apply", "Write the generated file")
+    .option("--force", "Allow replacing an existing generated file")
+    .action(async (options: CiCliOptions) => {
+      const result = await runCiInit({
+        target: options.target ?? "github",
+        nodeVersion: options.nodeVersion ?? "20",
+        packageVersion: options.packageVersion,
+        source: options.source,
+        sourceRevision: options.sourceRevision,
+        paths: options.path ?? [],
+        apply: options.apply,
+        force: options.force,
+      });
+      if (result.applied) {
+        io.writeOut(`Wrote ${result.outputPath}\n`);
+      } else {
+        io.writeOut(`# SkillSync ci init plan (no files written)\n${result.content}`);
+      }
+    });
+
+  const profile = program.command("profile").description("Validate and list agent capability profiles.");
+  profile
+    .command("validate")
+    .description("Validate an external profile YAML file.")
+    .requiredOption("--path <path>", "Profile YAML file to validate")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: { path: string; format?: string }) => {
+      const report = await runProfileValidate({ path: options.path });
+      io.writeOut(renderProfileValidate(report, options.format));
+    });
+  profile
+    .command("list")
+    .description("List builtin and discovered external profiles.")
+    .option("--profile-dir <path>", "Additional directory containing external profile YAML")
+    .option("--format <format>", "Output format: text or json", "text")
+    .action(async (options: { profileDir?: string; format?: string }) => {
+      const report = await runProfileList({ profileDir: options.profileDir });
+      io.writeOut(renderProfileList(report, options.format));
+    });
+
+  for (const [name, description] of COMMANDS) {
+    if (
+      name === "scan" ||
+      name === "compat" ||
+      name === "verify" ||
+      name === "explain" ||
+      name === "fix" ||
+      name === "report" ||
+      name === "baseline" ||
+      name === "diff" ||
+      name === "lock" ||
+      name === "adopt" ||
+      name === "test" ||
+      name === "runner" ||
+      name === "profile" ||
+      name === "ci"
+    ) {
+      continue;
+    }
+    program
+      .command(name)
+      .description(description)
+      .option("--format <format>", "Output format: text, json, or sarif", "text");
+  }
+
+  program.exitOverride();
+
+  return program;
+}
+
+export async function runCli(argv: string[]): Promise<CliResult> {
+  let stdout = "";
+  let stderr = "";
+  let exitCode = 0;
+  const program = createCli({
+    writeOut: (message) => {
+      stdout += message;
+    },
+    writeErr: (message) => {
+      stderr += message;
+    },
+    setExitCode: (code) => {
+      exitCode = code;
+    },
+  });
+
+  program.configureOutput({
+    writeOut: (message) => {
+      stdout += message;
+    },
+    writeErr: (message) => {
+      stderr += message;
+    },
+  });
+
+  if (argv[0] === "test" && argv.includes("--help")) {
+    const testCommand = program.commands.find((command) => command.name() === "test");
+    return {
+      stdout: `${testCommand?.helpInformation() ?? ""}`,
+      stderr,
+      exitCode: 0,
+    };
+  }
+
+  try {
+    await program.parseAsync(["node", "skillsync", ...argv]);
+    return { stdout, stderr, exitCode };
+  } catch (error: unknown) {
+    if (error instanceof CommanderError) {
+      const helpExit = error.code === "commander.helpDisplayed" || error.code === "commander.version";
+      return { stdout, stderr, exitCode: helpExit ? 0 : error.exitCode };
+    }
+
+    const explicitExitCode = explicitErrorExitCode(error);
+    if (explicitExitCode !== undefined) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { stdout, stderr: `${stderr}${message}\n`, exitCode: explicitExitCode };
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    return { stdout, stderr: `${stderr}${message}\n`, exitCode: 1 };
+  }
+}
+
+if (isCliEntryPoint(import.meta.url, process.argv[1])) {
+  const program = createCli();
+  program.parseAsync(process.argv).catch((error: unknown) => {
+    if (error instanceof CommanderError) {
+      if (error.code !== "commander.helpDisplayed" && error.code !== "commander.version") {
+        process.stderr.write(`${error.message}\n`);
+      }
+      process.exitCode = error.exitCode;
+      return;
+    }
+
+    const explicitExitCode = explicitErrorExitCode(error);
+    if (explicitExitCode !== undefined) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`${message}\n`);
+      process.exitCode = explicitExitCode;
+      return;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    process.exitCode = 1;
+  });
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "scenario": "allowed",
+  "request": {
+    "requestId": "egress-allowed-1",
+    "host": "api.example.com",
+    "port": 443,
+    "protocol": "https"
+  },
+  "policy": {
+    "mode": "allowlist",
+    "allowedHosts": ["api.example.com"]
+  },
+  "expected_decision": {
+    "schema_version": 1,
+    "request_id": "egress-allowed-1",
+    "requested_host": "api.example.com",
+    "port": 443,
+    "protocol": "https",
+    "decision": "allowed",
+    "enforcement": "proxy",
+    "proxy_status": "available",
+    "resolved_addresses": ["203.0.113.10"],
+    "redirect_chain": []
+  },
+  "expected_finding": {
+    "code": "egress.decision-valid",
+    "status": "pass"
+  },
+  "expected_digests": {
+    "request_digest": "sha256:3c9159856e4fd54ec1f31e7e098813e8fd01ffdc952b1428b97bfbdb86a3462e",
+    "decision_digest": "sha256:3dcc37ecf4484fe47a542f78d4b90e33081e3047240cfd715650103d92e9fe66",
+    "evidence_digest": "sha256:14c4dd42f4315cd4d6af60e20b12c155701c3e764d4e59b23ccdeac9f9c813e7"
+  }
+}

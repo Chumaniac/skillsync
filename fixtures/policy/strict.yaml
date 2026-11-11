@@ -1,0 +1,14 @@
+schema_version: 1
+fail_on:
+  - unknown-provenance
+  - structure-error
+targets:
+  required:
+    - codex
+capabilities: {}
+sources:
+  allowed_hosts: []
+  require_resolved_commit: false
+reporting:
+  sarif: true
+  include_local_paths: true

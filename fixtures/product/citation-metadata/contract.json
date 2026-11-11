@@ -1,0 +1,74 @@
+{
+  "schema": "skillsync.artifacts/v1",
+  "limits": {
+    "max_files": 2,
+    "max_file_bytes": 4096,
+    "max_total_bytes": 8192
+  },
+  "files": [
+    {
+      "path": "citations.csv",
+      "format": "csv",
+      "columns": [
+        {
+          "name": "source",
+          "type": "string"
+        },
+        {
+          "name": "digest",
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "type": "string"
+        }
+      ],
+      "max_rows": 10
+    },
+    {
+      "path": "sources.csv",
+      "format": "csv",
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "sha256",
+          "type": "string"
+        },
+        {
+          "name": "revision",
+          "type": "string"
+        }
+      ],
+      "unique_by": [
+        "id"
+      ],
+      "max_rows": 10
+    }
+  ],
+  "checks": [
+    {
+      "type": "reference_exists",
+      "source": {
+        "path": "citations.csv",
+        "field": "source"
+      },
+      "target": {
+        "path": "sources.csv",
+        "field": "id"
+      },
+      "matches": [
+        {
+          "source": "digest",
+          "target": "sha256"
+        },
+        {
+          "source": "version",
+          "target": "revision"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,386 @@
+# Actual artifact delivery checks
+
+The candidate source command `artifacts` checks local output files against a
+versioned contract. It opens actual bytes; it does not execute a Skill, Replay,
+Docker, provider or remote service. This command is not in the published npm0.1.0
+package. Existing `test` preflight and Replay event evidence keep their semantics.
+
+## Run a physical check
+
+```bash
+npm ci
+npm run build
+node dist/cli/index.js artifacts \
+  --contract fixtures/product/order-summary/contract.json \
+  --path fixtures/product/order-summary/artifacts --format json
+```
+
+Use `--delivery /path/to/bundle` instead of `--path` for a SkillTape source bundle
+created by `verify --delivery-dir`. The checker validates its layout, exact
+Receipt hash, artifact hashes/sizes, and deterministic artifact-set digest before
+accepting a complete result. A consistently rewritten manifest is not signed or
+authenticated evidence; the report marks provenance as not authenticated.
+
+## Hand a visible report to a reviewer
+
+Source0.1.7 adds `--format html`. The report opens directly in a browser, with no
+server, script, login, provider or network request. A reviewer sees the declared
+result, supplied file/Receipt binding, failed or incomplete reconciliation,
+affected file/column metadata and a concrete next review step.
+
+```bash
+# Build the current source first. Use a new destination; keep shell no-clobber.
+(set -C; node dist/cli/index.js artifacts \
+  --contract fixtures/product/tenant-reconciliation/contract.json \
+  --path fixtures/product/tenant-reconciliation/artifacts \
+  --format html > acceptance.html)
+```
+
+For a retained physical delivery, select `--delivery` instead. Exit0 means the
+declared local checks passed, exit1 retains findings/incomplete checks, and exit2
+reports invalid setup. A failed inspection still produces a reviewable HTML
+report; caller-side redirect errors remain the caller's responsibility.
+
+Reconciliation cards separate expected/delivered identity counts, missing or
+unexpected identities, and mismatched values. Unknown checks never display zero
+mismatches as accepted evidence. The review actions point to saved originals,
+declared identity columns and reviewed expectations; they do not execute a
+correction or establish business approval.
+
+HTML also requests bounded CSV record positions for affected identity groups.
+Expand "Locate affected CSV records" to find the expected and delivered data
+records in the original local files. Positions are 1-based, exclude the header,
+and count a quoted multiline record once; they are not physical text-line numbers.
+Up to8 positions per group, 32 examples per check and 64 examples across the
+invocation are retained. Truncated or unavailable positions are explicit, and
+unknown checks carry no position evidence. No IDs, fingerprints or amounts are
+returned. Ordinary JSON/text inspections do not request or retain this metadata.
+
+HTML shows at most 100 file details, 64 reconciliation cards and the existing
+256 findings. Failed/incomplete cards appear first, full-scope counts remain
+visible, and metadata longer than160 characters is shortened. Use the existing
+JSON output when complete metadata is required. HTML retains no raw record IDs,
+integer values, contents, key fingerprints or absolute host paths. Every visible
+field is escaped after the existing path redaction. CSP disables scripts and
+external resources. The output is bounded by the report ceilings and has no
+client timers or caches.
+
+The report is a captured local snapshot. Keep the successful original delivery;
+rerun read-only checks on its files to capture a later state. Source0.1.7 HTML is
+absent from the published GitHub0.1.4/npm0.1.0 packages.
+
+## Per-key integer reconciliation
+
+### Review a correction against its previous report
+
+The source CLI accepts `--compare <previous-artifacts.json>`. Save an ordinary
+JSON inspection before correcting a separate copy of the delivery, then inspect
+the corrected directory using the same contract:
+
+```bash
+(set -C; node dist/cli/index.js artifacts --contract reviewed-contract.json \
+  --path preserved-original --format json > previous-artifacts.json)
+(set -C; node dist/cli/index.js artifacts --contract reviewed-contract.json \
+  --path corrected-copy --compare previous-artifacts.json --format html > correction-review.html)
+```
+
+The first command may exit1 for a complete failed check; preserve that report.
+The second reads at most1MiB of strict UTF-8 JSON through the existing bounded
+stable-file reader. Invalid schema, duplicate keys, inconsistent digests/counts,
+duplicate files, symlinks, over-limit input and read changes fail setup before
+inspecting the current directory. Histories with an earlier derived comparison
+are structurally checked; their derived transitions are not reused.
+
+Matching contract hashes and ordered reconciliation declarations are required.
+Unknown checks, failed Receipt binding, missing file-set identity or a saturated
+256-finding list make comparison unavailable; no omitted finding is declared
+resolved. Unavailable comparison returns exit2 and a failed overall result, while
+`comparison.current_status` retains the independently observed current status.
+Ordinary inspections without `--compare` keep their existing outputs and exits.
+
+Comparable reports show new, ongoing and resolved **finding categories** by
+code/file/column, and improved, regressed, mixed or unchanged defect counts per
+declared reconciliation. Record identities and row positions are not compared;
+the same counts can refer to different records. At most128 transitions are
+retained and64 are displayed in HTML, with full-scope counts. Previous messages,
+record positions and raw values are not forwarded. A report byte hash identifies
+the caller-supplied history, which is not authenticated or a reviewed content
+pin. Passing checks or fewer defects do not establish business approval. This
+addition is source-only and does not change any public package or release.
+
+Source candidate 0.1.6 supports `keyed_integer_sum_equals`. It is absent from
+published npm0.1.0 and the existing GitHub0.1.4 package. Each side declares a CSV
+path, required nonempty string `key`, and required integer `value` column.
+The two paths must be distinct; comparing a file with itself is rejected before
+artifact reads, including when different columns are selected:
+
+```json
+{
+  "type": "keyed_integer_sum_equals",
+  "source": { "path": "expected.csv", "key": "order_id", "value": "amount_cents" },
+  "target": { "path": "allocations.csv", "key": "order_id", "value": "amount_cents" }
+}
+```
+
+Both key sets and each key's accumulated value must match. Repeated rows can
+represent split deliveries; `unique_by` remains a separate caller requirement.
+IDs are compared exactly, without trimming, case folding or numeric coercion.
+Safe integer intermediate totals are required per key, even when a global total
+remains safe. No floating-point tolerances or expressions are accepted.
+
+The [reproducible example](../fixtures/product/keyed-reconciliation/README.md)
+keeps hashes, reference coverage, row counts and global totals consistent while
+allocating amounts to the wrong orders. Per-key checks detect two mismatches.
+The same mechanism can compare counts per changed file, citation source or task.
+
+Reconciliation observes at most 100,000 selected cells per invocation, counting
+each key/value pair per unique path/key/value grouping. Identical grouping
+declarations reuse one index. Key values are retained only as internal SHA-256
+fingerprints; source fields are hashed once per row. Exhaustion releases partial
+indexes and produces `artifact.reconciliation-capacity`. Unsafe per-key sums or
+invalid artifacts produce `unknown` summaries, without incomplete numeric
+conclusions. Existing physical and scalar failures remain authoritative.
+
+JSON reports include optional `reconciliations` with declared metadata and
+counts of source/target, missing, unexpected and mismatched keys. They expose no
+raw ID, fingerprint or amount. Text reports include the same bounded counts.
+Without the rule, existing normalized contracts and report shapes are unchanged.
+Reports still say `execution: not-run` and `provenance: not-authenticated`;
+equality does not authenticate the expected input or approve a business action.
+
+### Ordered composite identities in source 0.1.6
+
+The `key` selector may also be an ordered array of two to four distinct column
+names. Every component must be a declared required nonempty string. Both sides
+must have the same number of components; positional column names may differ.
+One-element arrays, duplicate/empty names, undeclared fields, wrong scalar types,
+nullable components and mixed-width sides are rejected before artifact reads.
+
+```json
+{
+  "type": "keyed_integer_sum_equals",
+  "source": { "path": "expected.csv", "key": ["tenant_id", "order_id"], "value": "amount_cents" },
+  "target": { "path": "allocations.csv", "key": ["tenant_id", "order_id"], "value": "amount_cents" }
+}
+```
+
+Two organizations can use the same local order ID without their totals being
+merged. Component order, whitespace, Unicode spelling and numeric-looking
+strings remain exact. Tuples are internally framed with component count and
+UTF-8 byte lengths before hashing; joining IDs with a separator is not equivalent.
+Single-string keys preserve the existing behavior.
+
+Each unique grouping observes `key components + integer value` cells per row.
+The invocation-wide limit remains 100,000, including repeated rows. Matching
+group declarations reuse an index; matching selectors reuse their fingerprint
+within a row. Exhaustion and unsafe sums preserve `unknown` without partial
+counts. Composite missing-key findings have a `field` array of declared column
+names, while ordinary findings retain a string. No tuple values are reported.
+
+The [multi-organization example](../fixtures/product/tenant-reconciliation/README.md)
+detects a balanced cross-organization shift that a single local ID accepts.
+Composite identities apply to this integer reconciliation rule. The separate
+`reference_exists` rule still uses a single unique string field.
+
+## Declared requirements
+
+The [synthetic contract](../fixtures/product/order-summary/contract.json) declares:
+
+- capacity ceilings and a complete allowlist of required files;
+- exact CSV headers, scalar types, real calendar dates, row limits, unique keys,
+  optional expected hashes, and rejection of formula-risk text prefixes;
+- JSON top-level field types, required values and optional rejection of extras;
+- independently recomputed CSV record counts and safe integer sums compared with
+  declared JSON fields. Integer sums avoid unspecified floating-point tolerances.
+
+Source builds support `https_url` scalar fields in CSV
+columns and JSON top-level fields. Every such field requires `allowed_hosts`:
+1–16 unique, exact lowercase ASCII DNS names. Wildcards, bare localhost and IP
+literals are not host declarations. URL values are limited to 2,048 characters;
+literal whitespace/control/format characters and backslashes are rejected.
+The native URL parser must return HTTPS, the exact declared hostname, no userinfo
+and the default port (explicit443 is accepted). Host suffixes and undeclared
+subdomains fail. Other scalar types cannot carry `allowed_hosts`.
+
+The [synthetic knowledge source inventory](../fixtures/product/source-index/README.md)
+uses real CSV/JSON files plus existing unique-ID, date, capacity and summary rules.
+This extension is not included in published npm0.1.0. It does not fetch URLs, resolve DNS,
+follow redirects, assess the source text or prove that a named host is public or
+trustworthy. Exact URL spelling remains unchanged for uniqueness comparisons.
+Optional JSON fields may be omitted; an empty URL does not represent a source.
+
+String fields can declare `one_of` with 1–32 unique exact options, each limited
+to 256 UTF-16 code units. Options cannot contain surrounding whitespace, control
+or format characters. Other scalar types cannot carry `one_of`; an `equals`
+value must also be in the declared list. An empty option requires
+`allow_empty: true`. Matching does not trim, normalize, fold case or coerce types;
+CSV formula rejection still applies. Optional JSON fields may still be omitted.
+
+For example, `{ "name": "currency", "type": "string", "one_of": ["CNY", "USD"] }`
+checks only that the label is one of the caller's declarations. The
+[material intake catalog](../fixtures/product/review-intake/README.md) demonstrates
+domain and decision labels in physical CSV/JSON plus independent reference totals.
+These classifications do not authenticate reviewers, authorize actions or prove
+business correctness. This source extension is not in npm0.1.0; findings omit
+the actual string values.
+
+`bytes` rules check integrity and capacity without interpreting content. JSON
+checks cover declared top-level fields, not full JSON Schema or arbitrary
+expressions. Contract files are limited to 64 KiB. Limits must be explicit and
+within the shared 10,000-file/16 MiB-file/64 MiB-total workspace ceilings.
+
+`reference_exists` checks an exact nonempty string ID from one CSV against a
+declared single-column `unique_by` key in another CSV. Both columns must be
+declared required strings with `allow_empty: false`. File traversal order does
+not affect references. IDs are not trimmed, normalized or folded; numeric IDs,
+JSON references and composite keys are unsupported. Existing scalar, formula,
+duplicate-key and physical inventory checks continue to fail independently.
+The [synthetic citation catalog](../fixtures/product/reference-integrity/README.md)
+includes a runnable contract and explains adaptations for review, knowledge and
+operations data. Only declared reference fields are retained as SHA-256
+fingerprints with source row numbers. At most 100,000 referenced cells are
+indexed per invocation, counting repeated IDs and deduplicating field declarations.
+Exceeding this ceiling releases indexes and fails with `artifact.reference-capacity`.
+An optional `require_all_targets: true` also rejects declared target rows that
+have no reference in that check's source field. It reports
+`artifact.reference-unused` at the target file/field/data-row without its ID.
+Omitting the option keeps coverage disabled and preserves existing normalized
+contract digests; ordinary reference catalogs may contain unused targets.
+The [local delivery coverage candidate](../fixtures/product/delivery-coverage/README.md)
+demonstrates expected-order omissions; this release candidate is not yet published to npm.
+Target rows and optional source fingerprint sets share the existing 100,000-cell
+intake limit and are released together on exhaustion. Findings remain capped at 256.
+Coverage means reference presence, not completed work or authenticated approval.
+
+Missing references report relative file, field and data-row number, never the ID
+or fingerprint. This checks internal consistency without authenticating records.
+
+Duplicate JSON keys are rejected, including escaped-key aliases in metadata and
+payloads. JSON depth is capped at 64 and object keys at 100,000; individual keys
+are at most 1,024 characters. CSV rows stop at the declared field count instead
+of allocating an array for millions of separators. Manifest order is checked
+by UTF-8 path bytes. Directory allowlists use precomputed prefix sets.
+
+The inventory is streamed and checked before payload reads. Extra paths, links,
+special files, excess depth/entries and capacity overruns fail. Single-file reads
+are bounded and no-follow where supported; metadata and content changes during
+inspection fail. This is inspection of a stable caller-selected snapshot, not an
+OS sandbox against a same-privilege process actively replacing directory parents.
+
+CSV parsing preserves spaces and supports quoted commas, multiline values,
+escaped quotes and CRLF, plus the common LF extension. The format basis is
+[RFC 4180](https://www.rfc-editor.org/rfc/rfc4180.html). Text-prefix checks include
+ASCII/full-width formula starters and leading controls discussed by
+[OWASP CSV Injection](https://community.owasp.org/attacks/CSV_Injection).
+The checker rejects risky parsed cells; it neither rewrites files nor guarantees
+safe interpretation in every spreadsheet application or locale.
+
+## Reports and exit codes
+
+Exit0 means declared checks passed, exit1 an artifact finding, and exit2 invalid
+input/contract. A missing, non-directory, or symbolic-link `--path`/`--delivery`
+root is a setup error (exit2). Once a valid directory is selected, malformed
+delivery metadata, missing artifacts, and changed contents remain findings
+(exit1). JSON/text reports contain relative paths, digests, sizes, record
+counts and stable findings, not raw cells, JSON values, process output or host
+absolute paths. Cross-file totals remain internal. Findings identify the file,
+declared field and data-record number where appropriate.
+
+The [fixture](../fixtures/product/order-summary/README.md) proves physical file
+checks with fictional outputs. The complete cross-project example separately
+runs a local summarizer, preserves a SkillTape bundle, passes this checker and
+rejects corruption and an internally inconsistent summary in copies. None of
+those checks establishes customer-data truth, model/Agent acceptance or a live
+production/business integration.
+
+## Bind citations to exact source metadata
+
+Status: included in GitHub v0.2.0; absent from GitHub v0.1.7 and npm 0.1.0.
+
+A valid source ID alone does not establish that a citation uses the reviewed
+revision or digest. Add an optional `matches` array to `reference_exists`:
+
+```json
+{
+  "type": "reference_exists",
+  "source": { "path": "citations.csv", "field": "source" },
+  "target": { "path": "sources.csv", "field": "id" },
+  "matches": [
+    { "source": "digest", "target": "sha256" },
+    { "source": "version", "target": "revision" }
+  ]
+}
+```
+
+Declare each mapped column as a required nonempty string in its CSV rule. The
+existing target ID must still be a unique nonempty string. One to eight distinct
+column pairs are accepted. Matching preserves exact strings and pair order;
+there is no trimming, case folding or separator-based tuple concatenation.
+Existing contracts without `matches` keep their normalized digest and behavior.
+
+After all physical files are inspected, a matching ID with different metadata
+produces `artifact.reference-value-mismatch`; missing valid metadata produces
+`artifact.reference-value-unavailable`. Missing IDs retain the existing
+`artifact.reference-missing` finding. Reports identify only declared paths,
+column names and CSV data-record positions. Raw IDs, digest cell values and
+version cell values do not enter JSON, text or HTML findings.
+
+ID and metadata indexes share a 100,000-cell budget and a 64 MiB aggregate
+hash-input budget. Tuple values are streamed with byte-length framing rather
+than joined into a large copied string. Exhaustion clears retained indexes and
+fails the check without accepting partial reference evidence. Existing physical
+file, row, UTF-8, formula, path and snapshot limits continue to apply. These are
+input/work bounds; CPU and process RSS were not measured.
+
+Try the [original synthetic example](../fixtures/product/citation-metadata/README.md).
+The interface is informed by source-linked citation review in
+[WeKnora](https://github.com/Tencent/WeKnora), inspected on 2026-10-18. No upstream
+code or dependencies were copied. This local check proves consistency between
+observed metadata only. It does not fetch the cited source, authenticate a
+publisher, or establish that the underlying source bytes or claims are true.
+
+
+### Locate a mismatched reference in GitHub 0.2.1
+
+Metadata mismatch and unavailable findings include an optional `reference` object: the declared target path, lookup column, matched data-record position, and compared source/target column names. It contains no record ID or cell value. JSON and text retain these coordinates; the offline HTML displays the first32 reference locations with up to8 mappings each and links directly to the review section. Counts still cover all reported findings. Data-record positions exclude the CSV header, including for quoted multiline records.
+
+The baseline reader continues accepting older reports without this context. Reference context uses the same relative-path, row and eight-column bounds as the current contract. It locates evidence for review; it does not fetch sources, authenticate authors or approve corrections.
+
+## SARIF for artifact review
+
+Use `skillsync artifacts --contract reviewed-contract.json --path reviewed-artifacts --format sarif` to export a SARIF 2.1.0 document to standard output. The existing exit codes remain: 0 for a passing inspection, 1 for failed artifact checks, and 2 for invalid setup. No code-scanning upload or remote request is made.
+
+The separate `skillsync-artifacts` driver exports stable rule IDs, encoded relative file URIs and metadata-based fingerprints. Findings without a safe relative file path keep an empty location; they are not assigned to a fabricated file. Logical CSV record positions appear as `properties.dataRecord`, because quoted multiline CSV records do not correspond to physical source lines. Raw cells, field names, reference records and free-form error messages are omitted. Use the local JSON or HTML report when reviewing the original contract.
+
+SARIF currently describes the current inspection. `--compare` with SARIF is rejected before opening files; use JSON or HTML for baseline transitions. GitHub ingestion and alert placement additionally depend on repository features, committed matching files and the upload workflow; a local export does not establish a successful upload or business acceptance.
+
+Method reference from the 2026-10-21 Trending review: [Cloudflare's structured, verified finding records](https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/README.md) (MIT). No audit plugin is installed or run. Format reference: [GitHub SARIF support](https://docs.github.com/en/code-security/reference/code-scanning/sarif-files/sarif-support).
+
+## Source ownership
+
+`domain/artifact-report.ts` owns the report types, bounded validation and file-set digest.
+`domain/artifact-report-comparison.ts` compares validated reports. CLI commands produce
+reports, while HTML/SARIF reporters and workbench history consume the shared domain
+contract. Domain modules do not depend on CLI implementation types. The prior CLI
+and comparison type export paths remain compatible. This reorganization changes
+neither the report schema nor the meaning of a physical-file check.
+
+
+## Contract stability during verification (current source)
+
+A single artifact check now binds the selected contract's regular-file identity
+and exact bytes from its initial bounded read until inspection finishes. A
+replacement, deletion, link, recording-time edit or inaccessible contract makes
+the check incomplete (exit 2, `artifact.contract-changed-during-check`), with no
+accepted file observations. The original files are not rewritten. The existing
+v1 `contract_sha256` still hashes the normalized parsed contract; its meaning and
+the report schema have not changed.
+
+The local workbench applies the same bounded read before launching its CLI and
+checks again before saving current history. Changes during the operation return
+an error instead of a completed result or a new history entry. Earlier immutable
+history remains readable. Selecting a path does not freeze it indefinitely:
+edits made before a new verification starts are checked as its current input.
+A special file substituted after metadata inspection cannot block the reader
+waiting for a FIFO writer. This adds no Skill execution, provider calls, file
+repair or new installation/release behavior.

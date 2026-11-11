@@ -1,0 +1,4 @@
+material_id,domain,decision,reference_count
+SYN-MAT-001,code-review,needs-review,1
+SYN-MAT-002,knowledge-reference,ready,2
+SYN-MAT-003,data-ops,blocked,0
