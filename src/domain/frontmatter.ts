@@ -6,9 +6,22 @@ export type ParsedSkillDocument = {
   sourceRange: { start: number; end: number };
 };
 
+type DocumentLocation = { start: number; end: number; line: number; column: number };
+type DocumentFailure = { ok: false; error: string; location?: DocumentLocation };
+
+function documentLocation(text: string, start: number, end = start): DocumentLocation {
+  const lines = text.slice(0, start).split("\n");
+  return {start, end, line: lines.length, column: Array.from(lines[lines.length - 1] ?? "").length + 1};
+}
+
+export function describeDocumentError(failure: DocumentFailure): string {
+  const at = failure.location;
+  return at ? failure.error + " (line " + at.line + ", column " + at.column + ")" : failure.error;
+}
+
 export type ParseSkillDocumentResult =
   | { ok: true; value: ParsedSkillDocument }
-  | { ok: false; error: string; location?: { start: number; end: number } };
+  | DocumentFailure;
 
 function parserError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
@@ -20,7 +33,7 @@ export function parseSkillDocument(content: string): ParseSkillDocumentResult {
   if (!opening) {
     return {
       ok: false,
-      location: { start: 0, end: 0 },
+      location: documentLocation(content, 0),
       error: "Skill document must start with a YAML frontmatter delimiter.",
     };
   }
@@ -30,7 +43,7 @@ export function parseSkillDocument(content: string): ParseSkillDocumentResult {
   if (!closing) {
     return {
       ok: false,
-      location: { start: content.length, end: content.length },
+      location: documentLocation(content, content.length),
       error: "Skill frontmatter closing delimiter is missing.",
     };
   }
@@ -44,7 +57,7 @@ export function parseSkillDocument(content: string): ParseSkillDocumentResult {
     parsed = parse(frontmatterText, { uniqueKeys: true, prettyErrors: false });
   } catch (error: unknown) {
     const location = error instanceof YAMLParseError
-      ? { start: Math.min(yamlEnd, openingEnd + error.pos[0]), end: Math.min(yamlEnd, openingEnd + error.pos[1]) }
+      ? documentLocation(content, Math.min(yamlEnd, openingEnd + error.pos[0]), Math.min(yamlEnd, openingEnd + error.pos[1]))
       : undefined;
     return {
       ...(location && { location }),
@@ -61,7 +74,7 @@ export function parseSkillDocument(content: string): ParseSkillDocumentResult {
     return {
       ok: false,
       error: "Skill frontmatter must be a YAML mapping.",
-      location: { start: openingEnd, end: yamlEnd },
+      location: documentLocation(content, openingEnd, yamlEnd),
     };
   }
 

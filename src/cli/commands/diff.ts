@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { parseSkillDocument } from "../../domain/frontmatter.js";
+import { describeDocumentError, parseSkillDocument } from "../../domain/frontmatter.js";
 import { normalizeRelativePath } from "../../domain/digest.js";
 import { scanInventory, type ScanTarget } from "../../domain/inventory.js";
 import {
@@ -60,7 +60,7 @@ function hydrateFrontmatter(skill: Skill, label: "before" | "after"): Skill {
 
   const parsed = parseSkillDocument(skillMd.content.toString("utf8"));
   if (!parsed.ok) {
-    throw new Error(`Cannot diff ${label} Skill ${skill.name}: ${parsed.error}`);
+    throw new Error(`Cannot diff ${label} Skill ${skill.name}: ${describeDocumentError(parsed)}`);
   }
 
   return { ...skill, frontmatter: parsed.value.frontmatter };
