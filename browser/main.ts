@@ -54,4 +54,9 @@ function check() {
 input.value = example;
 input.addEventListener("input",clear);
 document.querySelector("#check")!.addEventListener("click",check);
-document.querySelector("#example")!.addEventListener("click",()=>{input.value=example;clear();input.focus()});
+document.querySelector("#example")!.addEventListener("click", () => {
+  if (input.value.trim() && input.value !== example && !window.confirm("用示例替换当前文档？")) return;
+  input.value = example;
+  clear();
+  input.focus();
+});
