@@ -6,7 +6,7 @@
 
 在运行 Skill 之前，检查它来自哪里、需要哪些权限，以及交付物是否满足声明的规则。
 
-[在线检查 SKILL.md](https://chumaniac.github.io/skillsync/) · [English / CLI reference](README.en.md) · [桌面下载](https://github.com/Chumaniac/skillsync-app/releases/tag/user-2026.11.11-zh)
+[在线检查 SKILL.md](https://chumaniac.github.io/skillsync/) · [English / CLI reference](README.en.md) · [桌面下载](https://github.com/Chumaniac/skillsync/releases/tag/user-2026.11.11-zh)
 
 ## 快速开始
 
