@@ -12,6 +12,17 @@ locate.addEventListener("click", () => {
   if (!errorLocation) return;
   input.focus();
   input.setSelectionRange(errorLocation.start, errorLocation.end);
+  // WebKit can move the selection without scrolling a wrapped textarea.
+  const measure = input.cloneNode(false) as HTMLTextAreaElement;
+  measure.removeAttribute("id");
+  measure.className = "diagnostic-measure";
+  measure.setAttribute("aria-hidden", "true");
+  measure.tabIndex = -1;
+  measure.style.width = input.clientWidth + "px";
+  measure.value = input.value.slice(0, errorLocation.start) + "\u200b";
+  input.after(measure);
+  input.scrollTop = Math.max(0, measure.scrollHeight - input.clientHeight / 2);
+  measure.remove();
 });
 const fields = document.querySelector<HTMLElement>("#fields")!;
 const example = "---\nname: inventory-check\ndescription: 对照清单核对库存。\n---\n\n先读取清单，再逐项核对应有与实收数量。";

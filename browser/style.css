@@ -1,1 +1,12 @@
 * { box-sizing: border-box } body { margin: 0; color: #202c36; background: #fbfcfd; font: 16px/1.55 system-ui,sans-serif } header,main { max-width: 68rem; padding: 1rem clamp(1.15rem,4vw,3rem); margin:auto } header { display:flex; align-items:center; gap:.7rem; min-height:4.5rem; border-bottom:1px solid #d9dfe5 } header a { margin-left:auto; color:#35556e; font-size:.9rem } main { padding-top:3.2rem } h1 { font-size:clamp(1.9rem,5vw,3rem); letter-spacing:-.045em; line-height:1.1; margin:0 } h2,label { display:block; font-size:1.08rem; font-weight:600; margin:0 0 1rem } main>p,small { color:#54616e } .columns { display:grid; grid-template-columns:1.25fr 1fr; gap:1rem; margin-top:2rem } section { min-width:0; padding:clamp(1rem,3vw,1.6rem); border:1px solid #d9dfe5; border-radius:12px; background:#fff } textarea { width:100%; height:18rem; padding:1rem; border:1px solid #9aa9b7; border-radius:6px; resize:vertical; font: .94rem/1.6 ui-monospace,monospace } small { display:block; margin-top:.5rem } button { border:1px solid #284862; color:#fff; background:#284862; border-radius:6px; padding:.63rem 1rem; font:inherit; cursor:pointer } button.secondary { color:#284862; background:#fff } .actions { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:1rem } dd { margin:0 0 .7rem; overflow-wrap:anywhere } dt { color:#596c7b; font-size:.9rem } :focus-visible { outline:3px solid #648dad; outline-offset:2px } @media(max-width:650px){.columns{grid-template-columns:1fr}main{padding-top:2rem}}
+
+textarea.diagnostic-measure {
+  position: fixed;
+  inset-inline-start: -9999px;
+  visibility: hidden;
+  min-height: 0;
+  height: 1px;
+  border: 0;
+  overflow: hidden;
+  resize: none;
+}
