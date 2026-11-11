@@ -10,6 +10,7 @@ on:
       - ".claude/skills/**"
       - ".cursor/skills/**"
       - "src/**"
+      - "browser/**"
       - "desktop/**"
       - "scripts/**"
       - "tests/**"
@@ -55,6 +56,7 @@ jobs:
       - run: npm test
       - run: npm test -- --run tests/integration/product-trust-loop.test.ts tests/integration/live-runtime-preparation.test.ts tests/docs/documentation.test.ts
       - run: npm run type-check
+      - run: npm run build:browser
       - run: npm run lint
       - run: npm pack --dry-run
       - name: Generate SBOM preview (non-blocking)

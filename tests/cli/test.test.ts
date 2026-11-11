@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { SpawnCommandRunner } from "../../src/sandbox/command";
 
 import { runCli } from "../../src/cli/index";
 import { publicAvailabilityFinding } from "../../src/cli/commands/test-v2";
@@ -320,20 +321,30 @@ describe("skillsync test", () => {
   it("blocks Docker explicitly without fallback", async () => {
     const root = await mkdtemp(join(tmpdir(), "skillsync-behavior-v2-docker-"));
     const fixtureRoot = await createV2Fixture(root, "docker");
-    const result = await runCli([
-      "test",
-      "--fixture",
-      fixtureRoot,
-      "--execute",
-      "--backend",
-      "docker",
-      "--format",
-      "json",
-    ]);
+    const hostCommand = vi.spyOn(SpawnCommandRunner.prototype, "run").mockResolvedValue({
+      exitCode: null, stdout: "", stderr: "", timedOut: true, outputLimitExceeded: false,
+    });
+    try {
+      const result = await runCli([
+        "test",
+        "--fixture",
+        fixtureRoot,
+        "--execute",
+        "--backend",
+        "docker",
+        "--format",
+        "json",
+      ]);
 
-    expect(result.exitCode).toBe(4);
-    expect(result.stdout).toMatch(/sandbox\.backend-unavailable/);
-    expect(JSON.parse(result.stdout).execution.status).toBe("blocked");
+      expect(result.exitCode).toBe(4);
+      expect(result.stdout).toMatch(/sandbox\.backend-unavailable/);
+      expect(JSON.parse(result.stdout).execution.status).toBe("blocked");
+      expect(hostCommand.mock.calls.map(([spec]) => [spec.executable, ...spec.args])).toEqual([
+        ["docker", "version", "--format", "{{.Server.Version}}"],
+      ]);
+    } finally {
+      hostCommand.mockRestore();
+    }
   });
 
   it("returns code 2 for an invalid v2 manifest", async () => {
