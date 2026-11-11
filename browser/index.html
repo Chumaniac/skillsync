@@ -7,5 +7,5 @@
 <main><h1>检查 Skill 文档</h1><p>粘贴 SKILL.md，读取 YAML 文档头和正文。内容只在当前标签页处理。</p>
 <div class="columns"><section><label for="source">SKILL.md</label><textarea id="source" maxlength="24576" spellcheck="false" aria-describedby="limit"></textarea><small id="limit">最多 24 KiB。网页检查文档格式，本机 CLI 可继续检查来源、权限和交付物。</small>
 <div class="actions"><button id="check">检查文档</button><button id="example" class="secondary">载入示例</button></div></section>
-<section aria-live="polite"><h2>解析结果</h2><strong id="status">等待检查</strong><p id="message">运行检查后，这里会列出文档头字段和正文长度。</p><dl id="fields"></dl></section></div></main>
+<section aria-live="polite"><h2>解析结果</h2><strong id="status">等待检查</strong><p id="message">运行检查后，这里会列出文档头字段和正文长度。</p><button id="locate" type="button" class="secondary" hidden>定位错误</button><dl id="fields"></dl></section></div></main>
 <script type="module" src="./main.ts"></script></body></html>

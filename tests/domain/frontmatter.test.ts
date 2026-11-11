@@ -23,6 +23,13 @@ describe("parseSkillDocument", () => {
     });
   });
 
+  it("locates a duplicate key in the original document including CRLF and Unicode", () => {
+    const text = "---\r\nname: 鱼🐟\r\nname: b\r\n---\r\nbody";
+    const result = parseSkillDocument(text);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.location?.start).toBe(text.lastIndexOf("name:"));
+  });
+
   it("rejects a document without an opening or closing delimiter", () => {
     const missingOpening = parseSkillDocument("name: review\n---\nbody");
     const missingClosing = parseSkillDocument("---\nname: review\nbody");

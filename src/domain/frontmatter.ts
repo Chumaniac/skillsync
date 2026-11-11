@@ -1,4 +1,4 @@
-import { parse } from "yaml";
+import { parse, YAMLParseError } from "yaml";
 
 export type ParsedSkillDocument = {
   frontmatter: Record<string, unknown>;
@@ -8,7 +8,7 @@ export type ParsedSkillDocument = {
 
 export type ParseSkillDocumentResult =
   | { ok: true; value: ParsedSkillDocument }
-  | { ok: false; error: string };
+  | { ok: false; error: string; location?: { start: number; end: number } };
 
 function parserError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
@@ -20,6 +20,7 @@ export function parseSkillDocument(content: string): ParseSkillDocumentResult {
   if (!opening) {
     return {
       ok: false,
+      location: { start: 0, end: 0 },
       error: "Skill document must start with a YAML frontmatter delimiter.",
     };
   }
@@ -29,6 +30,7 @@ export function parseSkillDocument(content: string): ParseSkillDocumentResult {
   if (!closing) {
     return {
       ok: false,
+      location: { start: content.length, end: content.length },
       error: "Skill frontmatter closing delimiter is missing.",
     };
   }
@@ -39,9 +41,13 @@ export function parseSkillDocument(content: string): ParseSkillDocumentResult {
 
   let parsed: unknown;
   try {
-    parsed = parse(frontmatterText, { uniqueKeys: true });
+    parsed = parse(frontmatterText, { uniqueKeys: true, prettyErrors: false });
   } catch (error: unknown) {
+    const location = error instanceof YAMLParseError
+      ? { start: Math.min(yamlEnd, openingEnd + error.pos[0]), end: Math.min(yamlEnd, openingEnd + error.pos[1]) }
+      : undefined;
     return {
+      ...(location && { location }),
       ok: false,
       error: `Invalid YAML frontmatter: ${parserError(error)}`,
     };
@@ -55,6 +61,7 @@ export function parseSkillDocument(content: string): ParseSkillDocumentResult {
     return {
       ok: false,
       error: "Skill frontmatter must be a YAML mapping.",
+      location: { start: openingEnd, end: yamlEnd },
     };
   }
 

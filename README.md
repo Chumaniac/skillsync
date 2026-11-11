@@ -28,6 +28,8 @@ node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target
 
 运行 `node dist/cli/index.js gui` 打开本机界面。修复前可查看计划，确认后再应用。默认未启用真实执行。
 
+网页检查会标出 YAML 语法错误所在的行和列。点击「定位错误」可回到原文修正，继续编辑会清除上一次的位置。
+
 ## 常见问题
 
 **网页能检查本机目录吗？** 网页只解析粘贴的文档。完整的目录、权限和交付物检查由本机 CLI 读取文件。
