@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 
-import { parseSkillDocument } from "../domain/frontmatter.js";
+import { describeDocumentError, parseSkillDocument } from "../domain/frontmatter.js";
 import { normalizeRelativePath } from "../domain/digest.js";
 import type { Finding } from "../domain/result.js";
 import type { Skill, SkillFile } from "../domain/skill.js";
@@ -160,7 +160,7 @@ export function inspectStructure(skill: Skill): Finding[] {
         severity: "error",
         status: "fail",
         code: "structure.invalid-frontmatter",
-        message: parsed.error,
+        message: describeDocumentError(parsed),
         evidence: [{ path: "SKILL.md" }],
         remediation: "Add valid YAML frontmatter enclosed by --- delimiters.",
       }),

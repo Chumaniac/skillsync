@@ -3,7 +3,7 @@ const input = document.querySelector<HTMLTextAreaElement>("#source")!;
 const status = document.querySelector<HTMLElement>("#status")!;
 const message = document.querySelector<HTMLElement>("#message")!;
 const locate = document.querySelector<HTMLButtonElement>("#locate")!;
-let errorLocation: {start: number; end: number} | undefined;
+let errorLocation: {start: number; end: number; line: number; column: number} | undefined;
 function resetLocation() {
   errorLocation = undefined;
   locate.hidden = true;
@@ -66,9 +66,7 @@ function check() {
     status.textContent = "无法解析文档";
     errorLocation = parsed.location;
     if (errorLocation) {
-      const lines = input.value.slice(0, errorLocation.start).split("\n");
-      const column = Array.from(lines[lines.length-1] ?? "").length + 1;
-      message.textContent = "第 " + lines.length + " 行，第 " + column + " 列。" + parsed.error;
+      message.textContent = "第 " + errorLocation.line + " 行，第 " + errorLocation.column + " 列。" + parsed.error;
       locate.hidden = false;
     } else {
       message.textContent = parsed.error;

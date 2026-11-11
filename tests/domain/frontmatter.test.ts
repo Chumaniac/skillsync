@@ -27,7 +27,11 @@ describe("parseSkillDocument", () => {
     const text = "---\r\nname: 鱼🐟\r\nname: b\r\n---\r\nbody";
     const result = parseSkillDocument(text);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.location?.start).toBe(text.lastIndexOf("name:"));
+    if (!result.ok) {
+      expect(result.location?.start).toBe(text.lastIndexOf("name:"));
+      expect(result.location?.line).toBe(3);
+      expect(result.location?.column).toBe(1);
+    }
   });
 
   it("rejects a document without an opening or closing delimiter", () => {
