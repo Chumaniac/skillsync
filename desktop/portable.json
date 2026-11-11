@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "name": "SkillSync",
+  "identifier": "com.chumaniac.skillsync",
+  "mark": "SS",
+  "port": 19002,
+  "smokePort": 19012,
+  "mode": "process",
+  "readySelector": "main",
+  "closeGuardSelector": "#verify:disabled",
+  "launch": {
+    "executable": "{{RESOURCES}}/runtime/bin/node",
+    "arguments": [
+      "{{RESOURCES}}/runtime/app/dist/cli/index.js",
+      "gui",
+      "--state-dir",
+      "{{HOME}}/Library/Application Support/SkillSync/workspace",
+      "--port",
+      "19002"
+    ],
+    "workingDirectory": "{{RESOURCES}}/runtime/app",
+    "healthPath": "health",
+    "healthMarker": "skillsync-workbench",
+    "stopOnQuit": true,
+    "smokeArguments": [
+      "{{RESOURCES}}/runtime/app/dist/cli/index.js",
+      "gui",
+      "--state-dir",
+      "{{SMOKE_DIR}}/state",
+      "--port",
+      "19012"
+    ]
+  },
+  "product": "skillsync"
+}

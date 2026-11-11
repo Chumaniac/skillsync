@@ -17,7 +17,7 @@ it('previews then creates and reopens a batch package without enabling Skill rep
  const page=await(await fetch(app.url)).text(),nonce=page.match(/name="client" content="([a-f0-9]+)"/)![1];
  const post=async(action:string,body={})=>{const response=await fetch(app.url+'/api/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-SkillSync-Client':nonce},body:JSON.stringify(body)});return {status:response.status,data:await response.json()};};
  const preview=await post('batch/preview',{path});expect(preview.status).toBe(200);expect(preview.data.batches).toHaveLength(2);
- const output=join(base,'first.json');const result=await post('batch/run',{path,output});expect(result.status).toBe(200);expect(result.data.summary.status).toBe('failed');expect(result.data.html).toContain('Batch acceptance');
+ const output=join(base,'first.json');const result=await post('batch/run',{path,output});expect(result.status).toBe(200);expect(result.data.summary.status).toBe('failed');expect(result.data.html).toContain('批次验收');
  expect(result.data.html).not.toMatch(/<iframe\b|srcdoc=/i);
  expect((result.data.html.match(/<style>/g)||[]).length).toBe(1);
  expect(result.data.html).toContain('id="batch-north-issues"');

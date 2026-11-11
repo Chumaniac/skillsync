@@ -2,7 +2,8 @@
 
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { homedir } from "node:os";
 
 import { Command, CommanderError } from "commander";
 
@@ -250,7 +251,9 @@ export function createCli(io: CliIO = defaultCliIO): Command {
 
   program.command("gui")
     .description("Open the loopback-only graphical verification workbench.")
-    .requiredOption("--state-dir <path>", "Private directory for plans and reports (outside Skill roots)")
+    .option("--state-dir <path>", "Private directory for plans and reports (outside Skill roots)",
+      process.platform === "darwin" ? join(homedir(), "Library/Application Support/SkillSync/workspace")
+        : join(homedir(), ".local/share/skillsync/workspace"))
     .option("--port <port>", "Loopback port", "14986")
     .action(async (options: {stateDir: string; port: string}) => {
       const port = Number(options.port);

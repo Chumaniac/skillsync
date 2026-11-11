@@ -161,7 +161,7 @@ describe("real CLI graphical workbench", () => {
     for (const html of [checked.data.html, (await api("history/open",{id:checked.data.historyId})).data.html]) {
       expect(html).toContain('data-source-records="1"');
       expect(html).toContain('data-target-records="1,3"');
-      expect(html).toContain("exclude the header");
+      expect(html).toContain("不包含表头");
       for (const privateValue of [base,"ORG_A","ORG_B","ORDER_1"]) expect(html).not.toContain(privateValue);
     }
   });
@@ -312,5 +312,5 @@ it("reads the current contract at verification start rather than pinning a prior
   const {api, base} = await setup();const fixture=join(base,"contract-before-start");await cp(resolve("fixtures/product/order-summary"),fixture,{recursive:true});const contract=join(fixture,"contract.json");
   expect((await api("select",{path:join(fixture,"artifacts"),kind:"artifacts",contract})).status).toBe(200);
   const contents=await readFile(contract,"utf8");await writeFile(contract,contents+"\n");
-  const outcome=await api("verify");expect(outcome.status).toBe(200);expect(outcome.data.html).toContain("Declared checks passed");expect((await api("history")).data.total).toBe(1);
+  const outcome=await api("verify");expect(outcome.status).toBe(200);expect(outcome.data.html).toContain("声明的检查已通过");expect((await api("history")).data.total).toBe(1);
 });

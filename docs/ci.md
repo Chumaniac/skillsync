@@ -106,7 +106,7 @@ not overwritten. This distribution needs no npm account or long-lived token;
 the npm registry remains at 0.1.0. A tag does not activate a live runtime.
 
 The operator-facing activation, revocation, rollback, and evidence review
-procedure is in [`runtime-operator-runbook.md`](runtime-operator-runbook.md).
+procedure is in [`runtime-operator-runbook.md`](build.md).
 
 
 ## Installation channel and source capabilities (current main)

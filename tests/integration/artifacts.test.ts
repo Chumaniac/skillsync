@@ -46,7 +46,7 @@ describe("physical artifact validation", () => {
     expect(report.exitCode).toBe(2);
     expect(report.status).toBe("failed");
     expect(report.files).toEqual([]);
-    expect(renderArtifacts(report, "html")).toContain("Check setup required");
+    expect(renderArtifacts(report, "html")).toContain("需要配置检查环境");
     for (const format of ["json", "text", "html"]) {
       const rendered = renderArtifacts(report, format);
       expect(rendered).not.toContain(root);
@@ -63,7 +63,7 @@ describe("physical artifact validation", () => {
     const report = await runArtifacts({ contract, delivery: bundle });
     expect(report.exitCode).toBe(1);
     expect(report.findings).toEqual([{ code: "delivery.layout" }]);
-    expect(renderArtifacts(report, "html")).toContain("Review required");
+    expect(renderArtifacts(report, "html")).toContain("需要复核");
   }));
   it("rejects an ambiguous receipt and an unsorted manifest", async () => fixture(async (root, contract, data) => {
     const bundle = join(root, "bundle"); await mkdir(bundle); await cp(data, join(bundle, "artifacts"), { recursive: true }); await bind(bundle);
