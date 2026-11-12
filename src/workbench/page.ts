@@ -173,7 +173,7 @@ async function loadHistory(newest=false, filters=historyFilters, offset=newest?0
  if(item.kind==='verify')for(const [side,text]of [['before','设为较早'],['after','设为较晚']]){const pick=document.createElement('button');pick.type='button';pick.className='history-compare-pick';pick.textContent=text;pick.disabled=busy||historyLoading;pick.setAttribute('aria-label','将记录 '+item.id+' '+text);pick.onclick=()=>{$('history-compare-'+side).value=item.id;clearHistoryComparison();};row.append(pick);}
  $('history-list').append(row);}
  renderedHistory=signature; }
- $('history-info').textContent=data.total+' 条匹配记录 · 保存文件 '+data.capacity.files+'/'+data.capacity.maxFiles+(data.unavailable?' · '+data.unavailable+' 条索引无法读取（不参与筛选）':'');
+ $('history-info').textContent=data.total+' 条匹配记录 · 保存文件 '+data.capacity.files+'/'+data.capacity.maxFiles+(data.unavailable?' · '+data.unavailable+' 份材料未完成或无法读取（已保留，不计完成记录）':'');
  $('history-prev').disabled=busy||historyOffset===0;$('history-next').disabled=busy||historyOffset+12>=historyTotal;
  }catch(e){$('history-info').textContent='历史暂不可用，保留上次结果与筛选条件，原文件未删除。';showHistoryFilters();}finally{historyLoading=false;renderLocks();if(historyRefreshQueued){historyRefreshQueued=false;await loadHistory(true);}}
 }

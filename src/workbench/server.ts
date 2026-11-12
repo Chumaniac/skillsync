@@ -302,7 +302,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           owned.historyId=intent.id;
           await checkSelection();
           applying = true;
-          const output = await command(["fix", "--apply", "--plan", current.path, "--yes", "--backup", "--format", "json"]);
+          const output = await command(["fix", "--apply", "--plan", current.path, "--yes", "--backup", "--backup-dir", join(stateDir, "repair-backups"), "--format", "json"]);
           const applied=await history.append({kind:"apply",selection:selected,snapshot:current.snapshot,baselineId:baseline?.id,parentId:intent.id},output);
           owned.historyId=applied.id;
           const receipt = JSON.parse(output) as {status?: string; backupPath?: string};

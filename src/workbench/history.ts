@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, realpath, writeFile } from "node:fs/promises";
+import { lstat, realpath, rename } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { z } from "zod";
 import { parseStrictJson } from "../domain/strict-json.js";
 import { readDirectoryEntries, readWorkspaceText } from "../sandbox/workspace-tree.js";
 import {parseComparisonReport,compareVerificationReports} from "./verification-comparison.js";
 import {compareArtifactReports,parseArtifactReport} from "../domain/artifact-report-comparison.js";
+
+import { REPAIR_BACKUP_FOLDER, syncDirectory, validateRepairBackupRoot, writeSyncedFile } from "../domain/repair-backups.js";
 
 export const MAX_OUTPUT = 8 * 1024 * 1024;
 const MAX_META = 16 * 1024;
@@ -43,15 +45,18 @@ export class WorkbenchHistory {
   private async entries() {
     const root = await lstat(this.root);
     if (!root.isDirectory() || root.isSymbolicLink() || identity(root)!==this.rootIdentity || await realpath(this.root)!==this.root) throw new WorkbenchStateError("状态目录已变化，请停止操作并检查原目录。");
-    const entries = await readDirectoryEntries(this.root, MAX_FILES);
-    let bytes = 0;
+    const entries = await readDirectoryEntries(this.root, MAX_FILES + 1);
+    let bytes = 0; const reports = [];
     for (const entry of entries) {
+      if (entry.name === REPAIR_BACKUP_FOLDER) { await validateRepairBackupRoot(join(this.root, entry.name)); continue; }
+      reports.push(entry);
       const info = await lstat(join(this.root,entry.name));
       if (!info.isFile() || info.isSymbolicLink()) throw new WorkbenchStateError("状态目录包含非普通文件，请检查；原结果未删除。");
       bytes += info.size;
     }
     if (bytes>MAX_STATE) throw new WorkbenchStateError("状态目录超过容量上限，请选择新的状态目录；原结果已保留。");
-    return {entries,bytes};
+    if (reports.length > MAX_FILES) throw new WorkbenchStateError("历史文件超过上限，原材料已保留。");
+    return {entries:reports,bytes};
   }
   async capacity(files=2, bytes=MAX_OUTPUT+MAX_META) {
     const current=await this.entries();
@@ -64,9 +69,15 @@ export class WorkbenchHistory {
     const index=JSON.stringify(record);
     if (Buffer.byteLength(index)>MAX_META || (output!==undefined && Buffer.byteLength(output)>MAX_OUTPUT)) throw new Error("历史记录超过上限。");
     await this.capacity(output===undefined?1:2,Buffer.byteLength(index)+Buffer.byteLength(output??""));
-    if (dataFile) await writeFile(join(this.root,dataFile),output!,{flag:"wx",mode:0o600});
-    // Publishing the index last keeps incomplete writes out of completed history.
-    await writeFile(join(this.root,`${id}-history.json`),index,{flag:"wx",mode:0o600});
+    const publish = async (name: string, text: string) => {
+      const pending = join(this.root, `.${name}.tmp`);
+      await writeSyncedFile(pending, text);
+      await rename(pending, join(this.root, name));
+      await syncDirectory(this.root);
+    };
+    if (dataFile) await publish(dataFile, output!);
+    // Failed staging/output remains discoverable and is never counted as completed.
+    await publish(`${id}-history.json`, index);
     return record;
   }
   private async metadata(id:unknown) {
@@ -81,16 +92,29 @@ export class WorkbenchHistory {
     if(!parsed.success)throw new WorkbenchStateError("历史筛选条件无效，请使用目录名、任务类型和退出码 0–4。");
     const {query,kind,exitCode}=parsed.data;
     const {entries,bytes}=await this.entries();
-    const rows:HistoryRecord[]=[];let unavailable=0;
+    const rows:HistoryRecord[]=[]; const incomplete = new Set<string>();
+    const names = new Set(entries.map(entry => entry.name));
     for(const entry of entries)if(/^[a-f0-9-]{36}-history\.json$/.test(entry.name)) {
-      try { rows.push(await this.metadata(entry.name.slice(0,-13))); } catch { unavailable++; }
+      const id = entry.name.slice(0, -13);
+      try {
+        const record = await this.metadata(id);
+        if (record.dataFile && !names.has(record.dataFile)) throw new Error('History output is missing.');
+        rows.push(record);
+      } catch { incomplete.add(id); }
     }
+    const completed = new Set(rows.map(row => row.id));
+    for (const entry of entries) {
+      const match = /^\.?([a-f0-9-]{36})-(?:data|history)\.json(?:\.tmp)?$/.exec(entry.name);
+      if (match && !completed.has(match[1])) incomplete.add(match[1]);
+    }
+    const unavailable = incomplete.size;
+    const recovery = [...incomplete].sort().map(id => ({ id, status: 'incomplete-material' as const, readOnly: true }));
     rows.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id));
     const summaries=rows.map(({id,createdAt,kind,selection,exitCode,baselineId,parentId})=>
       ({id,createdAt,kind,label:selection.path.split(/[\\/]/).filter(Boolean).at(-1)??"",exitCode,baselineId,parentId}));
     const matches=summaries.filter(row=>(!query||row.label.toLowerCase().includes(query))
       &&(!kind||row.kind===kind)&&(exitCode===undefined||row.exitCode===exitCode));
-    return {items:matches.slice(offset,offset+12),total:matches.length,offset,unavailable,
+    return {items:matches.slice(offset,offset+12),total:matches.length,offset,unavailable,recovery,
       capacity:{files:entries.length,bytes,maxFiles:MAX_FILES,maxBytes:MAX_STATE}};
   }
   async read(id:unknown) {

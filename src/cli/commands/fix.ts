@@ -26,6 +26,7 @@ export type FixApplyOptions = {
   yes: boolean;
   approveReviewRequired?: boolean;
   backup?: boolean;
+  backupDirectory?: string;
 };
 
 function selectIssues(issues: Issue[], issueIds: string[] | undefined): Issue[] {
@@ -112,6 +113,7 @@ export async function runFixApply(options: FixApplyOptions): Promise<ApplyReceip
     yes: options.yes,
     approveReviewRequired: options.approveReviewRequired,
     backup: options.backup,
+    backupDirectory: options.backupDirectory,
   });
 }
 
