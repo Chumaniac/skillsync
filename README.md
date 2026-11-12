@@ -40,3 +40,5 @@ node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target
 **需要 API Key 吗？** 离线核验无需环境变量或密钥。运行 `gui --state-dir <目录>` 可指定报告存储位置。
 
 [使用指南](docs/user-guide.md) · [构建桌面应用](docs/build.md) · [隐私与备份](docs/privacy.md) · [贡献指南](CONTRIBUTING.md)
+
+修复前的持久备份、并发编辑保全和中断后的核对步骤见[修复与恢复](docs/repair-recovery.md)。工作台会区分完成历史和保留的未完成材料。

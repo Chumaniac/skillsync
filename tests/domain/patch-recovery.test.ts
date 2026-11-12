@@ -2,19 +2,19 @@ import {mkdir,mkdtemp,readFile,realpath,rm,stat,writeFile} from 'node:fs/promise
 import {join} from 'node:path';import {tmpdir} from 'node:os';
 import {afterEach,expect,it,vi} from 'vitest';
 import {planDigest,type ActionPlan} from '../../src/domain/action-plan';
-import {applyActionPlan,ActionPlanApplyError} from '../../src/domain/patch-application';
+import {applyActionPlan as applyPlan,ActionPlanApplyError} from '../../src/domain/patch-application';
 import {renderFixApplyError} from '../../src/cli/commands/fix';
 const fault=vi.hoisted(()=>({root:'',moved:'',replace:true,armed:false}));
 vi.mock('node:fs/promises',async importOriginal=>{
  const actual=await importOriginal<typeof import('node:fs/promises')>();
- return {...actual,rename:async(from:Parameters<typeof actual.rename>[0],to:Parameters<typeof actual.rename>[1])=>{
+ return {...actual,link:async(from:Parameters<typeof actual.link>[0],to:Parameters<typeof actual.link>[1])=>{
   if(fault.armed&&to===join(fault.root,fault.replace?'a.txt':'b.txt')){
    fault.armed=false;
    if(!fault.replace)throw new Error('synthetic write failure');
-   await actual.rename(from,to);await actual.rename(fault.root,fault.moved);await actual.mkdir(fault.root);
+   await actual.link(from,to);await actual.rename(fault.root,fault.moved);await actual.mkdir(fault.root);
    await actual.writeFile(join(fault.root,'a.txt'),'replacement-a');await actual.writeFile(join(fault.root,'b.txt'),'replacement-b');return;
   }
-  return actual.rename(from,to);
+  return actual.link(from,to);
  }};
 });
 const owned:string[]=[];
@@ -23,7 +23,8 @@ it.each([true,false])('retains a discoverable recovery record when root replacem
  const parent=await mkdtemp(join(tmpdir(),'skillsync-recovery-'));owned.push(parent);const folder=join(parent,'root');await mkdir(folder);const root=await realpath(folder);await writeFile(join(root,'a.txt'),'before-a');await writeFile(join(root,'b.txt'),'before-b');const metadata=await stat(root);
  const input={schema_version:1 as const,rootPath:root,rootIdentity:`${metadata.dev}:${metadata.ino}`,issueIds:[],changes:[{path:'a.txt',before:'before-a',after:'after-a',safety:'safe' as const},{path:'b.txt',before:'before-b',after:'after-b',safety:'safe' as const}],manualSteps:[]};const plan:ActionPlan={...input,generatedAt:new Date().toISOString(),planDigest:planDigest(input)};
  Object.assign(fault,{root,moved:join(parent,'original'),replace:true,armed:true});
- const error=await applyActionPlan(plan,{yes:true,backup}).then(()=>{throw Error('expected failure');},error=>error as ActionPlanApplyError);
+ const backupDirectory=join(parent,'backups');
+ const error=await applyPlan(plan,{yes:true,backup,backupDirectory}).then(()=>{throw Error('expected failure');},error=>error as ActionPlanApplyError);
  expect(error).toBeInstanceOf(ActionPlanApplyError);expect(error.receipt).toBeUndefined();
  const recovery=JSON.parse(renderFixApplyError(error)).error.recovery;
  expect(recovery).toMatchObject({schema_version:1,status:'rollback-incomplete',planDigest:plan.planDigest,changedPaths:['a.txt'],failedPaths:['a.txt']});
@@ -38,7 +39,8 @@ it.each([true,false])('completed rollback still exposes retained failure materia
  const parent=await mkdtemp(join(tmpdir(),'skillsync-restored-'));owned.push(parent);const folder=join(parent,'root');await mkdir(folder);const root=await realpath(folder);await writeFile(join(root,'a.txt'),'before-a');await writeFile(join(root,'b.txt'),'before-b');
  const input={schema_version:1 as const,rootPath:root,issueIds:[],changes:[{path:'a.txt',before:'before-a',after:'after-a',safety:'safe' as const},{path:'b.txt',before:'before-b',after:'after-b',safety:'safe' as const}],manualSteps:[]};const plan:ActionPlan={...input,generatedAt:new Date().toISOString(),planDigest:planDigest(input)};
  Object.assign(fault,{root,moved:join(parent,'unused'),replace:false,armed:true});
- const error=await applyActionPlan(plan,{yes:true,backup}).then(()=>{throw Error('expected failure');},error=>error as ActionPlanApplyError);
+ const backupDirectory=join(parent,'backups');
+ const error=await applyPlan(plan,{yes:true,backup,backupDirectory}).then(()=>{throw Error('expected failure');},error=>error as ActionPlanApplyError);
  expect(error).toBeInstanceOf(ActionPlanApplyError);expect(error.recovery).toBeUndefined();expect(error.receipt).toMatchObject({status:'restored',changedPaths:['a.txt']});
  expect(error.receipt!.backupPath).toEqual(expect.any(String));owned.push(error.receipt!.backupPath!);
  expect(await readFile(join(root,'a.txt'),'utf8')).toBe('before-a');expect(await readFile(join(root,'b.txt'),'utf8')).toBe('before-b');

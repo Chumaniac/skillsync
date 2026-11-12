@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { inspectRepairBackup } from "../domain/repair-backups.js";
 
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -192,6 +193,7 @@ type FixCliOptions = {
   yes?: boolean;
   approveReviewRequired?: boolean;
   backup?: boolean;
+  backupDir?: string;
   format?: string;
 };
 
@@ -350,6 +352,10 @@ export function createCli(io: CliIO = defaultCliIO): Command {
       io.writeOut(renderExplain(issue, options.format));
     });
 
+  program.command("backup-check").description("Read-only checksum validation of one retained repair backup.")
+    .requiredOption("--input <path>", "Retained repair backup directory")
+    .action(async (options: { input: string }) => { io.writeOut(JSON.stringify(await inspectRepairBackup(options.input), null, 2)); });
+
   program
     .command("fix")
     .description("Plan or explicitly apply fixes for verification Issues.")
@@ -362,7 +368,8 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .option("--output <path>", "Write the generated ActionPlan JSON to this new file")
     .option("--yes", "Confirm the explicit ActionPlan apply")
     .option("--approve-review-required", "Approve review-required ActionPlan changes")
-    .option("--backup", "Retain backups while applying the ActionPlan")
+    .option("--backup", "Retain private backups while applying the ActionPlan")
+    .option("--backup-dir <path>", "Private repair backup directory (default: ~/.skillsync/repair-backups)")
     .option("--format <format>", "Output format: text or json", "text")
     .action(async (options: FixCliOptions) => {
       if (options.apply) {
@@ -370,7 +377,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
           throw new Error("fix --apply requires --plan <plan-file>.");
         }
         if (options.path || options.target || options.policy || options.issue || options.output) {
-          throw new Error("fix --apply accepts only --plan, --yes, --approve-review-required, --backup, and --format.");
+          throw new Error("fix --apply accepts only --plan, --yes, --approve-review-required, --backup, --backup-dir, and --format.");
         }
         if (options.format !== "text" && options.format !== "json") {
           throw new Error(`Unsupported fix output format: ${options.format}`);
@@ -381,6 +388,7 @@ export function createCli(io: CliIO = defaultCliIO): Command {
             yes: options.yes === true,
             approveReviewRequired: options.approveReviewRequired,
             backup: options.backup,
+            backupDirectory: options.backupDir,
           } satisfies FixApplyOptions);
           io.writeOut(renderFixApply(receipt, options.format));
         } catch (error: unknown) {

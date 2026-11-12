@@ -202,7 +202,7 @@ describe("real CLI graphical workbench", () => {
     expect(after.data.comparison.status).toBe("compared");
     expect(after.data.comparison.resolved).toBe(1);
     expect(after.data.comparison.added).toBe(0);
-    const saved = await readdir(join(base, "state"));
+    const saved = (await readdir(join(base, "state"), {withFileTypes:true})).filter(entry => entry.isFile()).map(entry => entry.name);
     const contents = await Promise.all(saved.map(name => readFile(join(base,"state",name))));
     await app.close(); running.splice(running.indexOf(app), 1);
     const next = await startWorkbench({port:0, stateDir:join(base,"state"),cliPath:resolve("dist/cli/index.js")}); running.push(next);

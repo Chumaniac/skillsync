@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { planDigest } from "../../src/domain/action-plan.js";
 import type { ActionPlan } from "../../src/domain/action-plan.js";
 import type { PatchChange } from "../../src/domain/resolution.js";
-import { applyActionPlan } from "../../src/domain/patch-application.js";
+import { applyActionPlan as applyPlan } from "../../src/domain/patch-application.js";
 
 const workspaces: string[] = [];
 
@@ -26,6 +26,11 @@ async function put(rootPath: string, relativePath: string, content: string, mode
   await mkdir(dirname(targetPath), { recursive: true });
   await writeFile(targetPath, content, { encoding: "utf8", mode });
   await chmod(targetPath, mode);
+}
+
+async function applyActionPlan(plan: ActionPlan, options: Parameters<typeof applyPlan>[1]) {
+  const backupDirectory = await workspace();
+  return applyPlan(plan, { ...options, backupDirectory });
 }
 
 function change(overrides: Partial<PatchChange> = {}): PatchChange {

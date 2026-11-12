@@ -1,5 +1,5 @@
-import { chmod, lstat, mkdir, mkdtemp, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { chmod, link, lstat, mkdir, open, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { constants, type Stats } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -7,7 +7,9 @@ import { assertActionPlanIntegrity } from "./action-plan.js";
 import type { ActionPlan } from "./action-plan.js";
 import { normalizeRelativePath } from "./digest.js";
 import type { PatchChange } from "./resolution.js";
-import { readWorkspaceText, WORKSPACE_TREE_LIMITS } from "../sandbox/workspace-tree.js";
+import { readWorkspaceFile, readWorkspaceText, WORKSPACE_TREE_LIMITS } from "../sandbox/workspace-tree.js";
+
+import { createRepairBackup, syncDirectory } from "./repair-backups.js";
 
 export type ApplyReceipt = {
   schema_version: 1;
@@ -64,14 +66,17 @@ export class ActionPlanApplyError extends Error {
 
 type PreparedChange = {
   change: PatchChange;
+  rootPath: string;
   normalizedPath: string;
   targetPath: string;
   content: string;
   mode: number;
+  metadata: Stats;
 };
 
 type Backup = PreparedChange & {
   backupFilePath: string;
+  published?: Stats;
 };
 
 function ensureSafePatchPath(path: string): string {
@@ -138,32 +143,71 @@ function receiptFor(
   };
 }
 
-async function replaceFileContents(targetPath: string, content: string, mode: number): Promise<void> {
+class TargetRecoveryRequired extends Error {
+  constructor(readonly target: string, detail: string) { super(`Target publication requires recovery: ${detail}`); }
+}
+async function assertSnapshot(path: string, content: string, mode: number, metadata: Stats): Promise<void> {
+  const current = await lstat(path);
+  if (!current.isFile() || current.isSymbolicLink() || current.dev !== metadata.dev || current.ino !== metadata.ino || (current.mode & 0o777) !== mode ||
+      (await readWorkspaceFile(path, WORKSPACE_TREE_LIMITS.maxFileBytes, current)).toString('utf8') !== content) throw new Error('Patch target changed or is stale.');
+}
+async function assertTarget(item: PreparedChange, content = item.content, mode = item.mode, metadata = item.metadata): Promise<void> {
+  await assertNoSymlinkedParents(item.rootPath, item.normalizedPath);
+  await assertSnapshot(item.targetPath, content, mode, metadata);
+}
+async function replaceFileContents(targetPath: string, content: string, mode: number, capturedPath: string,
+  expected: { content: string; mode: number; metadata: Stats }, beforeCommit: () => Promise<void>): Promise<Stats> {
   const temporaryPath = join(dirname(targetPath), `.skillsync-apply-${randomUUID()}.tmp`);
+  const probePath = `${temporaryPath}.link-check`;
+  let captured = false, published = false;
   try {
     await writeFile(temporaryPath, content, { encoding: "utf8", flag: "wx", mode });
     await chmod(temporaryPath, mode);
-    await rename(temporaryPath, targetPath);
-  } finally {
-    await rm(temporaryPath, { force: true }).catch(() => undefined);
-  }
+    const handle = await open(temporaryPath, constants.O_RDWR | (constants.O_NOFOLLOW ?? 0));
+    let metadata: Stats;
+    try { await handle.sync(); metadata = await handle.stat(); } finally { await handle.close(); }
+    // Refuse unsupported filesystems while the original target is still intact.
+    await link(temporaryPath, probePath); await rm(probePath);
+    await mkdir(dirname(capturedPath), { recursive: true, mode: 0o700 });
+    await beforeCommit();
+    // Capture the actual directory entry before publication. A concurrent new file
+    // is never replaced: link() fails if any writer has populated the target name.
+    await rename(targetPath, capturedPath); captured = true;
+    await syncDirectory(dirname(capturedPath));
+    await assertSnapshot(capturedPath, expected.content, expected.mode, expected.metadata);
+    await link(temporaryPath, targetPath); published = true;
+    return metadata;
+  } catch (error) {
+    if (captured && !published) {
+      try { await link(capturedPath, targetPath); await syncDirectory(dirname(targetPath)); }
+      catch { throw new TargetRecoveryRequired(targetPath, error instanceof Error ? error.message : 'conflicting publication'); }
+    }
+    throw error;
+  } finally { await rm(probePath, { force: true }).catch(() => undefined); await rm(temporaryPath, { force: true }).catch(() => undefined); }
+}
+async function changeMode(item: PreparedChange, mode: number, before: () => Promise<void>): Promise<void> {
+  const handle = await open(item.targetPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+  try {
+    const bound = await handle.stat(); await before();
+    if (bound.dev !== item.metadata.dev || bound.ino !== item.metadata.ino) throw new Error('Patch target changed before mode update.');
+    await handle.chmod(mode);
+  } finally { await handle.close(); }
+}
+async function restoreBackup(backup: Backup, checkRoot: () => Promise<void>, directory: string): Promise<void> {
+  const check = async () => {
+    await checkRoot();
+    await assertTarget(backup, hasContentPatch(backup.change) ? backup.change.after : backup.content, backup.change.modeAfter ?? backup.mode, backup.published ?? backup.metadata);
+  };
+  if (hasContentPatch(backup.change)) await replaceFileContents(backup.targetPath, await readWorkspaceText(backup.backupFilePath, WORKSPACE_TREE_LIMITS.maxFileBytes), backup.mode, join(directory, "rollback", backup.normalizedPath), { content: backup.change.after, mode: backup.change.modeAfter ?? backup.mode, metadata: backup.published ?? backup.metadata }, check);
+  else await changeMode(backup, backup.mode, check);
 }
 
-async function restoreBackup(backup: Backup): Promise<void> {
-  await replaceFileContents(
-    backup.targetPath,
-    await readWorkspaceText(backup.backupFilePath, WORKSPACE_TREE_LIMITS.maxFileBytes),
-    backup.mode,
-  );
-  await chmod(backup.targetPath, backup.mode);
-}
-
-async function restoreChangedTargets(changed: Backup[], checkRoot: () => Promise<void>): Promise<RollbackFailure[]> {
+async function restoreChangedTargets(changed: Backup[], checkRoot: () => Promise<void>, directory: string): Promise<RollbackFailure[]> {
   const failures: RollbackFailure[] = [];
   for (const backup of [...changed].reverse()) {
     try {
       await checkRoot();
-      await restoreBackup(backup);
+      await restoreBackup(backup, checkRoot, directory);
     } catch (error) {
       failures.push({
         path: backup.normalizedPath,
@@ -180,6 +224,7 @@ export async function applyActionPlan(
     yes: boolean;
     approveReviewRequired?: boolean;
     backup?: boolean;
+    backupDirectory?: string;
   },
 ): Promise<ApplyReceipt> {
   if (!options.yes) {
@@ -208,8 +253,12 @@ export async function applyActionPlan(
 
   const prepared: PreparedChange[] = [];
   const paths = new Set<string>();
+  let preparedBytes = 0, patchedBytes = 0;
+  if (plan.changes.length > WORKSPACE_TREE_LIMITS.maxFiles) throw new Error("Too many repair targets.");
   for (const change of plan.changes) {
     const normalizedPath = ensureSafePatchPath(change.path);
+    const outputBytes = Buffer.byteLength(change.after); patchedBytes += outputBytes;
+    if (outputBytes > WORKSPACE_TREE_LIMITS.maxFileBytes || patchedBytes > WORKSPACE_TREE_LIMITS.maxTotalBytes) throw new Error("Repair output exceeds the bounded workspace limit.");
     if (paths.has(normalizedPath)) {
       throw new Error(`Duplicate normalized patch path: ${normalizedPath}`);
     }
@@ -241,6 +290,8 @@ export async function applyActionPlan(
 
     const mode = targetStat.mode & 0o777;
     const content = await readWorkspaceText(targetPath, WORKSPACE_TREE_LIMITS.maxFileBytes);
+    preparedBytes += Buffer.byteLength(content);
+    if (preparedBytes > WORKSPACE_TREE_LIMITS.maxTotalBytes) throw new Error("Repair input exceeds the bounded workspace limit.");
     if (hasContentPatch(change) && content !== change.before) {
       throw new Error(`Patch target content is stale: ${normalizedPath}`);
     }
@@ -256,41 +307,38 @@ export async function applyActionPlan(
       }
     }
 
-    prepared.push({ change, normalizedPath, targetPath, content, mode });
+    prepared.push({ change, rootPath, normalizedPath, targetPath, content, mode, metadata: targetStat });
   }
 
   if (prepared.some(({ change }) => change.safety === "review-required") && !options.approveReviewRequired) {
     throw new Error("Review-required ActionPlan changes need explicit approval");
   }
 
-  const temporaryBackupPath = await mkdtemp(join(tmpdir(), "skillsync-action-plan-"));
-  const backups: Backup[] = [];
-  for (const item of prepared) {
-    const backupFilePath = join(temporaryBackupPath, "files", item.normalizedPath);
-    await mkdir(dirname(backupFilePath), { recursive: true });
-    await writeFile(backupFilePath, item.content, { encoding: "utf8", mode: item.mode });
-    await chmod(backupFilePath, item.mode);
-    backups.push({ ...item, backupFilePath });
-  }
+  if (options.backupDirectory && isWithinRoot(rootPath, resolve(options.backupDirectory))) throw new Error("Repair backups must be outside the Skill directory.");
+  const retained = await createRepairBackup(prepared, plan.planDigest, options.backupDirectory);
+  const temporaryBackupPath = retained.directory;
+  const backups: Backup[] = prepared.map(item => ({ ...item, backupFilePath: join(retained.directory, 'files', item.normalizedPath) }));
 
+  const retainedMetadata = await stat(retained.directory);
+  if (backups.some(item => item.metadata.dev !== (retainedMetadata.dev))) { await rm(retained.slot, { force:true, recursive:true }); throw new Error("Repair backups must be on the same filesystem as every target; select --backup-dir on that filesystem."); }
   const changed: Backup[] = [];
   try {
     for (const backup of backups) {
-      await checkRoot();
+      const check = async () => { await checkRoot(); await assertTarget(backup); };
       if (hasContentPatch(backup.change)) {
-        await replaceFileContents(backup.targetPath, backup.change.after, backup.change.modeAfter ?? backup.mode);
+        backup.published = await replaceFileContents(backup.targetPath, backup.change.after, backup.change.modeAfter ?? backup.mode, join(retained.directory, "captured", backup.normalizedPath), backup, check);
         changed.push(backup);
-      }
-      if (backup.change.modeAfter !== undefined) {
-        await checkRoot();
-        await chmod(backup.targetPath, backup.change.modeAfter);
-        if (!changed.includes(backup)) {
-          changed.push(backup);
-        }
+      } else if (backup.change.modeAfter !== undefined) {
+        await changeMode(backup, backup.change.modeAfter, check); changed.push(backup);
       }
     }
+    await checkRoot();
+    for (const backup of changed) await assertTarget(backup, hasContentPatch(backup.change) ? backup.change.after : backup.content, backup.change.modeAfter ?? backup.mode, backup.published ?? backup.metadata);
+    for (const parent of new Set(changed.map(item => dirname(item.targetPath)))) await syncDirectory(parent);
+
   } catch (error) {
-    const rollbackFailures = await restoreChangedTargets(changed, checkRoot);
+    const rollbackFailures = await restoreChangedTargets(changed, checkRoot, retained.directory);
+    if (error instanceof TargetRecoveryRequired) rollbackFailures.push({path: relative(rootPath,error.target).split(sep).join("/"),error});
     const detail = error instanceof Error ? error.message : "unknown write failure";
     if (rollbackFailures.length > 0) {
       const rollbackError = new ActionPlanRollbackError(rollbackFailures);
@@ -308,7 +356,7 @@ export async function applyActionPlan(
   }
 
   if (options.backup === false) {
-    await rm(temporaryBackupPath, { force: true, recursive: true });
+    await rm(retained.slot, { force: true, recursive: true });
   }
 
   return receiptFor(

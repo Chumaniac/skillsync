@@ -208,3 +208,5 @@ Existing history comparison remains separately readonly, with its own concurrenc
 A page leaving for navigation also releases its report string and hides the old result view. Returning from the browser cache cannot display that prior report as the current result; its immutable history record is retained and can be reopened explicitly. Form path nodes are not cleared by status polling.
 
 Local source validation:766 tests passed,1 optional Docker-reference test skipped; type checking,lint and build passed. Native synthetic Chrome390px covered refresh/current ID, stale cancel refusal, apply-in-progress refresh/refusal, explicit safe fixture fix, server restart/old nonce denial and browser return with the old report hidden. Seven immutable history files stayed byte-identical. The Skill script was never executed; Provider calls0. Formal release and external business acceptance remain separate.
+
+修复备份位于私有状态目录内的 `repair-backups/`，由独立的16次操作上限管理，不计入核验报告的64MiB/120文件计数。历史索引失败后保留的材料会显示为未完成，不计作核验成功。恢复与旧临时备份兼容边界见[修复与恢复](repair-recovery.md)。
