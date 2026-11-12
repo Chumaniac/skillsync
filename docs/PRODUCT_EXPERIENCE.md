@@ -23,3 +23,7 @@ node dist/cli/index.js gui --state-dir /absolute/private/report-directory
 ## Live browser navigation
 
 The static entry page accepts an explicit user-activated top-level navigation, including a reload that retains cross-site Fetch Metadata. The literal loopback Host, Origin, API nonce and mutation checks remain enforced. Cross-site iframes, script/API reads and writes are rejected. This fixes a real Chrome launch refusal without changing file-selection or repair authority.
+
+## 工作区与窄屏操作
+
+浏览器文档检查采用编辑区与诊断区，支持 Ctrl/⌘ + Enter。当前行数与 UTF-8 字节数随输入更新。本机核验台将目录范围和结论并列，有警告或未确认项时在主标题标出；历史只读与确认写文件的条件保持原要求。

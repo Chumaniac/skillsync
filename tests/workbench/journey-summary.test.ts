@@ -3,5 +3,9 @@ import type {VerificationReport} from '../../src/cli/commands/verify';import typ
 const skill={exitCode:1,summary:{fail:2,warn:1,unknown:0},issues:[{finding:{status:'fail'}}]} as VerificationReport;
 it('turns current Skill evidence into a plan next-step without claiming application',()=>{const result=journeySummary('skill',skill);expect(result.canPlan).toBe(true);expect(result.counts[0].count).toBe(2);expect(result.description).toContain('明确确认');});
 it('historical evidence never regains mutation authority',()=>expect(journeySummary('skill',skill,true)).toMatchObject({readOnly:true,canPlan:false}));
+it('a successful exit with warnings must surface the warning in the headline',()=>{
+ const warning={...skill,exitCode:0,summary:{...skill.summary,fail:0,warn:1,unknown:0}};
+ expect(journeySummary('skill',warning).title).toBe('检查完成 · 1 项建议核对');
+});
 it('incomplete evidence never offers a repair plan',()=>{expect(journeySummary('skill',{...skill,exitCode:2}).canPlan).toBe(false);expect(journeySummary('skill',{...skill,exitCode:4}).title).toContain('尚未完整');});
 it('artifact outcomes direct users to their files instead of safe-fix promises',()=>{const result=journeySummary('artifacts',{exitCode:1,files:[{}],findings:[{}],reconciliations:[]} as ArtifactReport);expect(result.canPlan).toBe(false);expect(result.description).toContain('不提供自动修改');expect(result.counts[0].count).toBe(1);});

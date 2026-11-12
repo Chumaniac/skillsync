@@ -4,8 +4,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <link rel="icon" href="./skillsync.svg"><link rel="stylesheet" href="./style.css"><title>Skill 文档检查 · SkillSync</title></head>
 <body><header><img src="./skillsync.svg" width="34" height="34" alt=""><strong>SkillSync</strong><a href="https://github.com/Chumaniac/skillsync">本机目录核验 ↗</a></header>
-<main><h1>检查 Skill 文档</h1><p>粘贴 SKILL.md，读取 YAML 文档头和正文。内容只在当前标签页处理。</p>
-<div class="columns"><section><label for="source">SKILL.md</label><textarea id="source" maxlength="24576" spellcheck="false" aria-describedby="limit"></textarea><small id="limit">最多 24 KiB。网页检查文档格式，本机 CLI 可继续检查来源、权限和交付物。</small>
+<a class="skip-link" href="#workspace">跳到文档编辑</a><main id="workspace"><div class="workspace-heading"><div><p class="eyebrow">DOCUMENT INSPECTOR</p><h1>检查 Skill 文档</h1><p>粘贴 SKILL.md，读取 YAML 文档头和正文。内容只在当前标签页处理。</p></div><span class="privacy-label">本机处理 · 无网络请求</span></div>
+<div class="columns"><section class="editor-panel"><div class="panel-heading"><label for="source">SKILL.md</label><span id="document-meta"></span></div><textarea id="source" maxlength="24576" spellcheck="false" aria-describedby="limit"></textarea><small id="limit">最多 24 KiB。网页检查文档格式，本机 CLI 可继续检查来源、权限和交付物。</small>
 <div class="actions"><button id="check">检查文档</button><button id="example" class="secondary">载入示例</button></div></section>
-<section aria-live="polite"><h2>解析结果</h2><strong id="status">等待检查</strong><p id="message">运行检查后，这里会列出文档头字段和正文长度。</p><button id="locate" type="button" class="secondary" hidden>定位错误</button><dl id="fields"></dl></section></div></main>
+<section class="result-panel" aria-live="polite" data-state="idle"><div class="panel-heading"><h2 id="result-heading" tabindex="-1">解析结果</h2><span class="result-indicator" aria-hidden="true"></span></div><strong id="status">等待检查</strong><p id="message">运行检查后，这里会列出文档头字段和正文长度。</p><button id="locate" type="button" class="secondary" hidden>定位错误</button><dl id="fields"></dl><div class="scope-note"><strong>检查范围</strong><p>读取 YAML 文档头与正文。来源身份、执行行为及目录权限，请使用本机核验台检查。</p></div></section></div></main>
 <script type="module" src="./main.ts"></script></body></html>

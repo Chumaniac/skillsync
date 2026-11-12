@@ -4,6 +4,8 @@ const status = document.querySelector<HTMLElement>("#status")!;
 const message = document.querySelector<HTMLElement>("#message")!;
 const locate = document.querySelector<HTMLButtonElement>("#locate")!;
 let errorLocation: {start: number; end: number; line: number; column: number} | undefined;
+function setState(value: string) { document.querySelector<HTMLElement>(".result-panel")!.dataset.state = value; }
+function updateMeta() { document.querySelector("#document-meta")!.textContent = input.value.split("\n").length + " 行 · " + new TextEncoder().encode(input.value).length + " B"; }
 function resetLocation() {
   errorLocation = undefined;
   locate.hidden = true;
@@ -32,6 +34,7 @@ function tooLarge(value: string) {
   return value.length > byteLimit || encoder.encode(value).length > byteLimit;
 }
 function oversized() {
+  setState("error");
   resetLocation();
   fields.replaceChildren();
   status.textContent = "文档过大";
@@ -50,6 +53,7 @@ input.addEventListener("beforeinput", event => {
   if (event.cancelable && event.inputType.startsWith("insert")) checkInsertion(event, event.data);
 });
 function clear() {
+  setState("idle"); updateMeta();
   resetLocation();
   status.textContent = "等待检查";
   message.textContent = "文档已更新，请重新检查。";
@@ -63,6 +67,7 @@ function check() {
   }
   const parsed = parseSkillDocument(input.value);
   if (!parsed.ok) {
+    setState("error");
     status.textContent = "无法解析文档";
     errorLocation = parsed.location;
     if (errorLocation) {
@@ -73,6 +78,7 @@ function check() {
     }
     return;
   }
+  setState("valid");
   status.textContent = "文档可解析";
   const {frontmatter, body} = parsed.value;
   const missing = ["name","description"].filter(key => typeof frontmatter[key] !== "string" || !frontmatter[key].trim());
@@ -85,8 +91,11 @@ function check() {
   }
 }
 input.value = example;
+updateMeta();
 input.addEventListener("input",clear);
-document.querySelector("#check")!.addEventListener("click",check);
+function inspect() { check(); document.getElementById("result-heading")!.focus(); }
+document.querySelector("#check")!.addEventListener("click", inspect);
+input.addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); inspect(); } });
 document.querySelector("#example")!.addEventListener("click", () => {
   if (input.value.trim() && input.value !== example && !window.confirm("用示例替换当前文档？")) return;
   input.value = example;
