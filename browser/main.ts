@@ -102,3 +102,6 @@ document.querySelector("#example")!.addEventListener("click", () => {
   clear();
   input.focus();
 });
+
+document.querySelector('#guide-example')!.addEventListener('click', () => document.querySelector<HTMLButtonElement>('#example')!.click());
+document.querySelector('#guide-check')!.addEventListener('click', inspect);

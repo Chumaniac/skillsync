@@ -8,6 +8,9 @@
 
 [在线检查 SKILL.md](https://chumaniac.github.io/skillsync/) · [English / CLI reference](README.en.md) · [桌面下载](https://github.com/Chumaniac/skillsync/releases/tag/user-2026.11.11-zh)
 
+
+在线页的“第一次检查”从示例文档走到解析结果。本机工作台的页内引导分别定位单份核验、批量计划与历史记录；切换入口不会自动运行检查或批准修复。
+
 ## 快速开始
 
 CLI 支持 Node.js 20 及以上版本。下面使用 Node.js 24 和 npm，在示例目录做一次只读检查。桌面打包所需的运行时见[构建说明](docs/build.md)。
