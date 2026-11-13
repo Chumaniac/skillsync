@@ -6,7 +6,13 @@
 
 在运行 Skill 之前，检查它来自哪里、需要哪些权限，以及交付物是否满足声明的规则。
 
-[在线检查 SKILL.md](https://chumaniac.github.io/skillsync/) · [English / CLI reference](README.en.md) · [桌面下载](https://github.com/Chumaniac/skillsync/releases/tag/user-2026.11.11-zh)
+**[打开 SKILL.md 检查器 →](https://chumaniac.github.io/skillsync/)** · [English / CLI reference](README.en.md) · [桌面下载](https://github.com/Chumaniac/skillsync/releases/tag/user-2026.11.11-zh)
+
+进入后，点击「载入示例」再检查文档；出现行列提示时，用「定位错误」回到原文。网页只解析粘贴的文档，本机目录、权限和交付物由 CLI 核验。
+
+[![SkillSync 对合成文档中重复字段的错误提示与原文定位入口](docs/preview/online.png)](https://chumaniac.github.io/skillsync/)
+
+*合成文档的重复字段提示。点击截图可载入自己的示例。*
 
 
 在线页的“第一次检查”从示例文档走到解析结果。本机工作台的页内引导分别定位单份核验、批量计划与历史记录；切换入口不会自动运行检查或批准修复。

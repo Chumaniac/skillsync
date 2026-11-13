@@ -1,5 +1,11 @@
 # SkillSync
 
+[中文](README.md) · **[Open the document checker →](https://chumaniac.github.io/skillsync/)**
+
+Load the sample, check its frontmatter, and use the reported line and column to locate a problem. The browser parses pasted text; local-folder, permission and artifact checks use the CLI.
+
+[![SkillSync locating a duplicate field in a synthetic Skill document](docs/preview/online.png)](https://chumaniac.github.io/skillsync/)
+
 Inspect local Skill folders and declared artifact deliveries. Review provenance, compatibility and changes without executing the Skill.
 
 > **Alpha · GitHub release v0.3.0 · Node.js 20+**
