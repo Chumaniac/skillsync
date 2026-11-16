@@ -7,8 +7,8 @@ class ManifestTests(unittest.TestCase):
  def fixture(self,root):
   app=root/'SkillSync.app';resources=app/'Contents/Resources';runtime=resources/'runtime';dist=runtime/'app/dist';dist.mkdir(parents=True)
   (resources/'app.json').write_text(json.dumps({'sourceCommit':'a'*40,'includesWorkingTreeChanges':False}))
-  (runtime/'app/package.json').write_text(json.dumps({'version':'0.4.0'}))
-  (dist/'build-info.json').write_text(json.dumps({'version':'0.4.0','sourceRevision':'a'*40,'dirty':False}))
+  (runtime/'app/package.json').write_text(json.dumps({'version':'0.4.1'}))
+  (dist/'build-info.json').write_text(json.dumps({'version':'0.4.1','sourceRevision':'a'*40,'dirty':False}))
   files={str(p.relative_to(runtime)):hashlib.sha256(p.read_bytes()).hexdigest() for p in runtime.rglob('*') if p.is_file()}
   (runtime/'runtime-manifest.json').write_text(json.dumps({'sourceCommit':'a'*40,'includesWorkingTreeChanges':False,'minimumSystemVersion':'13.5','architecture':'arm64','files':files}))
   archive=root/'application.zip';archive.write_bytes(b'owned zip fixture');return app,archive,dist
@@ -16,7 +16,7 @@ class ManifestTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as temporary,chdir(temporary):
    app,archive,dist=self.fixture(Path(temporary))
    with mock.patch('subprocess.Popen',side_effect=AssertionError('must not execute app code')):data=module.create(app,archive)
-   self.assertEqual(data['version'],'0.4.0');self.assertFalse(data['notarized'])
+   self.assertEqual(data['version'],'0.4.1');self.assertFalse(data['notarized'])
    (dist/'changed.txt').write_text('unrecognized file')
    with self.assertRaisesRegex(ValueError,'BYTES_CHANGED'):module.create(app,archive)
  def test_outside_context_and_external_links_fail(self):

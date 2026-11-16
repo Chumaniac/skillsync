@@ -8,10 +8,10 @@ Load the sample, check its frontmatter, and use the reported line and column to 
 
 Inspect local Skill folders and declared artifact deliveries. Review provenance, compatibility and changes without executing the Skill.
 
-> **Alpha · GitHub release v0.4.0 · Node.js 20+**
+> **Alpha · GitHub release v0.4.1 · Node.js 20+**
 > SkillSync performs offline checks of local Skill content. It does not execute Skill scripts, does not read credentials, and does not enable live provider, remote-worker, or runtime capabilities.
 
-GitHub v0.4.0 adds a declared cross-file checklist to HTML, text and JSON reports, including paths, field mappings and capacity limits. Declarations remain separate from actual results, and expected values are omitted. [Review the declaration list](docs/declared-checks.md). It also locates citation metadata failures by file, data record and compared columns. It checks exact digests and revisions without copying record values into reports. The offline review, correction workflow and bounded composite-key reconciliation remain available. The npm registry stays at 0.1.0; use the verified GitHub archive for current features.
+GitHub v0.4.1 adds a declared cross-file checklist to HTML, text and JSON reports, including paths, field mappings and capacity limits. Declarations remain separate from actual results, and expected values are omitted. [Review the declaration list](docs/declared-checks.md). It also locates citation metadata failures by file, data record and compared columns. It checks exact digests and revisions without copying record values into reports. The offline review, correction workflow and bounded composite-key reconciliation remain available. The npm registry stays at 0.1.0; use the verified GitHub archive for current features.
 
 [![Terminal demo](https://raw.githubusercontent.com/Chumaniac/skillsync/main/docs/assets/verify-demo.svg)](https://github.com/Chumaniac/skillsync/blob/main/docs/assets/verify-demo.svg)
 
@@ -49,7 +49,7 @@ Current source also supports [multi-delivery acceptance plans and portable revie
 
 Tagged builds now publish a CLI tarball, checksums, a validated CycloneDX SBOM
 and a source manifest on [GitHub Releases](https://github.com/Chumaniac/skillsync/releases).
-[GitHub v0.4.0](https://github.com/Chumaniac/skillsync/releases/tag/v0.4.0)
+[GitHub v0.4.1](https://github.com/Chumaniac/skillsync/releases/tag/v0.4.1)
 is distributed as a versioned CLI tarball with checksums, SBOM, source manifest
 and GitHub provenance. Its release workflow requires the exact immutable tag
 and an already successful main check before packaging. Earlier v0.1.7 assets
@@ -58,12 +58,12 @@ Installation uses Node.js 20+ and fetches the package's public dependencies;
 it needs no npm login.
 
 ```bash
-release_base="https://github.com/Chumaniac/skillsync/releases/download/v0.4.0"
-for asset in chumanic-skillsync-0.4.0.tgz checksums.txt sbom.cyclonedx.json release-manifest.json; do
+release_base="https://github.com/Chumaniac/skillsync/releases/download/v0.4.1"
+for asset in chumanic-skillsync-0.4.1.tgz checksums.txt sbom.cyclonedx.json release-manifest.json; do
   curl --fail --location --output "$asset" "$release_base/$asset"
 done
 shasum -a 256 -c checksums.txt
-npm install --prefix ./skillsync-tools ./chumanic-skillsync-0.4.0.tgz
+npm install --prefix ./skillsync-tools ./chumanic-skillsync-0.4.1.tgz
 ./skillsync-tools/node_modules/.bin/skillsync --version
 ```
 
