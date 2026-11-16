@@ -12,7 +12,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       actions: read
       id-token: write
       attestations: write
@@ -75,10 +75,81 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: release/*.tgz
-      - name: Publish immutable GitHub release
+      - name: Retain verified CLI distribution
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: skillsync-cli
+          path: release/*
+          if-no-files-found: error
+
+  mac-app:
+    needs: release
+    runs-on: macos-15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.x'
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Build and inspect owned portable application
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          python3 -m unittest discover -s desktop/tests -p 'test_*.py'
+          python3 desktop/prepare_runtime.py --output "$GITHUB_WORKSPACE/.release-workspace/runtime"
+          python3 desktop/build_app.py --runtime "$GITHUB_WORKSPACE/.release-workspace/runtime" --output "$GITHUB_WORKSPACE/.release-workspace/apps"
+          app="$GITHUB_WORKSPACE/.release-workspace/apps/SkillSync.app"
+          codesign --verify --deep --strict "$app"
+          "$app/Contents/MacOS/Workspace" --smoke-check "$RUNNER_TEMP/native-smoke.json" --snapshot "$RUNNER_TEMP/native-smoke.png" --width 390
+          python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["success"] is True' "$RUNNER_TEMP/native-smoke.json"
+          mkdir release
+          version="${GITHUB_REF_NAME#v}"
+          archive="release/skillsync-app-v$version-aarch64-apple-darwin.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "$archive"
+          python3 desktop/application_manifest.py --application "$app" --archive "$archive" --output "release/skillsync-app-v$version-aarch64-apple-darwin.source.json"
+      - name: Attest owned portable application
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: release/*.zip
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: skillsync-mac-app
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    needs: [release, mac-app]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: skillsync-*
+          path: release
+          merge-multiple: true
+      - name: Verify immutable tag and publish complete distribution
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          ref=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq '.object.type+" "+.object.sha')
+          read -r kind source <<< "$ref"
+          if [[ "$kind" == tag ]]; then source=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$source" --jq '.object.sha'); fi
+          test "$source" = "$GITHUB_SHA"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo 'An existing release must not be overwritten' >&2; exit 1; fi
+          (cd release && sha256sum *.tgz *.zip *.json > checksums.txt)
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "SkillSync $GITHUB_REF_NAME" --generate-notes release/*

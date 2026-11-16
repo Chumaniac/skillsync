@@ -1,5 +1,7 @@
 node_modules
 dist/
+/release/
+/.release-workspace/
 coverage/
 .DS_Store
 .env

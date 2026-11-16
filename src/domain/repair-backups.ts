@@ -16,6 +16,7 @@ const manifestSchema = z.object({ schema: z.literal('skillsync.repair-backup/v1'
     sha256: z.string().regex(/^[a-f0-9]{64}$/), mode: z.number().int().min(0).max(0o777) }).strict()).max(WORKSPACE_TREE_LIMITS.maxFiles),
 }).strict();
 export type RepairBackupFile = { normalizedPath: string; content: string; mode: number };
+export const repairScopeSchema = z.object({ schema:z.literal('skillsync.repair-scope/v1'), rootPath:z.string().min(1).max(4096), rootIdentity:z.string().regex(/^\d+:\d+$/), planDigest:z.string().min(1).max(128) }).strict();
 export async function syncDirectory(path: string): Promise<void> {
   // Windows does not expose a portable directory-fsync operation through Node.
   if (process.platform === 'win32') return;
@@ -31,7 +32,7 @@ export async function validateRepairBackupRoot(path: string): Promise<string> {
       ((info.mode & 0o077) !== 0 || typeof process.getuid === 'function' && info.uid !== process.getuid())) throw new Error('Repair backups require an owned private directory.');
   return realpath(path);
 }
-export async function createRepairBackup(files: RepairBackupFile[], planDigest: string, selectedRoot?: string) {
+export async function createRepairBackup(files: RepairBackupFile[], planDigest: string, selectedRoot?: string, scope?: { rootPath:string; rootIdentity:string }) {
   const raw = resolve(selectedRoot ?? join(homedir(), '.skillsync', REPAIR_BACKUP_FOLDER));
   await mkdir(raw, { recursive: true, mode: 0o700 });
   const root = await validateRepairBackupRoot(raw);
@@ -60,6 +61,7 @@ export async function createRepairBackup(files: RepairBackupFile[], planDigest: 
   const directory = join(slot, randomUUID());
   try {
     await mkdir(directory, { mode: 0o700 });
+    if (scope) await writeSyncedFile(join(directory, 'scope.json'), JSON.stringify(repairScopeSchema.parse({schema:'skillsync.repair-scope/v1',...scope,planDigest})));
     for (const file of files) {
       const path = join(directory, 'files', file.normalizedPath);
       await mkdir(dirname(path), { recursive: true, mode: 0o700 });
@@ -73,7 +75,7 @@ export async function createRepairBackup(files: RepairBackupFile[], planDigest: 
     await rm(slot, { recursive: true, force: true }); throw error;
   }
 }
-export async function inspectRepairBackup(input: string) {
+export async function readRepairBackupHeader(input: string) {
   const directory = await validateRepairBackupRoot(resolve(input));
   const manifest = manifestSchema.parse(parseStrictJson(await readWorkspaceText(join(directory, 'manifest.json'), MAX_MANIFEST_BYTES)));
   const paths = new Set<string>(); let bytes = 0;
@@ -81,10 +83,20 @@ export async function inspectRepairBackup(input: string) {
     if (normalizeRelativePath(file.path) !== file.path || paths.has(file.path)) throw new Error('Invalid repair backup manifest.');
     paths.add(file.path); bytes += file.bytes;
     if (bytes > WORKSPACE_TREE_LIMITS.maxTotalBytes) throw new Error('Repair backup exceeds the workspace limit.');
+  }
+  return { directory, manifest, bytes };
+}
+export async function readRepairBackup(input: string) {
+  const {directory,manifest,bytes}=await readRepairBackupHeader(input);
+  for (const file of manifest.files) {
     const path = join(directory, 'files', file.path);
     if (await realpath(path) !== path) throw new Error('Linked repair backup material is not accepted.');
     const content = await readWorkspaceFile(path, WORKSPACE_TREE_LIMITS.maxFileBytes);
     if (content.length !== file.bytes || sha(content) !== file.sha256) throw new Error('Repair backup checksum or size mismatch.');
   }
+  return { directory, manifest, bytes };
+}
+export async function inspectRepairBackup(input: string) {
+  const {manifest,bytes}=await readRepairBackup(input);
   return { schema: 'skillsync.repair-backup-check/v1', status: 'verified', planDigest: manifest.planDigest, files: manifest.files.length, bytes, sourceAuthentication: 'not-authenticated' };
 }

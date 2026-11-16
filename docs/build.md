@@ -44,3 +44,5 @@ npm test
 如果 Node 安装方式没有在标准位置保存完整许可，可给 prepare_runtime.py 传入 --node-license /path/to/official/NODE-LICENSE.txt，文件必须对应实际运行时版本。
 
 运行包从实际 Mach-O 部署目标计算最低系统版本，当前 Apple Silicon 包最低 macOS 13.5。嵌入的 Node 运行时最低13.5；源码 package.json 的 >=20 是库兼容下限，此桌面构建固定使用 Node 24。具体下载以 source-manifest.json 与应用信息为准。本机验收不等于其他系统版本已实机验收。
+
+正式GitHub发行从准确main成功检查和不可变版本标签构建CLI及Apple Silicon可移动程序。原生包用临时签名，不宣称Apple公证；实际最低系统版本以运行时Mach-O清单为准。检查程序清单只读文件哈希，不执行待检查App。

@@ -315,7 +315,8 @@ export async function applyActionPlan(
   }
 
   if (options.backupDirectory && isWithinRoot(rootPath, resolve(options.backupDirectory))) throw new Error("Repair backups must be outside the Skill directory.");
-  const retained = await createRepairBackup(prepared, plan.planDigest, options.backupDirectory);
+  const scopeInfo = await stat(rootPath);
+  const retained = await createRepairBackup(prepared, plan.planDigest, options.backupDirectory, {rootPath,rootIdentity:`${scopeInfo.dev}:${scopeInfo.ino}`});
   const temporaryBackupPath = retained.directory;
   const backups: Backup[] = prepared.map(item => ({ ...item, backupFilePath: join(retained.directory, 'files', item.normalizedPath) }));
 

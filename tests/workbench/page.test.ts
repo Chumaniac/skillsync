@@ -16,7 +16,8 @@ class Element {
   events=new Map<string,()=>void>();
   addEventListener(name:string,handler:()=>void) {this.events.set(name,handler);}
   replaceWith(element: Element) { Object.assign(this, element); }
-  replaceChildren() { this.children = []; }
+  replaceChildren(...elements: Element[]) { this.children = elements; }
+  add(element: Element) { this.children.push(element); }
   append(...elements: Element[]) { this.children.push(...elements); }
 }
 
@@ -59,12 +60,35 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
     }};
   };
   const timers=new Map<number,()=>void>(),events=new Map<string,()=>void>();let nextTimer=0;
-  runInNewContext(workbenchScript, {document: {hidden:false,addEventListener:(name:string,fn:()=>void)=>events.set(name,fn),getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()},window:{addEventListener:(name:string,fn:()=>void)=>events.set(name,fn)},crypto:{randomUUID},fetch, URL, Blob, setTimeout:(fn:()=>void)=>{timers.set(++nextTimer,fn);return nextTimer;},clearTimeout:(id:number)=>timers.delete(id), AbortController});
+  class OptionElement extends Element { constructor(text='',value=''){super();this.textContent=text;this.value=value;} }
+  runInNewContext(workbenchScript, {Option:OptionElement,document: {hidden:false,addEventListener:(name:string,fn:()=>void)=>events.set(name,fn),getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()},window:{addEventListener:(name:string,fn:()=>void)=>events.set(name,fn)},crypto:{randomUUID},fetch, URL, Blob, setTimeout:(fn:()=>void)=>{timers.set(++nextTimer,fn);return nextTimer;},clearTimeout:(id:number)=>timers.delete(id), AbortController});
   await new Promise(resolve => setImmediate(resolve));
   return {get, offsets, actions,inputs,timers,events,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
 }
 
 describe("workbench interactions", () => {
+  async function recoveryUi(){
+    const ui=await page(),id=randomUUID(),path='/private/synthetic/recovery/workspace';await ui.click('verify');
+    ui.respond('repair/list',{items:[{id:'slot-00/'+randomUUID(),state:'unchecked',legacy:false}],plans:[],copies:[{id,createdAt:'2026-11-16T00:00:00Z',state:'recorded'}]});
+    await ui.click('repair-list');ui.get('repair-choice').value='slot-00/'+randomUUID();ui.get('repair-choice').onchange?.();
+    ui.respond('repair/check',{token:randomUUID(),files:1,bytes:16,message:'保留当前目录'});await ui.click('repair-check');
+    ui.respond('repair/restore',{id,path,snapshot:'sha256:'+'a'.repeat(64)});await ui.click('repair-restore');return {ui,id,path};
+  }
+  it('binds copy verification to its exact id/path and drops a wrong response before download',async()=>{
+    const {ui,id,path}=await recoveryUi();
+    ui.respond('repair/verify',{id:randomUUID(),path,snapshot:'sha256:'+'a'.repeat(64),readOnly:true,html:'<p>wrong result</p>',report:{schema_version:1,targets:[{path}],issues:[]}});
+    await ui.click('repair-verify');expect(ui.get('repair-download').disabled).toBe(true);expect(ui.get('repair-report').hidden).toBe(true);expect(ui.get('repair-scope').textContent).toContain('未能绑定');
+    ui.respond('repair/verify',{id,path,snapshot:'sha256:'+'a'.repeat(64),readOnly:true,html:'<p>scoped saved report</p>',report:{schema_version:1,targets:[{path}],issues:[]}});await ui.click('repair-verify');expect(ui.get('repair-download').disabled).toBe(false);
+    ui.get('repair-legacy-plan').onchange?.();expect(ui.get('repair-download').disabled).toBe(true);expect(ui.get('repair-verify').disabled).toBe(true);expect(ui.get('repair-report').srcdoc).toBe('');
+  });
+  it('reopens an existing recovery from metadata without submitting a second restore',async()=>{
+    const {ui,id,path}=await recoveryUi();const submissions=ui.actions.filter(action=>action==='repair/restore').length;
+    ui.get('repair-existing').value=id;ui.respond('repair/status',{id,status:'ready',path,snapshot:'sha256:'+'a'.repeat(64)});await ui.click('repair-return');expect(ui.get('repair-copy-path').textContent).toBe(path);expect(ui.actions.filter(action=>action==='repair/restore')).toHaveLength(submissions);
+  });
+  it('keeps the owned restore operation cancellable while its reply is pending',async()=>{
+    const {ui,id,path}=await recoveryUi();ui.respond('repair/check',{token:randomUUID(),files:1,bytes:16,message:'check'});await ui.click('repair-check');
+    let finish!:(value:unknown)=>void;ui.respond('repair/restore',new Promise(resolve=>{finish=resolve;}));const pending=ui.click('repair-restore');await new Promise(resolve=>setImmediate(resolve));expect(ui.get('cancel').disabled).toBe(false);finish({id,path,snapshot:'sha256:'+'a'.repeat(64)});await pending;
+  });
   it('a cached return cannot display an old report as the current result',async()=>{
     const ui=await page();await ui.click('verify');expect(ui.get('result').hidden).toBe(false);
     ui.events.get('pagehide')?.();expect(ui.get('result').hidden).toBe(true);expect(ui.get('report').srcdoc).toBe('');expect(ui.get('root').value).toBe('/synthetic/review');

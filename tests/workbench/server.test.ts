@@ -23,6 +23,63 @@ async function setup(cliPath = resolve("dist/cli/index.js")) {
   return {base, root, script, app, api, token};
 }
 describe("real CLI graphical workbench", () => {
+  it("checks retained repair originals and restores only to a new copy before verifying it", async () => {
+    const { api, base, root, script } = await setup();
+    await api('select', { path: root, kind: 'skill' });
+    await api('verify'); const planned = await api('plan');
+    expect((await api('apply', { id: planned.data.id, confirm: true })).status).toBe(200);
+    const originalMode = (await stat(script)).mode & 0o777;
+    const listed = await api('repair/list'); expect(listed.status).toBe(200);
+    expect(listed.data.items).toHaveLength(1);
+    const checked = await api('repair/check', { id: listed.data.items[0].id }); expect(checked.status).toBe(200);
+    const copy = await api('repair/restore', { token: checked.data.token, confirm: true }); expect(copy.status).toBe(200);
+    expect(copy.data.path.startsWith(join(base, 'state', 'recovery-copies'))).toBe(true);
+    expect((await stat(script)).mode & 0o777).toBe(originalMode);
+    expect((await stat(join(copy.data.path, 'scripts/check.sh'))).mode & 0o777).toBe(0o777);
+    const verified = await api('repair/verify', { id: copy.data.id }); expect(verified.status).toBe(200);
+    expect(verified.data.readOnly).toBe(true); expect(verified.data.report).toHaveProperty('issues');
+    expect((await stat(script)).mode & 0o777).toBe(originalMode);
+  });
+  it('does not expose or restore another selected directory backup and rejects path-shaped IDs', async()=>{
+    const {api,base,root}=await setup();await api('select',{path:root,kind:'skill'});await api('verify');const plan=await api('plan');await api('apply',{id:plan.data.id,confirm:true});
+    const list=await api('repair/list'),id=list.data.items[0].id,checked=await api('repair/check',{id});
+    const other=join(base,'other');await mkdir(other);await writeFile(join(other,'SKILL.md'),'---\nname: other\ndescription: Other.\n---\n');
+    await api('select',{path:other,kind:'skill'});
+    expect((await api('repair/list')).data.items).toEqual([]);
+    expect((await api('repair/check',{id})).status).not.toBe(200);
+    expect((await api('repair/restore',{token:checked.data.token,confirm:true})).status).not.toBe(200);
+    expect((await api('repair/check',{id:'../outside'})).status).not.toBe(200);
+    expect(await readdir(join(base,'state'))).not.toContain('recovery-copies');
+  });
+  it('invalidates a reviewed recovery on permission or content changes and never repeats an old confirmation',async()=>{
+    const {api,root,script,base}=await setup();await api('select',{path:root,kind:'skill'});await api('verify');const plan=await api('plan');await api('apply',{id:plan.data.id,confirm:true});
+    const id=(await api('repair/list')).data.items[0].id;
+    const first=await api('repair/check',{id});await chmod(script,0o750);
+    const stale=await api('repair/restore',{token:first.data.token,confirm:true});expect(stale.status).not.toBe(200);expect(stale.data.error).toContain('变化');
+    const next=await api('repair/check',{id});await writeFile(join(root,'SKILL.md'),'later user edit\n');
+    expect((await api('repair/restore',{token:next.data.token,confirm:true})).status).not.toBe(200);
+    expect((await api('repair/restore',{token:next.data.token,confirm:true})).status).not.toBe(200);
+    expect(await readFile(join(root,'SKILL.md'),'utf8')).toBe('later user edit\n');expect(await readdir(join(base,'state'))).not.toContain('recovery-copies');
+  });
+  it('reads legacy repair backups only with the matching scoped original plan',async()=>{
+    const {api,base,root}=await setup();await api('select',{path:root,kind:'skill'});await api('verify');const plan=await api('plan');await api('apply',{id:plan.data.id,confirm:true});
+    const id=(await api('repair/list')).data.items[0].id;
+    const scope=join(base,'state','repair-backups',id,'scope.json');await rename(scope,scope+'.retained');
+    const legacy=await api('repair/list');expect(legacy.data.items[0].legacy).toBe(true);
+    expect((await api('repair/check',{id})).status).not.toBe(200);
+    const checked=await api('repair/check',{id,planHistoryId:legacy.data.plans[0].id});expect(checked.status).toBe(200);
+    const restored=await api('repair/restore',{token:checked.data.token,confirm:true});expect(restored.status).toBe(200);
+    const state=await api('repair/status',{id:restored.data.id});expect(state.data.status).toBe('ready');expect(state.data.path).toBe(restored.data.path);
+    expect((await api('repair/status',{id:restored.data.id})).data.path).toBe(restored.data.path);
+    const operation=await api('operation');expect(operation.data.last.id).toBe(restored.data.id);expect(operation.data.last.kind).toBe('repair_restore');
+  });
+  it('bounds retained recovery copies without evicting prior completed material',async()=>{
+    const {api,base,root}=await setup();await api('select',{path:root,kind:'skill'});await api('verify');const plan=await api('plan');await api('apply',{id:plan.data.id,confirm:true});
+    const id=(await api('repair/list')).data.items[0].id,completed=[];
+    for(let i=0;i<4;i++){const checked=await api('repair/check',{id});const restored=await api('repair/restore',{token:checked.data.token,confirm:true});expect(restored.status).toBe(200);completed.push(restored.data.id);}
+    const checked=await api('repair/check',{id});const full=await api('repair/restore',{token:checked.data.token,confirm:true});expect(full.status).not.toBe(200);expect(full.data.error).toContain('4份');
+    expect(await readdir(join(base,'state','recovery-copies'))).toHaveLength(4);for(const copyId of completed)expect((await api('repair/status',{id:copyId})).data.status).toBe('ready');
+  });
   it("accepts an activated top-level page navigation while rejecting cross-site APIs and frames", async () => {
     const {app,token}=await setup();
     const get=(path:string,headers:Record<string,string>)=>new Promise<number>((resolve,reject)=>{const request=httpRequest(app.url+path,{headers},response=>{response.resume();response.on('end',()=>resolve(response.statusCode!));});request.on('error',reject);request.end();});
