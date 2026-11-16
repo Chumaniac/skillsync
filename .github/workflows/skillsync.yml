@@ -58,7 +58,7 @@ jobs:
       - run: npm run type-check
       - run: npm run build:browser
       - run: npm run lint
-      - run: npm pack --dry-run --json > "$RUNNER_TEMP/package.json"
+      - run: npm pack --dry-run --json --ignore-scripts > "$RUNNER_TEMP/package.json"
       - run: node scripts/check-package.mjs "$RUNNER_TEMP/package.json"
       - name: Generate SBOM preview (non-blocking)
         run: |
