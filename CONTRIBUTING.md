@@ -11,7 +11,7 @@ Thanks for helping improve SkillSync. The project is an evidence and verificatio
 
 ## Local checks
 
-Use Node.js 20 or newer and run:
+Use Node.js 24 for development and tests. The installed CLI also supports Node.js 20. Run:
 
 ```bash
 npm ci

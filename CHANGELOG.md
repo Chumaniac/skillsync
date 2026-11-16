@@ -2,6 +2,8 @@
 
 ## 0.4.1 - 2026-11-16
 
+- Update the schema validator and build/test dependencies to patched releases. Keep the CLI Node20 floor while using Node24 for development and CI. Scope the temporary minimatch override to typescript-estree.
+
 - Validate the actual npm file list in both source CI and publication. Include the two named READMEs while continuing to refuse private, hidden, ambiguous and duplicate files.
 - The 0.4.0 tag remains an unpublished failed build; it is not overwritten.
 
