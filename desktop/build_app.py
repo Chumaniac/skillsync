@@ -12,6 +12,18 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def validate_portable_profile(config):
+    expected = {
+        'executable': '{{RESOURCES}}/runtime/bin/node',
+        'workingDirectory': '{{RESOURCES}}/runtime/app',
+        'arguments': ['{{RESOURCES}}/runtime/app/dist/cli/index.js', 'gui', '--state-dir',
+                      '{{HOME}}/Library/Application Support/SkillSync/workspace', '--port', str(config['port'])],
+        'smokeArguments': ['{{RESOURCES}}/runtime/app/dist/cli/index.js', 'gui', '--state-dir',
+                           '{{SMOKE_DIR}}/state', '--port', str(config['smokePort'])],
+    }
+    if config.get('product') != 'skillsync' or any(config.get('launch', {}).get(key) != value for key, value in expected.items()):
+        raise ValueError('PORTABLE_LAUNCH_PROFILE_INVALID')
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path, default=ROOT / 'desktop/build')
@@ -21,6 +33,8 @@ def main():
     if sys.platform != 'darwin':
         raise SystemExit('MACOS_BUILD_REQUIRED')
     config = json.loads((ROOT / ('desktop/portable.json' if args.runtime else 'desktop/app.json')).read_text())
+    if args.runtime:
+        validate_portable_profile(config)
     dirty = bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip())
     if dirty and not args.preview:
         raise SystemExit('CLEAN_SOURCE_REQUIRED; use --preview only for local review')
@@ -72,10 +86,11 @@ def main():
         binary = app / 'Contents/MacOS/Workspace'
         resources = app / 'Contents/Resources'
         binary.parent.mkdir(parents=True); resources.mkdir()
+        product_version = json.loads((ROOT / 'package.json').read_text())['version']
         info = {'CFBundleIdentifier': config['identifier'], 'CFBundleName': config['name'],
                 'CFBundleDisplayName': config['name'], 'CFBundleExecutable': 'Workspace',
-                'CFBundlePackageType': 'APPL', 'CFBundleIconFile': 'AppIcon', 'CFBundleShortVersionString': '1.0.0',
-                'CFBundleVersion': '1', 'LSMinimumSystemVersion': '13.0',
+                'CFBundlePackageType': 'APPL', 'CFBundleIconFile': 'AppIcon', 'CFBundleShortVersionString': product_version,
+                'CFBundleVersion': product_version, 'LSMinimumSystemVersion': '13.0',
                 'NSHighResolutionCapable': True,
                 'NSAppTransportSecurity': {'NSAllowsLocalNetworking': True}}
         (app / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
@@ -95,6 +110,8 @@ def main():
                 raise SystemExit('RUNTIME_MANIFEST_REQUIRED')
             import hashlib
             manifest = json.loads((runtime / 'runtime-manifest.json').read_text())
+            if manifest.get('architecture') != platform.machine():
+                raise SystemExit('RUNTIME_ARCHITECTURE_MISMATCH')
             if manifest.get('sourceCommit') != installed['sourceCommit'] or manifest.get('includesWorkingTreeChanges') != dirty:
                 raise SystemExit('RUNTIME_SOURCE_IDENTITY_MISMATCH')
             paths = list(runtime.rglob('*'))

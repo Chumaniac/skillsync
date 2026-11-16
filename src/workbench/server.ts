@@ -22,13 +22,14 @@ import { compareArtifactReports, parseArtifactReport } from "../domain/artifact-
 import {previewAcceptancePlan,inspectAcceptancePackage,batchSummary} from "../cli/commands/batch.js";
 import {renderBatchHtml} from "../reporters/batch-html.js";
 import {BatchAcceptanceError} from "../domain/batch-report.js";
+import {RepairRecovery} from "./repair-recovery.js";
 
 const identity = (s: {dev: number; ino: number}) => `${s.dev}:${s.ino}`;
 const inside = (root: string, target: string) => { const r = relative(root, target); return !r || (!r.startsWith("..") && !isAbsolute(r)); };
 const describePlan = (value:ActionPlan) => [...value.changes.map(c => `${c.path} · ${c.safety} · ${c.modeBefore?.toString(8) ?? "内容"} → ${c.modeAfter?.toString(8) ?? "内容"}`), ...value.manualSteps.map(s => `人工处理：${s.title}\n${s.steps.join("\n")}`)].join("\n\n") || "没有可自动应用的变更。";
 const preview = (text:string) => `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><pre>${text.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]!))}</pre>`;
 
-const operationKinds = {"/api/choose":"choose","/api/select":"select","/api/verify":"verify","/api/plan":"plan","/api/apply":"apply","/api/batch/preview":"batch_preview","/api/batch/run":"batch_run","/api/batch/open":"batch_open","/api/history/open":"history_open","/api/history/export":"history_export"} as const;
+const operationKinds = {"/api/repair/list":"repair_list","/api/repair/check":"repair_check","/api/repair/restore":"repair_restore","/api/repair/verify":"repair_verify","/api/choose":"choose","/api/select":"select","/api/verify":"verify","/api/plan":"plan","/api/apply":"apply","/api/batch/preview":"batch_preview","/api/batch/run":"batch_run","/api/batch/open":"batch_open","/api/history/open":"history_open","/api/history/export":"history_export"} as const;
 type OperationKind = typeof operationKinds[keyof typeof operationKinds];
 type OperationOutcome = "completed"|"failed"|"cancelled"|"unconfirmed";
 type ActiveOperation = {id:string;kind:OperationKind;phase:"preparing"|"running"|"finalizing";startedAt:number;submitted:boolean;historyId?:string;outcome?:OperationOutcome};
@@ -42,16 +43,17 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
   if ((await lstat(stateDir)).isSymbolicLink() || await realpath(stateDir) !== stateDir) throw new Error("State directory must be a real directory.");
   await chmod(stateDir, 0o700);
   const history = new WorkbenchHistory(stateDir, identity(await lstat(stateDir)));
+  const recovery=new RepairRecovery(stateDir,identity(await lstat(stateDir)),history);
   const nonce = randomBytes(32).toString("hex");
   const cliPath = options.cliPath ?? fileURLToPath(new URL("../cli/index.js", import.meta.url));
   let active: ChildProcess | undefined, busy = false, applying = false, cancelled = false;
   let currentOperation:ActiveOperation|undefined, lastOperation:LastOperation|undefined;
   let cancelKiller:ReturnType<typeof setTimeout>|undefined, closing=false;
-  const cancellable = () => Boolean(currentOperation && !applying && !cancelled && currentOperation.phase!=="finalizing" && ["verify","plan","batch_run"].includes(currentOperation.kind));
+  const cancellable = () => Boolean(currentOperation && !applying && !cancelled && currentOperation.phase!=="finalizing" && ["verify","plan","batch_run","repair_restore","repair_verify"].includes(currentOperation.kind));
   const operationStatus = () => ({schema:"skillsync.workbench-operation/v1",readOnly:true,
     active:currentOperation?{id:currentOperation.id,kind:currentOperation.kind,phase:applying?"applying":currentOperation.phase,startedAt:currentOperation.startedAt,cancellable:cancellable(),cancelRequested:cancelled}:null,
     last:lastOperation??null});
-  let comparingHistory=false;
+  let comparingHistory=false,readingRecovery=false;
   let selection: Selection | undefined;
   let actionable: string[] = [];
   let plan: { id: string; path: string; value: ActionPlan; snapshot: string; historyId:string } | undefined;
@@ -154,6 +156,11 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         catch(error){return send(res,400,{error:error instanceof WorkbenchStateError?error.message:"历史材料无法稳定读取，请检查两份原记录；没有重新执行核验。"});}
         finally{comparingHistory=false;}
       }
+      if(req.url==='/api/repair/status'){
+        if(readingRecovery)return send(res,409,{error:'已有恢复状态查询中，请稍后再试。'});
+        readingRecovery=true;
+        try{const scope=await checkSelection();const value=await recovery.status(input.id,scope);if(selection!==scope)throw new WorkbenchStateError('当前选择已变化，请重新核对恢复材料。');return send(res,200,value);}finally{readingRecovery=false;}
+      }
       if (busy) return send(res, 409, {error: "已有操作进行中，请查看后台状态。",code:"operation_busy"});
       const kind=operationKinds[req.url as keyof typeof operationKinds];
       if(!kind)return send(res,404,{error:"未知操作。"});
@@ -233,6 +240,24 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
           return respond( 200, {selected: true});
         }
         const selected = await checkSelection();
+        if(req.url?.startsWith('/api/repair/')){
+          if(selected.kind!=='skill')throw new WorkbenchStateError('恢复副本只用于 Skill 目录。');
+          if(req.url==='/api/repair/list')return respond(200,await recovery.list(selected));
+          if(req.url==='/api/repair/check')return respond(200,await recovery.check(input.id,selected,input.planHistoryId));
+          if(req.url==='/api/repair/restore'){
+            if(input.confirm!==true)throw new WorkbenchStateError('请确认只创建新副本，保留当前目录。');
+            plan=undefined;actionable=[];owned.submitted=true;owned.phase='running';
+            const value=await recovery.restore(input.token,selected,owned.id,()=>cancelled||closing,()=>{owned.phase='finalizing';});owned.phase='finalizing';return respond(200,value);
+          }
+          if(req.url==='/api/repair/verify'){
+            const copy=await recovery.copy(input.id,selected),before=await scanStagedWorkspace(copy.path);
+            const args=['verify','--path',copy.path,'--format','json'];if(selected.delivery)args.push('--delivery');
+            const output=await command(args),value=parseStrictJson(output) as VerificationReport;
+            if((await scanStagedWorkspace(copy.path)).digest!==before.digest)throw new WorkbenchStateError('副本在核验期间变化，请保留原结果后重新检查。');
+            const info=await lstat(copy.path);const record=await history.append({kind:'verify',selection:{...selected,path:copy.path,identity:identity(info)},snapshot:before.digest,exitCode:value.exitCode},output);
+            return respond(200,{id:input.id,snapshot:copy.snapshot,readOnly:true,report:value,html:renderVerificationHtml(value),historyId:record.id,path:copy.path});
+          }
+        }
         if (req.url === "/api/verify") {
           plan=undefined;actionable=[];
           const snapshot=selected.kind==="skill"?(await scanStagedWorkspace(selected.path)).digest:undefined;
@@ -311,7 +336,7 @@ export async function startWorkbench(options: { port?: number; stateDir: string;
         }
         return respond( 404, {error: "未知操作。"});
       } catch(error) {
-        owned.outcome=owned.submitted&&["apply","batch_run"].includes(owned.kind)?"unconfirmed":cancelled?"cancelled":"failed";
+        owned.outcome=owned.submitted&&["apply","batch_run","repair_restore"].includes(owned.kind)?"unconfirmed":cancelled?"cancelled":"failed";
         throw error;
       } finally {
         if(cancelKiller){clearTimeout(cancelKiller);cancelKiller=undefined;}

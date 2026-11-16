@@ -1,10 +1,19 @@
-import { access, chmod, cp, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { access, chmod, cp, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { runCli } from "../../src/cli/index";
+import { runCli as actualRunCli } from "../../src/cli/index";
+
+// Every repair test owns its vault; repeated suites never consume the user vault.
+const backupFixtures: string[] = [];
+afterEach(async () => { for (const path of backupFixtures.splice(0)) await rm(path, {recursive: true, force: true}); });
+async function runCli(args: string[]) {
+  if (args[0] !== "fix" || !args.includes("--apply") || args.includes("--backup-dir")) return actualRunCli(args);
+  const parent = await mkdtemp(join(tmpdir(), "skillsync-test-backups-")); backupFixtures.push(parent);
+  return actualRunCli([...args, "--backup-dir", join(parent, "vault")]);
+}
 
 type VerifyJson = {
   exitCode: number;

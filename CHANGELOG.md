@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased source - 2026-11-02
+## 0.4.0 - 2026-11-16
+
+- Check retained repair originals, create a new bounded recovery copy, reopen the same operation after interruption and verify/download the copy without changing the selected directory.
+- Bind new backups to the local selected directory, preserve v1 legacy manifests with original-plan verification, and invalidate confirmation on content, permissions or identity changes.
+- Retain four private recovery slots, cancellation material and immutable completion evidence; keep queries read-only and copy reports path-redacted.
+
+### Included source follow-ups (2026-11-02)
 
 - Report Git URL/commit declarations as unknown remote identity rather than
   authenticated provenance. Explicit unknown-provenance policies also block
@@ -14,7 +20,7 @@
 - Record synthetic small, byte-limit and near-file-limit scan baselines while
   retaining the required before/after mutation checks and no cross-request cache.
 
-## Unreleased source - 2026-10-21
+### Included workbench follow-ups (2026-10-21)
 
 - Add a loopback graphical workbench for real Skill and contract directories,
   with native macOS selection, read-only cancellation and offline report review.

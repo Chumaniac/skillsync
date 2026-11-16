@@ -45,10 +45,10 @@ export class WorkbenchHistory {
   private async entries() {
     const root = await lstat(this.root);
     if (!root.isDirectory() || root.isSymbolicLink() || identity(root)!==this.rootIdentity || await realpath(this.root)!==this.root) throw new WorkbenchStateError("状态目录已变化，请停止操作并检查原目录。");
-    const entries = await readDirectoryEntries(this.root, MAX_FILES + 1);
+    const entries = await readDirectoryEntries(this.root, MAX_FILES + 2);
     let bytes = 0; const reports = [];
     for (const entry of entries) {
-      if (entry.name === REPAIR_BACKUP_FOLDER) { await validateRepairBackupRoot(join(this.root, entry.name)); continue; }
+      if (entry.name === REPAIR_BACKUP_FOLDER || entry.name === "recovery-copies") { await validateRepairBackupRoot(join(this.root, entry.name)); continue; }
       reports.push(entry);
       const info = await lstat(join(this.root,entry.name));
       if (!info.isFile() || info.isSymbolicLink()) throw new WorkbenchStateError("状态目录包含非普通文件，请检查；原结果未删除。");
@@ -121,6 +121,11 @@ export class WorkbenchHistory {
     await this.entries();
     const record=await this.metadata(id);
     return {record,output:await this.output(record)};
+  }
+  async repairPlans(selection:Selection) {
+    const {entries}=await this.entries(),result:Array<{id:string;createdAt:string}>=[];
+    for(const entry of entries){if(!/^[a-f0-9-]{36}-history\.json$/.test(entry.name))continue;try{const record=await this.metadata(entry.name.slice(0,-13));if(record.kind==='plan'&&record.selection.path===selection.path&&record.selection.identity===selection.identity&&record.selection.kind===selection.kind)result.push({id:record.id,createdAt:record.createdAt});}catch{/* Incomplete records remain visible separately. */}}
+    return result.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,16);
   }
   private async output(record:HistoryRecord) {
     const output=record.dataFile?await readWorkspaceText(join(this.root,record.dataFile),MAX_OUTPUT):undefined;

@@ -12,6 +12,12 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def validate_node_license(path, prefix=None):
+    if (path.is_symlink() or not path.is_file() or not 1 <= path.stat().st_size <= 4 * 1024 * 1024
+            or (prefix is not None and not path.resolve().is_relative_to(prefix.resolve()))):
+        raise ValueError('NODE_LICENSE_INVALID')
+    return path
+
 
 def declared_minimum(text):
     # vtool also prints linker/tool versions. They are not OS deployment targets.
@@ -41,6 +47,12 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--node-license', type=Path, help='Full upstream license for the installed Node runtime')
     args = parser.parse_args()
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    dirty = bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip())
+    info = json.loads((ROOT / 'dist/build-info.json').read_text())
+    version = json.loads((ROOT / 'package.json').read_text())['version']
+    if info.get('schema') != 'skillsync.build-info/v1' or info.get('version') != version or info.get('sourceRevision') != revision or info.get('dirty') != dirty:
+        raise SystemExit('RUNTIME_BUILD_IDENTITY_MISMATCH')
     profile = json.loads((ROOT / 'desktop/portable.json').read_text())
     product = profile['product']
     output = args.output.expanduser().absolute()
@@ -66,6 +78,10 @@ def main():
     node = shutil.which('node')
     if not node:
         raise SystemExit('NODE_REQUIRED')
+    node_version = subprocess.check_output([node, '--version'], text=True, timeout=10).strip()
+    node_architecture = subprocess.check_output([node, '-p', 'process.arch'], text=True, timeout=10).strip()
+    if {'arm64': 'arm64', 'x86_64': 'x64'}.get(platform.machine()) != node_architecture:
+        raise SystemExit('NODE_ARCHITECTURE_MISMATCH')
     (output / 'bin').mkdir()
     shutil.copy2(node, output / 'bin/node')
     for relative in ['package.json', 'package-lock.json']:
@@ -77,9 +93,10 @@ def main():
     subprocess.run(['npm', 'ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], cwd=app, check=True)
     node_prefix = Path(node).resolve().parent.parent
     candidates = [args.node_license] if args.node_license else [node_prefix / 'LICENSE', node_prefix / 'share/doc/node/LICENSE', node_prefix / 'share/doc/nodejs/LICENSE']
-    license_root = next((path for path in candidates if path and path.is_file()), Path('/nonexistent-node-license'))
-    if not license_root.is_file():
+    license_root = next((path for path in candidates if path and path.is_file()), None)
+    if license_root is None:
         raise SystemExit('NODE_LICENSE_REQUIRED')
+    validate_node_license(license_root, None if args.node_license else node_prefix)
     shutil.copy2(license_root, output / 'bin/NODE-LICENSE.txt')
 
     if (ROOT / 'desktop/runtime-licenses').is_dir():
@@ -94,9 +111,7 @@ def main():
     manifest = {str(p.relative_to(output)): hashlib.sha256(p.read_bytes()).hexdigest()
                 for p in sorted(output.rglob('*')) if p.is_file() and not p.is_symlink()}
     minimum, deployments = minimum_macos(output)
-    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
-    dirty = bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip())
-    (output / 'runtime-manifest.json').write_text(json.dumps({'schema': 'runtime-files/v1', 'product': product, 'sourceCommit': revision, 'includesWorkingTreeChanges': dirty, 'minimumSystemVersion': minimum, 'binaryDeploymentTargets': deployments, 'files': manifest}, indent=2) + '\n')
+    (output / 'runtime-manifest.json').write_text(json.dumps({'schema': 'runtime-files/v1', 'product': product, 'architecture': platform.machine(), 'nodeVersion': node_version, 'nodeLicenseSha256': manifest['bin/NODE-LICENSE.txt'], 'sourceCommit': revision, 'includesWorkingTreeChanges': dirty, 'minimumSystemVersion': minimum, 'binaryDeploymentTargets': deployments, 'files': manifest}, indent=2) + '\n')
     print(json.dumps({'product': product, 'files': len(manifest), 'runtime': str(output)}))
 
 

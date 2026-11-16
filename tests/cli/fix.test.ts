@@ -1,11 +1,20 @@
-import { chmod, mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { planDigest } from "../../src/domain/action-plan";
-import { runCli } from "../../src/cli/index";
+import { runCli as actualRunCli } from "../../src/cli/index";
+
+// Every repair test owns its vault; repeated suites never consume the user vault.
+const backupFixtures: string[] = [];
+afterEach(async () => { for (const path of backupFixtures.splice(0)) await rm(path, {recursive: true, force: true}); });
+async function runCli(args: string[]) {
+  if (args[0] !== "fix" || !args.includes("--apply") || args.includes("--backup-dir")) return actualRunCli(args);
+  const parent = await mkdtemp(join(tmpdir(), "skillsync-test-backups-")); backupFixtures.push(parent);
+  return actualRunCli([...args, "--backup-dir", join(parent, "vault")]);
+}
 
 async function createSkillRoot(): Promise<{ root: string; scriptPath: string }> {
   const parent = await mkdtemp(join(tmpdir(), "skillsync-fix-"));
@@ -246,6 +255,7 @@ describe("skillsync fix", () => {
       "--yes",
       "--approve-review-required",
     ]);
+    expect(approved.stderr).toBe("");
     expect(approved.exitCode).toBe(0);
     expect(approved.stdout).toContain("Applied is not verified. Next command: skillsync verify");
     await expect(readFile(skillPath, "utf8")).resolves.toBe("after\n");

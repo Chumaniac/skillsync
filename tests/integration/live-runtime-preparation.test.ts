@@ -139,7 +139,9 @@ describe("live runtime preparation", () => {
     const jobs = asRecord(document.jobs);
 
     expect(push.tags).toEqual(["v*"]);
-    expect(Object.keys(jobs)).toEqual(["release"]);
+    expect(Object.keys(jobs)).toEqual(["release", "mac-app", "publish"]);
+    expect(asRecord(jobs["mac-app"]).needs).toBe("release");
+    expect(asRecord(jobs.publish).needs).toEqual(["release", "mac-app"]);
 
     const runs = workflowRuns(document, "release").join("\n");
     for (const command of [
@@ -152,8 +154,17 @@ describe("live runtime preparation", () => {
       expect(runs).toContain(command);
     }
 
-    expect(runs).toContain("gh release create");
-    expect(runs).toContain("--verify-tag");
+    const publish = workflowRuns(document, "publish").join("\n");
+    const mac = workflowRuns(document, "mac-app").join("\n");
+    expect(publish).toContain("gh release create");
+    expect(publish).toContain("--verify-tag");
+    expect(publish).toContain("sha256sum *.tgz *.zip *.json");
+    expect(publish).toContain('test "$source" = "$GITHUB_SHA"');
+    expect(publish).toContain("An existing release must not be overwritten");
+    for (const command of ['test "$(uname -m)" = arm64', "desktop/prepare_runtime.py", "desktop/build_app.py --runtime", "codesign --verify --deep --strict", "--smoke-check", "--width 390", "desktop/application_manifest.py", "python3 -m unittest discover"]) expect(mac).toContain(command);
+    expect(asRecord(jobs["mac-app"])["runs-on"]).toBe("macos-15");
+    expect(asRecord(asRecord(jobs.publish).permissions)).toEqual({contents: "write"});
+    expect(runs).not.toContain("gh release create");
     expect(runs).toContain("checksums.txt");
     expect(runs).toContain("branch=main&event=push&status=success");
     expect(runs).toContain("actions/workflows/skillsync.yml/runs");
@@ -167,7 +178,7 @@ describe("live runtime preparation", () => {
     expect(content).toContain("package-manager-cache: false");
     expect(content).not.toMatch(/npm dist-tag|NODE_AUTH_TOKEN|registry-url|secrets\./i);
     expect(asRecord(document.permissions)).toEqual({ contents: "read", actions: "read" });
-    expect(asRecord(asRecord(jobs.release).permissions)).toEqual({ contents: "write", actions: "read", "id-token": "write", attestations: "write", "artifact-metadata": "write" });
+    expect(asRecord(asRecord(jobs.release).permissions)).toEqual({ contents: "read", actions: "read", "id-token": "write", attestations: "write", "artifact-metadata": "write" });
   });
 
   it("keeps workflow and test sources outside the package artifact allowlist", async () => {

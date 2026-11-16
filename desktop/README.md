@@ -16,3 +16,5 @@ The three task sections share a quiet sidebar. File and directory selection, scr
 Native smoke checks use port 19012, a dedicated canonical cache directory and nonpersistent WebKit storage. They never use the normal history directory. The project tests use synthetic files and explicit cleanup. Build output is not a user-data backup. Local builds use ad-hoc signing and are not notarized redistribution releases.
 
 完整可移动程序的构建步骤、运行时闭包和许可要求见[构建说明](../docs/build.md)。
+
+The 0.4.0 workbench can check retained repair originals, restore to a new private copy and verify it without changing the selected directory. Source build identity must match the package version and exact Git tree before runtime assembly. The release pipeline includes the portable Apple Silicon app and reports ad-hoc signing explicitly.
