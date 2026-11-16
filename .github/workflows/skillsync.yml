@@ -18,6 +18,7 @@ on:
       - "fixtures/behavior/**"
       - "fixtures/product/**"
       - "README.md"
+      - "README.en.md"
       - "CHANGELOG.md"
       - "LICENSE"
       - "CONTRIBUTING.md"
