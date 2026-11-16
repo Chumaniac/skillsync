@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.4.0 - 2026-11-16
+## 0.4.1 - 2026-11-16
+
+- Validate the actual npm file list in both source CI and publication. Include the two named READMEs while continuing to refuse private, hidden, ambiguous and duplicate files.
+- The 0.4.0 tag remains an unpublished failed build; it is not overwritten.
+
+## 0.4.0 source changes - 2026-11-16
 
 - Check retained repair originals, create a new bounded recovery copy, reopen the same operation after interruption and verify/download the copy without changing the selected directory.
 - Bind new backups to the local selected directory, preserve v1 legacy manifests with original-plan verification, and invalidate confirmation on content, permissions or identity changes.

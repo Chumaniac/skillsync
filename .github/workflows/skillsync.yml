@@ -58,7 +58,8 @@ jobs:
       - run: npm run type-check
       - run: npm run build:browser
       - run: npm run lint
-      - run: npm pack --dry-run
+      - run: npm pack --dry-run --json > "$RUNNER_TEMP/package.json"
+      - run: node scripts/check-package.mjs "$RUNNER_TEMP/package.json"
       - name: Generate SBOM preview (non-blocking)
         run: |
           npm sbom --sbom-format cyclonedx --sbom-type library > /tmp/sbom.cyclonedx.json 2>&1 || true

@@ -56,6 +56,7 @@ jobs:
           set -euo pipefail
           mkdir release
           npm pack --json --ignore-scripts --pack-destination release > "$RUNNER_TEMP/package.json"
+          node scripts/check-package.mjs "$RUNNER_TEMP/package.json"
           npm sbom --sbom-format cyclonedx --package-lock-only --omit=dev > release/sbom.cyclonedx.json
           node --input-type=module - "$RUNNER_TEMP/package.json" <<'JS'
           import fs from 'node:fs';
@@ -63,8 +64,6 @@ jobs:
           const [pack]=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
           const version=JSON.parse(fs.readFileSync('package.json','utf8')).version;
           if(pack.name!=='@chumanic/skillsync'||pack.version!==version||pack.filename!==`chumanic-skillsync-${version}.tgz`) throw new Error('Package identity mismatch');
-          const allowed=/^(dist\/|runner\/|profiles\/|templates\/|fixtures\/(behavior|product|runner|policy)\/|config\/|docs\/[^/]+[.]md$|README[.]md$|LICENSE$|CHANGELOG[.]md$|package[.]json$)/;
-          if(!pack.files.length||pack.files.some(file=>!allowed.test(file.path)||file.path.split('/').some(part=>part.startsWith('.')&&part!=='.skillsync'))) throw new Error('Unexpected public package file');
           const sbom=JSON.parse(fs.readFileSync('release/sbom.cyclonedx.json','utf8'));
           if(sbom.bomFormat!=='CycloneDX'||!Array.isArray(sbom.components)) throw new Error('Invalid SBOM');
           const sha256=crypto.createHash('sha256').update(fs.readFileSync(`release/${pack.filename}`)).digest('hex');
