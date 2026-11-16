@@ -1,3 +1,5 @@
+<img src="browser/skillsync.svg" width="56" height="56" alt="" />
+
 # SkillSync
 
 [中文](README.md) · **[Open the document checker →](https://chumaniac.github.io/skillsync/)**
