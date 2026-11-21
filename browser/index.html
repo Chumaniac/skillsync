@@ -1,12 +1,160 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="在当前浏览器检查 SKILL.md 的 YAML 文档头，查看字段与正文。">
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="在当前浏览器检查 SKILL.md 的 YAML 文档头、必填字段与引用路径。">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
-<link rel="icon" href="./skillsync.svg"><link rel="stylesheet" href="./style.css"><title>Skill 文档检查 · SkillSync</title></head>
-<body><header><img src="./skillsync.svg" width="34" height="34" alt=""><strong>SkillSync</strong><a href="https://github.com/Chumaniac/skillsync">本机目录核验 ↗</a></header>
-<a class="skip-link" href="#workspace">跳到文档编辑</a><main id="workspace"><div class="workspace-heading"><div><p class="eyebrow">DOCUMENT INSPECTOR</p><h1>检查 Skill 文档</h1><p>SkillSync 帮助维护者在运行或交付前核对技能包与材料声明。这里先检查一份 SKILL.md 的文档格式，找到缺失字段或出错位置。</p></div><span class="privacy-label">本机处理 · 无网络请求</span></div>
-<details class="first-use"><summary>第一次检查：从一份文档开始</summary><p class="guide-preparation">适合分享 Skill 前、收到技能包后或修改文档时自查。准备文件全文；无需账号或 API Key。</p><ol><li><strong>放入一份文档</strong><p>把 SKILL.md 全文粘贴到左侧，保留开头两条 --- 之间的字段。也可先使用内置示例。</p><button id="guide-example" type="button" class="secondary">先使用示例文档</button></li><li><strong>运行格式检查</strong><p>点击“检查文档”或按 Ctrl / ⌘ + Enter，查看文档头字段和正文长度。</p><button id="guide-check" type="button">检查当前输入</button></li><li><strong>按结果继续</strong><p>出错时用“定位错误”返回原文。能解析只说明格式可读；目录、权限和交付物请在本机继续核验。</p><a href="#result-heading">阅读当前解析结果</a></li></ol></details>
-<div class="columns"><section class="editor-panel"><div class="panel-heading"><label for="source">SKILL.md</label><span id="document-meta"></span></div><textarea id="source" maxlength="24576" spellcheck="false" aria-describedby="limit"></textarea><small id="limit">最多 24 KiB。网页检查文档格式，本机 CLI 可继续检查来源、权限和交付物。</small>
-<div class="actions"><button id="check">检查文档</button><button id="example" class="secondary">载入示例</button></div></section>
-<section class="result-panel" aria-live="polite" data-state="idle"><div class="panel-heading"><h2 id="result-heading" tabindex="-1">解析结果</h2><span class="result-indicator" aria-hidden="true"></span></div><strong id="status">等待检查</strong><p id="message">运行检查后，这里会列出文档头字段和正文长度。</p><button id="locate" type="button" class="secondary" hidden>定位错误</button><dl id="fields"></dl><div class="scope-note"><strong>检查范围</strong><p>读取 YAML 文档头与正文。来源身份、执行行为及目录权限，请使用本机核验台检查。</p></div></section></div></main>
-<script type="module" src="./main.ts"></script></body></html>
+<link rel="icon" href="./skillsync.svg">
+<link rel="stylesheet" href="./style.css">
+<title>Skill 文档检查 · SkillSync</title>
+</head>
+<body>
+<a class="skip-link" href="#workspace">跳到文档编辑</a>
+
+<header class="app-bar">
+  <div class="app-bar-inner">
+    <a class="brand" href="./" aria-label="SkillSync 文档检查">
+      <img src="./skillsync.svg" width="24" height="24" alt="">
+      <span>SkillSync</span>
+    </a>
+    <span class="badge" title="文档只在当前页面解析，不会上传">本机处理 · 无网络请求</span>
+    <nav class="app-actions" aria-label="页面工具">
+      <button type="button" class="ghost" id="open-shortcuts" aria-haspopup="dialog" aria-label="快捷键">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M9 16h6M10 13h.01M14 13h.01"/></svg>
+        <span>快捷键</span>
+      </button>
+      <button type="button" class="ghost icon-only" id="theme-toggle" aria-label="切换深色或浅色外观">
+        <svg class="icon theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg class="icon theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+      <a class="ghost" href="https://github.com/Chumaniac/skillsync" rel="noopener" aria-label="本机目录核验（GitHub）">
+        <span>本机目录核验</span>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7"/></svg>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="workspace">
+  <div class="page-heading">
+    <h1>检查 Skill 文档</h1>
+    <p>在运行或交付前，先核对一份 SKILL.md 的文档头：格式能否解析、必填字段是否齐全、引用路径是否留在 Skill 目录内。</p>
+  </div>
+
+  <div class="columns">
+    <section class="panel editor-panel" id="editor-panel" aria-labelledby="source-label">
+      <div class="panel-heading">
+        <label id="source-label" for="source">SKILL.md</label>
+        <span class="meta" id="document-meta"></span>
+        <div class="heading-actions">
+          <button type="button" class="ghost" id="open-file" aria-label="打开文件">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg>
+            <span>打开文件</span>
+          </button>
+          <button type="button" class="ghost" id="example" aria-label="载入示例">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8ZM14 3v5h5M9 13h6M9 17h4"/></svg>
+            <span>载入示例</span>
+          </button>
+          <button type="button" class="ghost" id="clear" aria-label="清空">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+            <span>清空</span>
+          </button>
+          <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
+        </div>
+      </div>
+      <div class="editor">
+        <div class="gutter" id="gutter" aria-hidden="true"></div>
+        <textarea id="source" wrap="off" maxlength="24576" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="limit" placeholder="把 SKILL.md 全文粘贴到这里，或把文件拖进来。"></textarea>
+        <div class="drop-hint" aria-hidden="true">松开以载入文件</div>
+      </div>
+      <div class="editor-footer">
+        <small id="limit">最多 24 KiB。输入时自动检查；来源、权限和交付物由本机 CLI 核验。</small>
+        <button type="button" class="primary" id="check">
+          <span>检查文档</span>
+          <kbd data-mod></kbd><kbd>↵</kbd>
+        </button>
+      </div>
+    </section>
+
+    <section class="panel result-panel" id="result-panel" aria-live="polite" data-state="idle">
+      <div class="panel-heading">
+        <h2 id="result-heading" tabindex="-1">检查结果</h2>
+        <button type="button" class="ghost" id="copy-summary" hidden>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          <span>复制摘要</span>
+        </button>
+      </div>
+      <div class="verdict">
+        <span class="result-indicator" aria-hidden="true"></span>
+        <div>
+          <strong id="status">等待文档</strong>
+          <p id="message">粘贴或打开一份 SKILL.md 后，这里会列出问题、文档头字段和引用的本地资源。</p>
+        </div>
+      </div>
+      <button type="button" id="locate" hidden>定位错误</button>
+
+      <ol class="diagnostics" id="diagnostics" aria-label="问题列表"></ol>
+
+      <div class="block" id="fields-block" hidden>
+        <h3>文档头字段</h3>
+        <dl id="fields"></dl>
+      </div>
+      <div class="block" id="references-block" hidden>
+        <h3>引用的本地资源</h3>
+        <ul id="references"></ul>
+      </div>
+
+      <div class="scope-note">
+        <strong>检查范围</strong>
+        <p>只读取这份文档的 YAML 文档头与正文。目录结构、来源身份、脚本权限和交付物，请用本机 CLI：<code>skillsync verify --path &lt;目录&gt;</code></p>
+      </div>
+    </section>
+  </div>
+
+  <details class="first-use">
+    <summary>第一次检查：从一份文档开始</summary>
+    <p class="guide-preparation">适合分享 Skill 前、收到技能包后或修改文档时自查。准备文件全文；无需账号或 API Key。</p>
+    <ol>
+      <li>
+        <strong>放入一份文档</strong>
+        <p>粘贴 SKILL.md 全文、点击「打开文件」，或把文件拖到编辑区。保留开头两条 --- 之间的字段。</p>
+        <button id="guide-example" type="button">先使用示例文档</button>
+      </li>
+      <li>
+        <strong>查看问题列表</strong>
+        <p>输入停顿后自动检查，也可按 Ctrl / ⌘ + Enter 立即检查。错误必须修正；建议不影响 CLI 核验结果。</p>
+        <button id="guide-check" type="button">检查当前输入</button>
+      </li>
+      <li>
+        <strong>按结果继续</strong>
+        <p>点击问题或「定位错误」回到原文对应位置。能解析只说明格式可读；目录、权限和交付物请在本机继续核验。</p>
+        <a href="#result-heading">阅读当前检查结果</a>
+      </li>
+    </ol>
+  </details>
+</main>
+
+<footer class="site-footer">
+  <p>网页只解析粘贴或打开的文档，不上传、不保存。<a href="https://github.com/Chumaniac/skillsync/blob/main/docs/user-guide.md" rel="noopener">使用指南</a></p>
+</footer>
+
+<dialog id="shortcuts" aria-labelledby="shortcuts-title">
+  <div class="dialog-heading">
+    <h2 id="shortcuts-title">快捷键</h2>
+    <button type="button" class="ghost icon-only" data-close aria-label="关闭">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <dl class="shortcut-list">
+    <div><dt>立即检查并查看结果</dt><dd><kbd data-mod></kbd><kbd>Enter</kbd></dd></div>
+    <div><dt>打开文件</dt><dd><kbd data-mod></kbd><kbd>O</kbd></dd></div>
+    <div><dt>下一个 / 上一个问题</dt><dd><kbd>F8</kbd><kbd>Shift</kbd><kbd>F8</kbd></dd></div>
+    <div><dt>打开本面板（不在输入框内时）</dt><dd><kbd>?</kbd></dd></div>
+  </dl>
+</dialog>
+
+<script type="module" src="./main.ts"></script>
+</body>
+</html>

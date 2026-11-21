@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Browser inspector (GitHub Pages; not part of the npm package): check as you type, list errors, convention warnings and referenced local resources with line markers, open or drop a file, step through findings with F8, copy a Markdown summary, and follow a light or dark appearance. Reference paths use the same boundary as the CLI's `structure.unsafe-path`. Document text is never stored.
+
 ## 0.4.1 - 2026-11-16
 
 - Update the schema validator and build/test dependencies to patched releases. Keep the CLI Node20 floor while using Node24 for development and CI. Scope the temporary minimatch override to typescript-estree.

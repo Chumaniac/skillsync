@@ -8,7 +8,7 @@
 
 **[打开 SKILL.md 检查器 →](https://chumaniac.github.io/skillsync/)** · [English / CLI reference](README.en.md) · [桌面下载](https://github.com/Chumaniac/skillsync/releases/tag/v0.4.1)
 
-进入后，点击「载入示例」再检查文档；出现行列提示时，用「定位错误」回到原文。网页只解析粘贴的文档，本机目录、权限和交付物由 CLI 核验。
+进入后，粘贴、打开或拖入一份 SKILL.md，输入时自动检查；出现行列提示时，点击问题或「定位错误」回到原文。网页只解析这一份文档，本机目录、权限和交付物由 CLI 核验。
 
 [![SkillSync 对合成文档中重复字段的错误提示与原文定位入口](docs/preview/online.png)](https://chumaniac.github.io/skillsync/)
 
@@ -37,11 +37,11 @@ node dist/cli/index.js verify --path fixtures/product/trust-loop/review --target
 
 运行 `node dist/cli/index.js gui` 打开本机界面。修复前可查看计划，确认后再应用。默认未启用真实执行。
 
-网页检查会标出 YAML 语法错误所在的行和列。点击「定位错误」可回到原文修正，继续编辑会清除上一次的位置。
+网页检查会在行号旁标出问题所在的行，并列出三类结果：错误（YAML 语法、缺少 `name` 或 `description`、引用路径超出 Skill 根目录，对应 CLI 的结构核验）、建议（命名与长度约定、正文为空，不影响 CLI 结果）和提示（引用的本地资源，需由 CLI 确认存在）。点击问题或按 F8 可在原文中逐个定位；「复制摘要」生成不含字段内容的 Markdown。文档不上传，也不保存在浏览器中。
 
 ## 常见问题
 
-**网页能检查本机目录吗？** 网页只解析粘贴的文档。完整的目录、权限和交付物检查由本机 CLI 读取文件。
+**网页能检查本机目录吗？** 网页只解析粘贴或打开的一份文档。完整的目录、权限和交付物检查由本机 CLI 读取文件。
 
 **需要 API Key 吗？** 离线核验无需环境变量或密钥。运行 `gui --state-dir <目录>` 可指定报告存储位置。
 
