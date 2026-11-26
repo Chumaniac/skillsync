@@ -39,6 +39,12 @@ node dist/cli/index.js verify --path ./skills --target codex --format junit > sk
 node dist/cli/index.js scan --path ./skills --format junit > inventory.junit.xml
 ```
 
+For a CI job comparing two distributions, run
+`skillsync scan --path ./first/skills ./second/skills --fail-on-drift --format junit`.
+A same-name Skill with different digests produces exit 1 and a failed policy case.
+Identical copies pass the gate. Other inventory warnings retain their usual status.
+
+
 Upload the XML through your CI's existing test-report step even when verification
 returns nonzero; retain that original exit code. This addition is not in the
 unchanged npm 0.1.0 or GitHub v0.3.0 archive, and enables no upload or workflow by

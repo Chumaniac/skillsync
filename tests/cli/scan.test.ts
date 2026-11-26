@@ -27,3 +27,16 @@ describe("skillsync scan", () => {
     expect(report.skills[0]).toHaveProperty("skillMdPath", "<local-path>");
   });
 });
+
+it("lets CI gate drift with consistent process and report status", async () => {
+  const paths = ["fixtures/provenance/duplicate-a/skills", "fixtures/provenance/duplicate-b/skills"];
+  const scan = (...args: string[]) => runCli(["scan", "--path", ...paths, ...args]);
+  const gated = await scan("--fail-on-drift", "--format", "json");
+  expect(gated.exitCode).toBe(1);
+  expect(JSON.parse(gated.stdout).exitCode).toBe(1);
+  expect((await scan("--fail-on-drift", "--format", "junit")).stdout).toContain('failures="1"');
+  expect((await scan("--format", "json")).exitCode).toBe(0);
+  const same = await runCli(["scan", "--path", paths[0]!, paths[0]!, "--fail-on-drift", "--format", "json"]);
+  expect(same.exitCode).toBe(0);
+  expect(JSON.parse(same.stdout).exitCode).toBe(0);
+});

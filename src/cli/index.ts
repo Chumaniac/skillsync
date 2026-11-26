@@ -126,6 +126,7 @@ export function isCliEntryPoint(moduleUrl: string, argvPath: string | undefined)
 }
 
 type ScanCliOptions = Omit<ScanOptions, "paths"> & {
+  failOnDrift?: boolean;
   path?: string[];
   format?: string;
 };
@@ -272,12 +273,17 @@ export function createCli(io: CliIO = defaultCliIO): Command {
     .description("Inspect skill files without executing their instructions.")
     .option("--path <paths...>", "Explicit Skill directory or directory containing Skills")
     .option("--follow-symlinks", "Follow only symlinks that remain inside the Skill root")
+    .option("--fail-on-drift", "Exit 1 when duplicate Skill names have different content digests")
     .option("--format <format>", "Output format: text, json, sarif, or junit", "text")
     .action(async (options: ScanCliOptions) => {
       const report = await runScan({
         paths: options.path ?? [],
         followSymlinks: options.followSymlinks,
       });
+      if (options.failOnDrift) {
+        report.exitCode = report.findings.some((item) => item.code === "inventory.duplicate-drift") ? 1 : 0;
+        io.setExitCode?.(report.exitCode);
+      }
       io.writeOut(renderScan(report, options.format));
     });
 

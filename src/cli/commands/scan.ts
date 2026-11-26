@@ -15,6 +15,7 @@ export type ScanOptions = InventoryOptions & {
 };
 
 export type ScanReport = {
+  exitCode?: 0 | 1;
   schema_version: 1;
   targets: ScanTarget[];
   skills: Array<{
