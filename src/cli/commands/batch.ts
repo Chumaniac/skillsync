@@ -140,7 +140,7 @@ export async function runAcceptanceBatch(options:BatchRunOptions){
   const declarationSha=contentHash(context.declaration);
   if(previous&&contentHash({...previous.packet.payload.declaration,declarations_sha256:context.declaration.declarations_sha256})!==declarationSha)throw error('batch.previous-plan-changed','The prior package belongs to a different plan or contract.');
   const rows:AcceptanceBatch[]=[];let evidenceBytes=0;
-  for(const[index,item]of context.plan.batches.entries()){
+  async function inspectBatch(item: AcceptancePlan['batches'][number], index: number): Promise<AcceptanceBatch> {
    const source=context.sources[index],before=previous?.packet.payload.batches.find(row=>row.id===item.id);
    let tree:Awaited<ReturnType<typeof scanStagedWorkspace>>|undefined,report:ArtifactReport,mode:AcceptanceBatch['mode']='inspected';
    try{tree=await snapshot(source);}catch{tree=undefined;}
@@ -160,9 +160,20 @@ export async function runAcceptanceBatch(options:BatchRunOptions){
    if(before&&mode==='inspected'){
     row.previous={report_sha256:before.report_sha256,report:before.report};row.comparison=compareArtifactReports(before.report,report,before.report_sha256);
    }
-   evidenceBytes+=Buffer.byteLength(canonicalJson(report))+Buffer.byteLength(canonicalJson(row.previous?.report??null));
-   if(evidenceBytes>BATCH_LIMITS.max_reports_bytes)throw error('batch.evidence-capacity','The combined report evidence exceeds 8 MiB; use a smaller plan.');
-   rows.push(row);
+   return row;
+  }
+  // Limit simultaneous filesystem scans and retained evidence. Publish in plan order.
+  const parallelism = 2;
+  for (let start = 0; start < context.plan.batches.length; start += parallelism) {
+   const group = context.plan.batches.slice(start, start + parallelism);
+   const results = await Promise.allSettled(group.map((item, offset) => inspectBatch(item, start + offset)));
+   for (const result of results) {
+    if (result.status === 'rejected') throw result.reason;
+    const row = result.value;
+    evidenceBytes += Buffer.byteLength(canonicalJson(row.report)) + Buffer.byteLength(canonicalJson(row.previous?.report ?? null));
+    if (evidenceBytes > BATCH_LIMITS.max_reports_bytes) throw error('batch.evidence-capacity','The combined report evidence exceeds 8 MiB; use a smaller plan.');
+    rows.push(row);
+   }
   }
   if(sha256(await readWorkspaceFile(context.contractPath,64*1024))!==context.checked.file||sha256(await readWorkspaceFile(context.path,256*1024))!==context.raw_sha256)throw error('batch.plan-changed','The plan or contract changed during acceptance.');
   const payload:BatchReport={schema:'skillsync.batch-report/v1',createdAt:new Date().toISOString(),tool_version:VERSION,declaration:context.declaration,declaration_sha256:declarationSha,

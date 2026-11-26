@@ -1,7 +1,8 @@
 import { cp, mkdir, mkdtemp, readFile, realpath, stat, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as artifacts from "../../src/cli/commands/artifacts.js";
 import { runCli } from "../../src/cli/index.js";
 import {batchStatus,contentHash} from "../../src/domain/batch-report.js";
 
@@ -42,6 +43,31 @@ describe('portable multi-batch acceptance',()=>{
   await cp(join(root,'batches/north/allocations.csv'),join(root,'batches/south/allocations.csv'));
   expect((await execute(planPath,join(root,'legacy-rechecked.json'),['--previous',legacy,'--retry-failed'])).exitCode).toBe(0);
   expect(await readFile(legacy)).toEqual(original);
+ });
+
+ it('overlaps independent inspections and preserves plan order with at most two active', async () => {
+  const {root, plan, planPath, output} = await fixture();
+  await cp(join(root,'batches/north'),join(root,'batches/third'),{recursive:true});
+  plan.batches.push({id:'third',path:'batches/third',kind:'artifacts'});
+  await writeFile(planPath, JSON.stringify(plan));
+  const original = artifacts.runArtifacts;
+  let unlock!: () => void;
+  const bothRunning = new Promise<void>(resolve => { unlock = resolve; });
+  let active = 0, peak = 0;
+  const abortWait = setTimeout(unlock, 2000);
+  const inspect = vi.spyOn(artifacts,'runArtifacts').mockImplementation(async options => {
+   active++; peak = Math.max(peak,active);
+   if (active === 2) unlock();
+   try { await bothRunning; return await original(options); }
+   finally { active--; }
+  });
+  try {
+   expect((await execute(planPath,output)).exitCode).toBe(1);
+   const saved = JSON.parse(await readFile(output,'utf8'));
+   expect(saved.payload.batches.map((row: {id: string}) => row.id)).toEqual(['north','south','third']);
+   expect(peak).toBe(2);
+   expect(active).toBe(0);
+  } finally { clearTimeout(abortWait); inspect.mockRestore(); }
  });
 
  it('records per-batch failures without copying business rows, and can verify the offline package',async()=>{
