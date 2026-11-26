@@ -68,6 +68,9 @@ describe("scanInventory", () => {
       expect.objectContaining({ code: "inventory.duplicate-identical", skill: "review" }),
     );
 
+    const duplicate = identical.findings.find((item) => item.code === "inventory.duplicate-identical");
+    expect(duplicate?.evidence.map((item) => item.target)).toEqual(["first", "second"]);
+
     const drift = await scanInventory([
       target("first", identicalPath),
       target("second", driftPath),

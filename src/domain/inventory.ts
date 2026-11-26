@@ -389,7 +389,7 @@ async function scanTarget(
   return { skills, findings };
 }
 
-function addDuplicateFindings(skills: Skill[], targets: ScanTarget[], findings: Finding[]): void {
+function addDuplicateFindings(skills: Skill[], owners: Map<Skill, string>, findings: Finding[]): void {
   const groups = new Map<string, Skill[]>();
   for (const skill of skills) {
     const group = groups.get(skill.name) ?? [];
@@ -417,7 +417,7 @@ function addDuplicateFindings(skills: Skill[], targets: ScanTarget[], findings: 
         evidence: group.map((skill) => ({
           root_path: skill.rootPath,
           digest: skill.digest,
-          target: targets.find((candidate) => resolve(candidate.path) === skill.rootPath)?.name ?? "unknown",
+          target: owners.get(skill)!,
         })),
         remediation: identical
           ? "Keep one canonical source and document the intended targets."
@@ -433,13 +433,22 @@ export async function scanInventory(
 ): Promise<Inventory> {
   const skills: Skill[] = [];
   const findings: Finding[] = [];
+  const owners = new Map<Skill, string>();
   const budget = new InventoryBudget(options);
   budget.check("maxTargets", targets.length);
   try {
-    for (const target of targets) {
-      const result = await scanTarget(target, options, budget);
-      skills.push(...result.skills);
-      findings.push(...result.findings);
+    // Bound file I/O across targets. Drain the whole batch on failure and
+    // merge results in caller order so findings and shared limits stay stable.
+    const width = 4;
+    for (let start = 0; start < targets.length; start += width) {
+      const batch = targets.slice(start, start + width);
+      const results = await Promise.allSettled(batch.map((target) => scanTarget(target, options, budget)));
+      for (const [index, result] of results.entries()) {
+        if (result.status === "rejected") throw result.reason;
+        for (const skill of result.value.skills) owners.set(skill, batch[index]!.name);
+        skills.push(...result.value.skills);
+        findings.push(...result.value.findings);
+      }
     }
     await budget.verifyStable();
   } catch (error) {
@@ -450,6 +459,6 @@ export async function scanInventory(
     throw error;
   }
 
-  addDuplicateFindings(skills, targets, findings);
+  addDuplicateFindings(skills, owners, findings);
   return { targets, skills, findings };
 }
