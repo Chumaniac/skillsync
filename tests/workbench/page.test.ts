@@ -61,12 +61,26 @@ async function page(failure?: "network" | "invalid-json" | "expired-session", de
   };
   const timers=new Map<number,()=>void>(),events=new Map<string,()=>void>();let nextTimer=0;
   class OptionElement extends Element { constructor(text='',value=''){super();this.textContent=text;this.value=value;} }
-  runInNewContext(workbenchScript, {Option:OptionElement,document: {hidden:false,addEventListener:(name:string,fn:()=>void)=>events.set(name,fn),getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()},window:{addEventListener:(name:string,fn:()=>void)=>events.set(name,fn)},crypto:{randomUUID},fetch, URL, Blob, setTimeout:(fn:()=>void)=>{timers.set(++nextTimer,fn);return nextTimer;},clearTimeout:(id:number)=>timers.delete(id), AbortController});
+  const location = { hash: "" };
+  const history = { pushState(_state: unknown, _title: string, hash: string) { location.hash = hash; } };
+  runInNewContext(workbenchScript, {location,history,Option:OptionElement,document: {documentElement:{dataset:{}},hidden:false,addEventListener:(name:string,fn:()=>void)=>events.set(name,fn),getElementById: get, querySelector: () => get("meta"), querySelectorAll: () => [], createElement: () => new Element()},window:{addEventListener:(name:string,fn:()=>void)=>events.set(name,fn)},crypto:{randomUUID},fetch, URL, Blob, setTimeout:(fn:()=>void)=>{timers.set(++nextTimer,fn);return nextTimer;},clearTimeout:(id:number)=>timers.delete(id), AbortController});
   await new Promise(resolve => setImmediate(resolve));
-  return {get, offsets, actions,inputs,timers,events,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
+  return {get, offsets, location, actions,inputs,timers,events,respond(action:string,value:unknown){responses.set(action,value);}, fail(action: string, message: string) { rejected.set(action, message); }, async finishInitialHistory() { releaseHistory(); await new Promise(resolve => setImmediate(resolve)); }, async click(id: string) { await get(id).onclick?.(); await new Promise(resolve => setImmediate(resolve)); }};
 }
 
 describe("workbench interactions", () => {
+  it("restores the selected task from browser history without rerunning verification", async () => {
+    const ui = await page();
+    await ui.click("nav-batch");
+    expect(ui.location.hash).toBe("#batch");
+    await ui.click("nav-history");
+    const prior = [...ui.actions];
+    ui.location.hash = "#batch";
+    ui.events.get("hashchange")?.();
+    expect(ui.get("nav-batch").attributes.get("aria-pressed")).toBe("true");
+    expect(ui.get("task-batch").hidden).toBe(false);
+    expect(ui.actions).toEqual(prior);
+  });
   async function recoveryUi(){
     const ui=await page(),id=randomUUID(),path='/private/synthetic/recovery/workspace';await ui.click('verify');
     ui.respond('repair/list',{items:[{id:'slot-00/'+randomUUID(),state:'unchecked',legacy:false}],plans:[],copies:[{id,createdAt:'2026-11-16T00:00:00Z',state:'recorded'}]});
